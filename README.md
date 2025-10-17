@@ -30,30 +30,68 @@ A comprehensive aquarium automation system built for ESP32 that monitors and con
 - **pH Calibration Interface** - Step-by-step calibration with multiple buffer solutions
 - **Remote Configuration** - Change WiFi, MQTT, and control settings via web interface
 - **Safety Interlocks** - Automatic shutdown if parameters exceed safe limits
+- **Dosing Pump Control** - DRV8871 motor driver with calibration and scheduling
+- **Water Change Predictor** - Self-learning TDS-based prediction (linear regression)
+- **Pattern Learning** - Learns daily feeding/maintenance patterns
+- **Ender 3 Pro Display** - LCD12864 local interface with encoder navigation
+- **Event Logging** - Comprehensive event tracking with 1000-event circular buffer
+- **NTP Time Sync** - Accurate timekeeping with automatic daylight saving
 
 ## Hardware Requirements
 
 ### Components
-- **ESP32 Development Board** (DevKit v1 or similar)
-- **DS18B20 Temperature Sensor** with 4.7kΩ pull-up resistor
-- **pH Sensor Module** (analog output)
-- **TDS Sensor Module** (analog output)
-- **2x Relay Modules** (for heater and CO2 solenoid)
-- **Heater** (appropriate for your aquarium size)
-- **CO2 Solenoid Valve**
-- **Power Supply** (appropriate for your relays and ESP32)
+
+**Required:**
+- **ESP32 Development Board** (DevKit v1 or similar, 30+ GPIO pins)
+- **DS18B20 Temperature Sensors** (2x) with 4.7kΩ pull-up resistors (water + ambient)
+- **pH Sensor Module** (analog output, BNC connector recommended)
+- **TDS Sensor Module** (analog output with temperature compensation)
+- **2x Relay Modules** (optocoupled, 240V AC rated for Australian mains)
+- **Aquarium Heater** (240V AC, sized for your tank - 1W per litre)
+- **CO2 Solenoid Valve** (240V AC, for planted tanks)
+- **Power Supply** (5V/2A USB for ESP32, appropriate power for relays)
+
+**Optional:**
+- **DRV8871 Motor Driver** - For dosing pump control
+- **Peristaltic Pump** - For liquid fertilizer dosing
+- **Ender 3 Pro Display** - LCD12864 with encoder for local control
+- **RCD Safety Switch** - 30mA, mandatory for Australian installations
 
 ### Pin Configuration
 
-Default pin assignments (configurable in code):
+Default pin assignments (configurable via web interface):
 
+**Sensors:**
 ```
-Temperature Sensor (DS18B20): GPIO 4
-pH Sensor (Analog):          GPIO 34
-TDS Sensor (Analog):         GPIO 35
-Heater Relay:                GPIO 26
-CO2 Solenoid Relay:          GPIO 27
+Water Temperature (DS18B20):  GPIO 4  (OneWire)
+Ambient Temperature (DS18B20): GPIO 5  (OneWire)
+pH Sensor (Analog):           GPIO 34 (ADC1)
+TDS Sensor (Analog):          GPIO 35 (ADC1)
 ```
+
+**Control Outputs:**
+```
+Heater Relay:                 GPIO 26 (Digital Out)
+CO2 Solenoid Relay:           GPIO 27 (Digital Out)
+Dosing Pump IN1 (DRV8871):    GPIO 25 (PWM)
+Dosing Pump IN2 (DRV8871):    GPIO 33 (PWM)
+```
+
+**Display (Optional - Ender 3 Pro):**
+```
+LCD_CS (Chip Select):         GPIO 15
+LCD_A0 (Data/Command):        GPIO 2
+LCD_RESET:                    GPIO 0
+LCD_SCK (SPI Clock):          GPIO 18
+LCD_MOSI (SPI Data):          GPIO 23
+BTN_ENC (Encoder Button):     GPIO 13
+BTN_EN1 (Encoder A):          GPIO 14
+BTN_EN2 (Encoder B):          GPIO 16
+BEEPER (Buzzer):              GPIO 17
+```
+
+**Total Pins Used:** 17 of 38 available  
+**Remaining:** 21 GPIO pins for future expansion
 
 ### Wiring Diagram
 
@@ -421,6 +459,54 @@ To add new sensors or features:
 2. Add to task loop or create new task in `SystemTasks.cpp`
 3. Update web interface in `data/index.html`
 4. Add API endpoints in `WebServer.cpp`
+
+## 📚 Documentation
+
+### Quick Start Guides
+- **[QUICKSTART.md](QUICKSTART.md)** - Get up and running quickly
+- **[AUSTRALIAN_CONFIGURATION.md](AUSTRALIAN_CONFIGURATION.md)** 🇦🇺 - Australian-specific setup
+- **[PH_CALIBRATION_GUIDE.md](PH_CALIBRATION_GUIDE.md)** - pH sensor calibration
+- **[WEB_CALIBRATION_GUIDE.md](WEB_CALIBRATION_GUIDE.md)** - Web-based calibration
+
+### Feature Documentation
+- **[DOSING_PUMP_GUIDE.md](DOSING_PUMP_GUIDE.md)** - Dosing pump setup and use
+- **[WATER_CHANGE_ASSISTANT.md](WATER_CHANGE_ASSISTANT.md)** - Water change prediction
+- **[PATTERN_LEARNING.md](PATTERN_LEARNING.md)** - Pattern learning system
+- **[NTP_TIME_SYNC.md](NTP_TIME_SYNC.md)** - Time synchronization
+- **[MQTT_IMPROVEMENTS.md](MQTT_IMPROVEMENTS.md)** - MQTT configuration
+- **[TIME_PROPORTIONAL.md](TIME_PROPORTIONAL.md)** - PID control details
+
+### Display & Interface
+- **[ENDER3_DISPLAY_COMPATIBILITY.md](ENDER3_DISPLAY_COMPATIBILITY.md)** - Display feasibility
+- **[ENDER3_DISPLAY_WIRING.md](ENDER3_DISPLAY_WIRING.md)** - Wiring guide
+- **[DISPLAY_IMPLEMENTATION_COMPLETE.md](DISPLAY_IMPLEMENTATION_COMPLETE.md)** - Implementation details
+- **[WEB_UI_PATTERN_GUIDE.md](WEB_UI_PATTERN_GUIDE.md)** - Web UI usage
+
+### API & Integration
+- **[WEB_API_COMPLETE.md](WEB_API_COMPLETE.md)** - Complete API reference
+- **[PINOUT.md](PINOUT.md)** - Pin configuration details
+- **[PRODUCTION_FEATURES.md](PRODUCTION_FEATURES.md)** - Production-ready features
+
+### Testing & Development
+- **[TESTING.md](TESTING.md)** - Complete testing guide
+- **[TEST_SUMMARY.md](TEST_SUMMARY.md)** - Test suite overview
+- **[TEST_QUICKREF.md](TEST_QUICKREF.md)** - Quick testing reference
+- **[DISPLAY_TESTS.md](DISPLAY_TESTS.md)** - Display test documentation
+
+### Implementation Details
+- **[IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md)** - Water change predictor
+- **[ADVANCED_FEATURES.md](ADVANCED_FEATURES.md)** - Advanced capabilities
+- **[FEATURES.md](FEATURES.md)** - Feature list
+- **[DUAL_TEMPERATURE.md](DUAL_TEMPERATURE.md)** - Dual temperature sensing
+
+### Issue Resolution
+- **[ISSUES_FIXED.md](ISSUES_FIXED.md)** - Configuration issues and fixes
+- **[AUSTRALIAN_CHANGES_SUMMARY.md](AUSTRALIAN_CHANGES_SUMMARY.md)** 🇦🇺 - Australian updates
+
+### Feature Summaries
+- **[DOSING_PUMP_README.md](DOSING_PUMP_README.md)** - Dosing pump overview
+- **[PATTERN_LEARNING_SUMMARY.md](PATTERN_LEARNING_SUMMARY.md)** - Pattern learning summary
+- **[TEST_UPDATE_SUMMARY.md](TEST_UPDATE_SUMMARY.md)** - Test updates
 
 ## License
 

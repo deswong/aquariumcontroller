@@ -1,15 +1,33 @@
 # Quick Start Guide - ESP32 Aquarium Controller
 
-## 🚀 Getting Started in 5 Steps
+🇦🇺 **Australian Users**: See [AUSTRALIAN_CONFIGURATION.md](AUSTRALIAN_CONFIGURATION.md) for Australian-specific setup (240V AC, AEST timezone, au.pool.ntp.org)
+
+## 🚀 Getting Started in 6 Steps
 
 ### Step 1: Hardware Assembly
-1. Connect DS18B20 temperature sensor to GPIO 4 (with 4.7kΩ pullup to 3.3V)
-2. Connect pH sensor analog output to GPIO 34
-3. Connect TDS sensor analog output to GPIO 35
-4. Connect heater relay to GPIO 26
-5. Connect CO2 solenoid relay to GPIO 27
-6. Connect all grounds together
-7. Power sensors from 3.3V, relays from 5V
+
+**Core Sensors (Required - 8 pins):**
+1. Connect water temp DS18B20 to GPIO 4 (with 4.7kΩ pullup to 3.3V)
+2. Connect ambient temp DS18B20 to GPIO 5 (with 4.7kΩ pullup to 3.3V)
+3. Connect pH sensor analog output to GPIO 34
+4. Connect TDS sensor analog output to GPIO 35
+5. Connect heater relay to GPIO 26 (⚠️ 240V AC in Australia - see electrical safety)
+6. Connect CO2 solenoid relay to GPIO 27
+7. Connect dosing pump IN1 to GPIO 25, IN2 to GPIO 33
+8. Connect all grounds together
+9. Power sensors from 3.3V, relays from 5V
+
+**Display (Optional - 9 pins):**
+10. Connect Ender 3 Pro LCD12864 display (see [ENDER3_DISPLAY_WIRING.md](ENDER3_DISPLAY_WIRING.md))
+    - LCD: CS→15, A0→2, Reset→0, E→16, R/W→17, PSB→18
+    - Encoder: DT→13, CLK→14, SW→23
+
+⚠️ **Australian Electrical Safety (AS/NZS 3000:2018)**:
+- 240V AC circuits MUST use RCD protection (30mA)
+- Licensed electrician required for mains wiring
+- Use IP-rated enclosures near water
+
+See [PINOUT.md](PINOUT.md) for complete wiring diagrams.
 
 ### Step 2: Flash Firmware
 ```bash
@@ -33,8 +51,18 @@ pio run --target uploadfs
 4. Go to Settings tab and enter your WiFi credentials
 5. Save and restart
 
-### Step 4: Calibrate pH Sensor
-1. Navigate to pH Calibration tab
+### Step 4: Configure Australian Settings 🇦🇺 (if applicable)
+1. Go to Settings tab
+2. Set timezone to AEST (UTC+10)
+3. Set NTP server to `au.pool.ntp.org`
+4. Enable daylight saving time
+5. Verify electrical standards (240V AC, 50Hz, RCD 30mA)
+6. Save settings
+
+See [AUSTRALIAN_CONFIGURATION.md](AUSTRALIAN_CONFIGURATION.md) for details.
+
+### Step 5: Calibrate pH Sensor
+1. Navigate to pH Calibration tab (or use LCD display if installed)
 2. Click "Start Calibration"
 3. Place probe in pH 4.0 buffer → Click "Calibrate pH 4.0"
 4. Rinse probe with distilled water
@@ -43,8 +71,10 @@ pio run --target uploadfs
 7. Place probe in pH 10.0 buffer → Click "Calibrate pH 10.0"
 8. Click "Save Calibration"
 
-### Step 5: Set Your Targets
-1. Go to Control tab
+**Note**: System uses ambient temperature sensor (GPIO 5) during calibration, water temperature (GPIO 4) for readings. See [PH_CALIBRATION_GUIDE.md](PH_CALIBRATION_GUIDE.md).
+
+### Step 6: Set Your Targets
+1. Go to Control tab (or use LCD display)
 2. Set Temperature Target (e.g., 25.0°C)
 3. Set pH Target (e.g., 6.8 for planted tank)
 4. Click "Update Targets"
@@ -53,10 +83,14 @@ pio run --target uploadfs
 
 The system will now:
 - ✓ Read sensors every second
-- ✓ Control heater to maintain temperature
+- ✓ Control heater to maintain temperature (240V AC 🇦🇺)
 - ✓ Control CO2 to maintain pH
 - ✓ Learn and optimize PID parameters
 - ✓ Display live data on web interface
+- ✓ Show status on LCD display (if installed)
+- ✓ Sync time with NTP (au.pool.ntp.org 🇦🇺)
+- ✓ Learn patterns and predict water changes
+- ✓ Control dosing pump (if installed)
 - ✓ Publish data to MQTT (if configured)
 - ✓ Store all settings in flash memory
 
@@ -72,11 +106,16 @@ If you want to integrate with Home Assistant or other systems:
 
 ### MQTT Topics
 Your data will be published to:
-- `aquarium/temperature`
-- `aquarium/ph`
-- `aquarium/tds`
-- `aquarium/heater`
-- `aquarium/co2`
+- `aquarium/temperature` - Water temperature (°C)
+- `aquarium/ambient_temperature` - Air/room temperature (°C)
+- `aquarium/ph` - pH (temperature compensated)
+- `aquarium/tds` - TDS (ppm)
+- `aquarium/heater` - Heater state (ON/OFF, 240V AC 🇦🇺)
+- `aquarium/co2` - CO2 solenoid state
+- `aquarium/dosing_pump` - Dosing pump status (if installed)
+- `aquarium/display` - Display data (JSON, if installed)
+- `aquarium/water_change` - Water change predictions
+- `aquarium/patterns` - Pattern learning analytics
 
 ## ⚠️ Important Safety Notes
 
@@ -137,17 +176,22 @@ pio run --target upload
 
 ## 📚 Next Steps
 
-- Fine-tune PID parameters if needed
-- Set up MQTT for external monitoring
-- Add temperature alerts to your phone
-- Connect to Home Assistant
-- Monitor and adjust based on fish behavior
+- **Display**: Install LCD display for at-a-glance monitoring (see [ENDER3_DISPLAY_WIRING.md](ENDER3_DISPLAY_WIRING.md))
+- **Dosing**: Set up automated nutrient dosing (see [DOSING_PUMP_GUIDE.md](DOSING_PUMP_GUIDE.md))
+- **Patterns**: Enable pattern learning for anomaly detection (see [PATTERN_LEARNING.md](PATTERN_LEARNING.md))
+- **Water Changes**: Use water change predictor (see [WATER_CHANGE_ASSISTANT.md](WATER_CHANGE_ASSISTANT.md))
+- **Fine-tune**: Adjust PID parameters if needed
+- **MQTT**: Set up for external monitoring and Home Assistant
+- **Alerts**: Add temperature/pH alerts to your phone
+- **Monitor**: Watch fish behavior and adjust targets accordingly
 
 ## 🆘 Need Help?
 
-1. Check the full README.md for detailed documentation
+1. Check the full [README.md](README.md) for detailed documentation
 2. Monitor serial output: `pio device monitor -b 115200`
-3. Check GitHub issues
-4. Review safety warnings in README.md
+3. Review 30+ documentation files for specific features
+4. Check GitHub issues
+5. 🇦🇺 Australian users: See [AUSTRALIAN_CONFIGURATION.md](AUSTRALIAN_CONFIGURATION.md)
+6. Display issues: See [DISPLAY_TESTS.md](DISPLAY_TESTS.md)
 
-**Happy Fishkeeping! 🐠**
+**Happy Fishkeeping! 🐠🎯🇦🇺**

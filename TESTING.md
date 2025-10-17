@@ -2,15 +2,22 @@
 
 This document describes the comprehensive test suite for the aquarium controller project.
 
+**Total Test Coverage: 100+ tests** including display, dosing pump, sensors, PID control, safety, and integration.
+
 ## Test Structure
 
-The test suite is organized into three main categories:
+The test suite is organized into multiple test files:
 
 ```
 test/
 ├── test_main.cpp          # Unit tests for individual components
 ├── test_mocks.cpp         # Tests using mock objects for hardware
-└── test_integration.cpp   # Integration tests for complete workflows
+├── test_integration.cpp   # Integration tests for complete workflows
+├── test_display.cpp       # Display tests (31 tests - NEW)
+├── test_dosing_pump.cpp   # Dosing pump tests (NEW)
+├── test_time_proportional.cpp  # Time proportional control tests
+├── test_ph_sensor.cpp     # pH sensor tests with temperature compensation
+└── test_*.cpp             # Additional feature-specific tests
 ```
 
 ## Running Tests
@@ -46,11 +53,94 @@ pio test -e native -f test_integration
 
 # Run only mock tests
 pio test -e native -f test_mocks
+
+# Run display tests (31 tests - NEW)
+pio test -e native -f test_display
+
+# Run dosing pump tests (NEW)
+pio test -e native -f test_dosing_pump
+
+# Run time proportional control tests
+pio test -e native -f test_time_proportional
+
+# Run pH sensor tests
+pio test -e native -f test_ph_sensor
 ```
 
 ## Test Categories
 
-### 1. Unit Tests (`test_main.cpp`)
+### 1. Display Tests (`test_display.cpp`) ✨ **NEW** - 31 Tests
+
+Tests for Ender 3 Pro LCD12864 display and rotary encoder interface.
+
+#### Display Initialization Tests
+- ✓ Display begins successfully
+- ✓ Encoder pins configured correctly
+- ✓ Buzzer pin configured
+- ✓ Initial screen state
+
+#### Display Drawing Tests
+- ✓ Main screen renders correctly
+- ✓ Settings screen navigation
+- ✓ Calibration screen display
+- ✓ Dosing screen display
+- ✓ Statistics screen rendering
+- ✓ About screen information
+- ✓ All 8 menu screens functional
+
+#### Encoder Tests
+- ✓ Clockwise rotation detection
+- ✓ Counter-clockwise rotation detection
+- ✓ Button press detection
+- ✓ Button long-press detection
+- ✓ Debouncing works correctly
+
+#### Data Update Tests
+- ✓ Temperature update display
+- ✓ pH value update display
+- ✓ TDS value update display
+- ✓ Heater state update
+- ✓ CO2 state update
+- ✓ WiFi status update
+- ✓ Time display update
+
+#### Power Management Tests
+- ✓ Sleep mode after timeout
+- ✓ Wake on button press
+- ✓ Wake on encoder rotation
+- ✓ Backlight control
+
+#### Edge Cases
+- ✓ Null pointer handling
+- ✓ Invalid screen index
+- ✓ Rapid encoder rotation
+- ✓ Display buffer overflow protection
+
+**Documentation:** See [DISPLAY_TESTS.md](DISPLAY_TESTS.md) for detailed results.
+
+### 2. Dosing Pump Tests (`test_dosing_pump.cpp`) ✨ **NEW**
+
+Tests for L298N motor driver control.
+
+#### Basic Operation Tests
+- ✓ Forward operation (GPIO 25 HIGH, GPIO 33 LOW)
+- ✓ Reverse operation (GPIO 25 LOW, GPIO 33 HIGH)
+- ✓ Brake operation (both LOW)
+- ✓ Stop operation
+
+#### Timing Tests
+- ✓ Dose duration accuracy
+- ✓ Interval timing
+- ✓ Scheduled dosing
+
+#### Safety Tests
+- ✓ Emergency stop
+- ✓ Maximum dose volume limit
+- ✓ Pump jam detection
+
+**Documentation:** See [DOSING_PUMP_GUIDE.md](DOSING_PUMP_GUIDE.md) for setup.
+
+### 3. Unit Tests (`test_main.cpp`)
 
 Tests individual functions and components in isolation.
 
@@ -69,20 +159,24 @@ Tests individual functions and components in isolation.
 - ✓ Three-point pH calibration
 - ✓ TDS temperature compensation
 - ✓ TDS valid range checking
+- ✓ Dual temperature sensor support (water + ambient)
 
 #### Relay Controller Tests
 - ✓ Minimum toggle interval enforcement
 - ✓ Safety disable functionality
 - ✓ Inverted logic support
+- ✓ Time proportional mode (NEW)
 
 #### Configuration Tests
 - ✓ Default value initialization
 - ✓ String copy safety (buffer overflow prevention)
+- ✓ Australian defaults (AEST, au.pool.ntp.org) 🇦🇺
 
 #### Safety Tests
 - ✓ Temperature safety limit enforcement
 - ✓ pH safety limit enforcement
 - ✓ Overshoot detection
+- ✓ 240V AC relay safety (Australian mode) 🇦🇺
 
 #### Utility Tests
 - ✓ Constrain function
@@ -93,10 +187,12 @@ Tests individual functions and components in isolation.
 - ✓ Zero division protection
 - ✓ Sensor disconnect detection
 - ✓ Invalid JSON handling
+- ✓ WiFi.h include verification
 
 #### Performance Tests
 - ✓ Calculation speed validation
 - ✓ Moving average efficiency
+- ✓ Display refresh rate (20Hz)
 
 **Total Unit Tests: 30+**
 

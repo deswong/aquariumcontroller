@@ -2,6 +2,9 @@
 
 ## Default Pin Configuration
 
+**Total Pins Used: 17 of 38 available (21 free)**
+
+### Core Sensors & Outputs (8 pins)
 | Function | GPIO Pin | Type | Notes |
 |----------|----------|------|-------|
 | Water Temperature Sensor (DS18B20) | GPIO 4 | Digital (1-Wire) | Requires 4.7kΩ pullup resistor to 3.3V |
@@ -10,38 +13,67 @@
 | TDS Sensor | GPIO 35 | Analog Input | Input only, no pullup available |
 | Heater Relay | GPIO 26 | Digital Output | Can drive relay directly or via transistor |
 | CO2 Solenoid Relay | GPIO 27 | Digital Output | Can drive relay directly or via transistor |
+| Dosing Pump IN1 | GPIO 25 | Digital Output | L298N motor driver input |
+| Dosing Pump IN2 | GPIO 33 | Digital Output | L298N motor driver input |
+
+### Display & Interface (9 pins)
+| Function | GPIO Pin | Type | Notes |
+|----------|----------|------|-------|
+| LCD CS (Chip Select) | GPIO 15 | Digital Output | ST7920 LCD12864 display |
+| LCD A0 (Register Select) | GPIO 2 | Digital Output | ST7920 LCD12864 display |
+| LCD Reset | GPIO 0 | Digital Output | ST7920 LCD12864 display |
+| LCD E (Enable) | GPIO 16 | Digital Output | ST7920 LCD12864 display |
+| LCD R/W | GPIO 17 | Digital Output | ST7920 LCD12864 display |
+| LCD PSB | GPIO 18 | Digital Output | Parallel/Serial mode select |
+| Encoder DT (Data) | GPIO 13 | Digital Input | Rotary encoder with pullup |
+| Encoder CLK (Clock) | GPIO 14 | Digital Input | Rotary encoder with pullup |
+| Encoder Switch | GPIO 23 | Digital Input | Button press with pullup |
 
 ## ESP32 DevKit v1 Pin Layout
 
 ```
                         ┌─────────┐
                      EN │1      38│ GND
-                  GPIO36│2      37│ GPIO23
+                  GPIO36│2      37│ GPIO23 ◄── Encoder Switch
                   GPIO39│3      36│ GPIO22
                   GPIO34│4      35│ GPIO1 (TX)
                   GPIO35│5      34│ GPIO3 (RX)
                   GPIO32│6      33│ GPIO21
                   GPIO33│7      32│ GND
                   GPIO25│8      31│ GPIO19
-                  GPIO26│9      30│ GPIO18  ◄── Heater Relay
-                  GPIO27│10     29│ GPIO5   ◄── Ambient Temp Sensor
-                  GPIO14│11     28│ GPIO17
-                  GPIO12│12     27│ GPIO16
-                     GND│13     26│ GPIO4   ◄── Water Temp Sensor
-                  GPIO13│14     25│ GPIO0
-                   GPIO9│15     24│ GPIO2
-                  GPIO10│16     23│ GPIO15
+                  GPIO26│9      30│ GPIO18 ◄── LCD PSB
+                  GPIO27│10     29│ GPIO5  ◄── Ambient Temp
+                  GPIO14│11     28│ GPIO17 ◄── LCD R/W
+                  GPIO12│12     27│ GPIO16 ◄── LCD E
+                     GND│13     26│ GPIO4  ◄── Water Temp
+                  GPIO13│14     25│ GPIO0  ◄── LCD Reset
+                   GPIO9│15     24│ GPIO2  ◄── LCD A0
+                  GPIO10│16     23│ GPIO15 ◄── LCD CS
                   GPIO11│17     22│ GPIO8
                      VIN│18     21│ GPIO7
                      GND│19     20│ GPIO6
                         └─────────┘
 
+   Core Sensors & Outputs:
    pH Sensor ──────────────────►│4│ GPIO34
    TDS Sensor ─────────────────►│5│ GPIO35
-   Heater Relay ───────────────►│9│ GPIO26
-   CO2 Relay ──────────────────►│10│ GPIO27
    Water Temp Sensor ──────────►│26│ GPIO4
    Ambient Temp Sensor ─────────►│29│ GPIO5
+   Heater Relay ───────────────►│9│ GPIO26
+   CO2 Relay ──────────────────►│10│ GPIO27
+   Dosing Pump IN1 ────────────►│8│ GPIO25
+   Dosing Pump IN2 ────────────►│7│ GPIO33
+
+   Display Interface:
+   LCD CS ─────────────────────►│23│ GPIO15
+   LCD A0 ─────────────────────►│24│ GPIO2
+   LCD Reset ──────────────────►│25│ GPIO0
+   LCD E ──────────────────────►│27│ GPIO16
+   LCD R/W ────────────────────►│28│ GPIO17
+   LCD PSB ────────────────────►│30│ GPIO18
+   Encoder DT ─────────────────►│14│ GPIO13
+   Encoder CLK ────────────────►│11│ GPIO14
+   Encoder Switch ─────────────►│37│ GPIO23
 ```
 
 ## Detailed Wiring
@@ -101,7 +133,7 @@ Relay Module     ESP32        Device
 │  IN2     │ ─── GPIO 27     [CO2 Solenoid]
 │          │
 │  COM1    │ ─┐
-│  NO1     │ ─┤──── Heater Power Control
+│  NO1     │ ─┤──── Heater Power Control (240V AC 🇦🇺)
 │  NC1     │ ─┘
 │          │
 │  COM2    │ ─┐
@@ -111,6 +143,60 @@ Relay Module     ESP32        Device
 
 Note: Use COM and NO (Normally Open) for safety
       Device is OFF when ESP32 is off/crashed
+      
+⚠️ Australian Electrical Safety (AS/NZS 3000:2018):
+   - 240V AC circuits MUST have RCD protection (30mA)
+   - Use IP-rated enclosures near water
+   - Licensed electrician required for AC wiring
+```
+
+### Dosing Pump (L298N Motor Driver)
+```
+L298N Module     ESP32        Pump Motor
+┌──────────┐
+│  +12V    │ ─── 12V Supply
+│  GND     │ ─── GND (common with ESP32)
+│  +5V     │ ─── (leave disconnected or use for ESP32 5V)
+│  IN1     │ ─── GPIO 25
+│  IN2     │ ─── GPIO 33
+│  ENA     │ ─── 5V (or PWM from ESP32)
+│          │
+│  OUT1    │ ─┐
+│  OUT2    │ ─┤──── Dosing Pump Motor (12V DC)
+└──────────┘
+
+Note: IN1/IN2 control direction (forward/reverse/brake)
+      ENA enables motor (HIGH = enabled)
+```
+
+### Display (Ender 3 Pro LCD12864)
+```
+LCD12864         ESP32
+┌────────┐
+│  CS    │ ───── GPIO 15 (Chip Select)
+│  A0    │ ───── GPIO 2 (Register Select)
+│  RST   │ ───── GPIO 0 (Reset)
+│  E     │ ───── GPIO 16 (Enable)
+│  R/W   │ ───── GPIO 17 (Read/Write)
+│  PSB   │ ───── GPIO 18 (Mode: HIGH=parallel)
+│  VCC   │ ───── 5V
+│  GND   │ ───── GND
+│  BLA   │ ───── 5V (backlight anode)
+│  BLK   │ ───── GND (backlight cathode)
+└────────┘
+
+Rotary Encoder   ESP32
+┌────────┐
+│  DT    │ ───── GPIO 13 (Data)
+│  CLK   │ ───── GPIO 14 (Clock)
+│  SW    │ ───── GPIO 23 (Switch/Button)
+│  +     │ ───── 3.3V
+│  GND   │ ───── GND
+└────────┘
+
+Note: ST7920 controller, 128x64 pixels
+      Rotary encoder has internal pullups
+      Do NOT connect SD card slot (not implemented)
 ```
 
 ## Power Considerations
@@ -178,8 +264,9 @@ You can use these alternative GPIOs:
 
 ## Modifying Pin Configuration
 
-To change pins, edit `ConfigManager.h` default constructor:
+To change pins, edit the appropriate header files:
 
+### Core System Pins (`ConfigManager.h`)
 ```cpp
 SystemConfig() {
     // ... other settings ...
@@ -190,6 +277,27 @@ SystemConfig() {
     heaterRelayPin = 26;    // Any digital output pin
     co2RelayPin = 27;       // Any digital output pin
 }
+```
+
+### Display Pins (`DisplayManager.h`)
+```cpp
+// ST7920 LCD pins
+#define LCD_CS 15      // Chip select
+#define LCD_A0 2       // Register select (RS)
+#define LCD_RESET 0    // Reset
+#define LCD_E 16       // Enable
+#define LCD_RW 17      // Read/write
+#define LCD_PSB 18     // Parallel/serial select
+
+// Rotary encoder pins
+#define ENC_DT 13      // Data
+#define ENC_CLK 14     // Clock
+#define ENC_SW 23      // Switch/button
+```
+
+### Dosing Pump Pins (`main.cpp`)
+```cpp
+dosingPump = new DosingPump(25, 33, 1);  // IN1, IN2, channel
 ```
 
 Then rebuild and upload firmware.
