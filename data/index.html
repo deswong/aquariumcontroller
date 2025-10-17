@@ -1,0 +1,2720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aquarium Controller</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .sensor-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .sensor-box h3 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .sensor-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .sensor-unit {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .control-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .control-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-on {
+            background: #4caf50;
+            box-shadow: 0 0 10px #4caf50;
+        }
+        
+        .status-off {
+            background: #f44336;
+        }
+        
+        .alert {
+            background: #ff9800;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert.show {
+            display: block;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .calibration-steps {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        
+        .calibration-steps h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .calibration-steps ol {
+            margin-left: 20px;
+        }
+        
+        .calibration-steps li {
+            margin: 10px 0;
+        }
+        
+        .control-group small {
+            display: block;
+            color: #666;
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+        
+        .btn-primary {
+            background: #2196F3;
+        }
+        
+        .btn-primary:hover {
+            background: #1976D2;
+        }
+        
+        /* Water Change Styles */
+        .phase-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .phase-steps {
+            display: flex;
+            justify-content: space-between;
+            margin: 30px 0;
+            position: relative;
+        }
+        
+        .phase-step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            padding: 10px;
+        }
+        
+        .phase-step::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 50%;
+            height: 2px;
+            background: #ddd;
+            z-index: 0;
+        }
+        
+        .phase-step:first-child::before {
+            display: none;
+        }
+        
+        .phase-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #ddd;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .phase-step.active .phase-circle {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);
+        }
+        
+        .phase-step.completed .phase-circle {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .phase-step.completed::before {
+            background: #4caf50;
+        }
+        
+        .schedule-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .schedule-box {
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .schedule-box h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .schedule-box .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .overdue {
+            color: #f44336 !important;
+        }
+        
+        .water-change-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .water-change-controls .btn {
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .history-table th,
+        .history-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .history-table th {
+            background: #667eea;
+            color: white;
+        }
+        
+        .history-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        /* Pattern Learning Styles */
+        .pattern-status,
+        .seasonal-info,
+        .anomalies-section,
+        .pattern-chart,
+        .pattern-config {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .status-grid,
+        .season-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .status-box,
+        .season-box {
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+        }
+        
+        .status-box h4,
+        .season-box h4 {
+            margin: 0 0 10px 0;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .status-box .value,
+        .season-box .value {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #4ade80;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+        
+        .season-icon {
+            font-size: 3em;
+            margin: 10px 0;
+        }
+        
+        .anomaly-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .anomaly-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .anomaly-table th,
+        .anomaly-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .anomaly-table th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .anomaly-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .severity-low {
+            color: #fbbf24;
+            font-weight: bold;
+        }
+        
+        .severity-medium {
+            color: #f97316;
+            font-weight: bold;
+        }
+        
+        .severity-high {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        
+        .severity-critical {
+            color: #dc2626;
+            font-weight: bold;
+            background: #fee2e2;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+        
+        .chart-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .chart-container {
+            min-height: 300px;
+            position: relative;
+        }
+        
+        .chart-text-view {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            white-space: pre;
+            overflow-x: auto;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .threshold-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 0.85em;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+        }
+        
+        /* Dosing Pump Styles */
+        .calibration-step {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .calibration-step p {
+            margin: 10px 0;
+        }
+        
+        #dose-history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        #dose-history-table th,
+        #dose-history-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        #dose-history-table th {
+            background: #f3f4f6;
+            font-weight: 600;
+        }
+        
+        #dose-history-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .status-success {
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        .status-failed {
+            color: #ef4444;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐠 Aquarium Controller</h1>
+        
+        <div id="alert" class="alert"></div>
+        
+        <!-- Sensor Readings -->
+        <div class="card">
+            <h2>📊 Live Sensor Readings</h2>
+            <div class="sensor-grid">
+                <div class="sensor-box">
+                    <h3>TEMPERATURE</h3>
+                    <div class="sensor-value" id="temp">--</div>
+                    <div class="sensor-unit">°C</div>
+                </div>
+                <div class="sensor-box">
+                    <h3>pH LEVEL</h3>
+                    <div class="sensor-value" id="ph">--</div>
+                    <div class="sensor-unit">pH</div>
+                </div>
+                <div class="sensor-box">
+                    <h3>TDS</h3>
+                    <div class="sensor-value" id="tds">--</div>
+                    <div class="sensor-unit">ppm</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Device Status -->
+        <div class="card">
+            <h2>🔌 Device Status</h2>
+            <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+                <div>
+                    <span class="status-indicator" id="heater-status"></span>
+                    <strong>Heater:</strong> <span id="heater-state">OFF</span>
+                </div>
+                <div>
+                    <span class="status-indicator" id="co2-status"></span>
+                    <strong>CO2 Solenoid:</strong> <span id="co2-state">OFF</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Control Tabs -->
+        <div class="card">
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('control')">⚙️ Control</button>
+                <button class="tab" onclick="showTab('waterchange')">💧 Water Change</button>
+                <button class="tab" onclick="showTab('pattern')">🧠 Pattern Learning</button>
+                <button class="tab" onclick="showTab('dosing')">💊 Dosing Pump</button>
+                <button class="tab" onclick="showTab('calibration')">🔬 pH Calibration</button>
+                <button class="tab" onclick="showTab('settings')">🔧 Settings</button>
+            </div>
+            
+            <!-- Control Tab -->
+            <div id="control-tab" class="tab-content active">
+                <h2>Control Settings</h2>
+                
+                <h3 style="margin-top: 20px;">🌡️ Temperature Control</h3>
+                <div class="control-group">
+                    <label>Temperature Target (°C)</label>
+                    <input type="number" id="temp-target" step="0.1" min="20" max="32" value="25.0">
+                    <small style="color: #888; font-size: 0.9em; display: block; margin-top: 5px;">
+                        Target water temperature for heater control
+                    </small>
+                </div>
+                <div class="control-group">
+                    <label>Temperature Safety Max (°C)</label>
+                    <input type="number" id="temp-safety-max" step="0.1" min="25" max="35" value="30.0">
+                    <small style="color: #888; font-size: 0.9em; display: block; margin-top: 5px;">
+                        ⚠️ Emergency cutoff temperature - heater will shut down if exceeded
+                    </small>
+                </div>
+                
+                <h3 style="margin-top: 20px;">🧪 pH Control</h3>
+                <div class="control-group">
+                    <label>pH Target</label>
+                    <input type="number" id="ph-target" step="0.1" min="6.0" max="8.0" value="6.8">
+                    <small style="color: #888; font-size: 0.9em; display: block; margin-top: 5px;">
+                        Target pH for CO2 injection control
+                    </small>
+                </div>
+                <div class="control-group">
+                    <label>pH Safety Minimum</label>
+                    <input type="number" id="ph-safety-min" step="0.1" min="5.0" max="7.0" value="6.0">
+                    <small style="color: #888; font-size: 0.9em; display: block; margin-top: 5px;">
+                        ⚠️ Emergency cutoff - CO2 will shut down if pH drops below this
+                    </small>
+                </div>
+                
+                <button class="btn" onclick="updateTargets()">💾 Save Control Settings</button>
+                <button class="btn btn-danger" onclick="emergencyStop()" style="margin-left: 10px;">🛑 Emergency Stop</button>
+                <button class="btn btn-success" onclick="clearEmergency()" style="margin-left: 10px;">✅ Clear Emergency</button>
+            </div>
+            
+            <!-- Water Change Tab -->
+            <div id="waterchange-tab" class="tab-content">
+                <h2>💧 Water Change Assistant</h2>
+                
+                <!-- Current Status -->
+                <div class="phase-indicator">
+                    <div>
+                        <h3 style="margin: 0 0 5px 0;">Current Status</h3>
+                        <p id="wc-phase-desc" style="margin: 0; color: #666;">Loading...</p>
+                    </div>
+                    <div>
+                        <span id="wc-elapsed" style="font-size: 24px; font-weight: bold;">--</span>
+                    </div>
+                </div>
+                
+                <!-- Phase Progress -->
+                <div class="phase-steps">
+                    <div class="phase-step" id="phase-0">
+                        <div class="phase-circle">1</div>
+                        <div>Prepare</div>
+                    </div>
+                    <div class="phase-step" id="phase-1">
+                        <div class="phase-circle">2</div>
+                        <div>Drain</div>
+                    </div>
+                    <div class="phase-step" id="phase-2">
+                        <div class="phase-circle">3</div>
+                        <div>Drained</div>
+                    </div>
+                    <div class="phase-step" id="phase-3">
+                        <div class="phase-circle">4</div>
+                        <div>Fill</div>
+                    </div>
+                    <div class="phase-step" id="phase-4">
+                        <div class="phase-circle">5</div>
+                        <div>Stabilize</div>
+                    </div>
+                    <div class="phase-step" id="phase-5">
+                        <div class="phase-circle">✓</div>
+                        <div>Complete</div>
+                    </div>
+                </div>
+                
+                <!-- Controls -->
+                <div class="water-change-controls">
+                    <button class="btn btn-success" onclick="startWaterChange()" id="wc-start-btn">🚀 Start Water Change</button>
+                    <button class="btn btn-primary" onclick="advancePhase()" id="wc-advance-btn" disabled>➡️ Next Phase</button>
+                    <button class="btn btn-danger" onclick="cancelWaterChange()" id="wc-cancel-btn" disabled>❌ Cancel</button>
+                </div>
+                
+                <!-- Schedule Info -->
+                <div class="card">
+                    <h3>📅 Schedule Information</h3>
+                    <div class="schedule-info">
+                        <div class="schedule-box">
+                            <h4>Tank Volume</h4>
+                            <div class="value" id="wc-tank-volume">--</div>
+                            <div>gallons</div>
+                        </div>
+                        <div class="schedule-box">
+                            <h4>Scheduled Volume</h4>
+                            <div class="value" id="wc-scheduled-volume">--</div>
+                            <div>gallons</div>
+                        </div>
+                        <div class="schedule-box">
+                            <h4>Last Change</h4>
+                            <div class="value" id="wc-days-since">--</div>
+                            <div>days ago</div>
+                        </div>
+                        <div class="schedule-box">
+                            <h4>Next Change</h4>
+                            <div class="value" id="wc-days-until">--</div>
+                            <div>days</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Schedule Settings -->
+                    <h3 style="margin-top: 30px;">⚙️ Schedule Settings</h3>
+                    <div class="control-group">
+                        <label>Schedule</label>
+                        <select id="wc-schedule">
+                            <option value="0">None</option>
+                            <option value="1">Daily</option>
+                            <option value="7">Weekly</option>
+                            <option value="14">Bi-weekly</option>
+                            <option value="30">Monthly</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Volume Percentage</label>
+                        <input type="number" id="wc-volume-percent" step="5" min="10" max="50" value="25">
+                        <small>10-50% of tank volume</small>
+                    </div>
+                    <button class="btn" onclick="saveWaterChangeSchedule()">💾 Save Schedule</button>
+                </div>
+                
+                <!-- History -->
+                <div class="card">
+                    <h3>📊 Recent Water Changes</h3>
+                    <table class="history-table" id="wc-history-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Volume (gal)</th>
+                                <th>Temp Change</th>
+                                <th>pH Change</th>
+                                <th>Duration (min)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wc-history-body">
+                            <tr><td colspan="5" style="text-align: center;">Loading history...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Statistics -->
+                <div class="card">
+                    <h3>📈 Statistics</h3>
+                    <div class="schedule-info">
+                        <div class="schedule-box">
+                            <h4>Total Changes</h4>
+                            <div class="value" id="wc-stat-total">--</div>
+                        </div>
+                        <div class="schedule-box">
+                            <h4>This Month</h4>
+                            <div class="value" id="wc-stat-month">--</div>
+                        </div>
+                        <div class="schedule-box">
+                            <h4>Volume This Month</h4>
+                            <div class="value" id="wc-stat-volume">--</div>
+                            <div>gallons</div>
+                        </div>
+                        <div class="schedule-box">
+                            <h4>Average Volume</h4>
+                            <div class="value" id="wc-stat-avg">--</div>
+                            <div>gallons</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pattern Learning Tab -->
+            <div id="pattern-tab" class="tab-content">
+                <h2>🧠 Pattern Learning & Anomaly Detection</h2>
+                
+                <!-- Status Overview -->
+                <div class="pattern-status">
+                    <h3>System Status</h3>
+                    <div class="status-grid">
+                        <div class="status-box">
+                            <h4>Learning Status</h4>
+                            <div class="value" id="ml-status">Loading...</div>
+                        </div>
+                        <div class="status-box">
+                            <h4>Confidence</h4>
+                            <div class="value" id="ml-confidence">--</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="ml-confidence-bar"></div>
+                            </div>
+                        </div>
+                        <div class="status-box">
+                            <h4>Days Learning</h4>
+                            <div class="value" id="ml-days">--</div>
+                            <div>days</div>
+                        </div>
+                        <div class="status-box">
+                            <h4>Total Samples</h4>
+                            <div class="value" id="ml-samples">--</div>
+                            <div>readings</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Seasonal Information -->
+                <div class="seasonal-info">
+                    <h3>🌡️ Seasonal Analysis</h3>
+                    <div class="season-grid">
+                        <div class="season-box">
+                            <h4>Current Season</h4>
+                            <div class="season-icon" id="ml-season-icon">❓</div>
+                            <div class="value" id="ml-season">--</div>
+                        </div>
+                        <div class="season-box">
+                            <h4>Avg Ambient</h4>
+                            <div class="value" id="ml-ambient">--</div>
+                            <div>°C (7-day avg)</div>
+                        </div>
+                        <div class="season-box">
+                            <h4>Avg Water</h4>
+                            <div class="value" id="ml-water">--</div>
+                            <div>°C</div>
+                        </div>
+                        <div class="season-box">
+                            <h4>Avg pH</h4>
+                            <div class="value" id="ml-ph">--</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Anomalies -->
+                <div class="anomalies-section">
+                    <h3>⚠️ Recent Anomalies</h3>
+                    <div class="anomaly-summary">
+                        <span>Total Detected: <strong id="ml-total-anomalies">--</strong></span>
+                        <button class="btn btn-small" onclick="clearAnomalies()">Clear History</button>
+                    </div>
+                    <table class="anomaly-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Type</th>
+                                <th>Actual</th>
+                                <th>Expected</th>
+                                <th>Deviation</th>
+                                <th>Severity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ml-anomaly-list">
+                            <tr><td colspan="6" style="text-align: center;">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Hourly Pattern Chart -->
+                <div class="pattern-chart">
+                    <h3>📊 24-Hour Pattern Overview</h3>
+                    <div class="chart-controls">
+                        <button class="btn btn-small" onclick="updatePatternChart('temp')">Temperature</button>
+                        <button class="btn btn-small" onclick="updatePatternChart('ph')">pH</button>
+                        <button class="btn btn-small" onclick="updatePatternChart('tds')">TDS</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="pattern-chart-canvas"></canvas>
+                        <div id="pattern-chart-text" class="chart-text-view"></div>
+                    </div>
+                </div>
+                
+                <!-- Configuration -->
+                <div class="pattern-config">
+                    <h3>⚙️ Configuration</h3>
+                    <div class="config-grid">
+                        <div class="control-group">
+                            <label>
+                                <input type="checkbox" id="ml-enabled" onchange="updateMLConfig()">
+                                Enable Pattern Learning
+                            </label>
+                        </div>
+                        <div class="control-group">
+                            <label>
+                                <input type="checkbox" id="ml-auto-adapt" onchange="updateMLConfig()">
+                                Auto Seasonal Adaptation
+                            </label>
+                        </div>
+                        <div class="control-group">
+                            <label>
+                                <input type="checkbox" id="ml-alerts" onchange="updateMLConfig()">
+                                Send Anomaly Alerts
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <h4>Anomaly Detection Thresholds (Sigma)</h4>
+                    <div class="threshold-grid">
+                        <div class="control-group">
+                            <label>Temperature Threshold</label>
+                            <input type="number" id="ml-temp-thresh" step="0.1" min="1.5" max="5.0" value="2.5">
+                            <small>Higher = less sensitive (default: 2.5σ)</small>
+                        </div>
+                        <div class="control-group">
+                            <label>pH Threshold</label>
+                            <input type="number" id="ml-ph-thresh" step="0.1" min="1.5" max="5.0" value="2.0">
+                            <small>Higher = less sensitive (default: 2.0σ)</small>
+                        </div>
+                        <div class="control-group">
+                            <label>TDS Threshold</label>
+                            <input type="number" id="ml-tds-thresh" step="0.1" min="1.5" max="5.0" value="2.5">
+                            <small>Higher = less sensitive (default: 2.5σ)</small>
+                        </div>
+                    </div>
+                    
+                    <button class="btn" onclick="saveMLConfig()">Save Configuration</button>
+                    <button class="btn btn-warning" onclick="resetPatterns()" style="margin-left: 10px;">🔄 Reset All Patterns</button>
+                </div>
+            </div>
+            
+            <!-- Dosing Pump Tab -->
+            <div id="dosing-tab" class="tab-content">
+                <h2>💊 Fertilizer Dosing Pump</h2>
+                
+                <!-- Status Dashboard -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3>📊 Status</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="info-box">
+                            <div class="info-label">Pump State</div>
+                            <div class="info-value" id="dose-state">--</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Calibration</div>
+                            <div class="info-value" id="dose-calibrated">--</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Flow Rate</div>
+                            <div class="info-value" id="dose-flow-rate">--</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Daily Volume</div>
+                            <div class="info-value" id="dose-daily-volume">--</div>
+                        </div>
+                    </div>
+                    <div id="dose-progress-container" style="margin-top: 15px; display: none;">
+                        <div style="margin-bottom: 5px;">
+                            <span id="dose-progress-text">Dosing: 0%</span>
+                            <span style="float: right;" id="dose-progress-volume">0.0 / 0.0 mL</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="dose-progress-bar" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Calibration Wizard -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3>🔬 Calibration Wizard</h3>
+                    <div id="calibration-wizard">
+                        <div id="cal-step-1" class="calibration-step">
+                            <p><strong>Step 1:</strong> Prepare a graduated container to measure output volume</p>
+                            <div style="margin-top: 15px;">
+                                <label>Calibration Speed:</label>
+                                <input type="range" id="cal-speed" min="50" max="100" value="100" style="width: 200px;">
+                                <span id="cal-speed-value">100%</span>
+                            </div>
+                            <button class="button" onclick="startCalibration()" id="btn-start-cal">Start Calibration</button>
+                        </div>
+                        <div id="cal-step-2" class="calibration-step" style="display: none;">
+                            <p><strong>Step 2:</strong> Pump is running... Collect the output</p>
+                            <p id="cal-timer">Time elapsed: 0 seconds</p>
+                            <button class="button" onclick="stopCalibrationForMeasure()">Stop & Measure</button>
+                            <button class="button button-danger" onclick="cancelCalibration()">Cancel</button>
+                        </div>
+                        <div id="cal-step-3" class="calibration-step" style="display: none;">
+                            <p><strong>Step 3:</strong> Measure the collected volume</p>
+                            <div style="margin-top: 15px;">
+                                <label>Measured Volume (mL):</label>
+                                <input type="number" id="cal-volume" min="0.1" step="0.1" placeholder="e.g., 25.5" style="width: 150px;">
+                            </div>
+                            <div style="margin-top: 15px;">
+                                <label>Duration (seconds):</label>
+                                <input type="number" id="cal-duration" min="1" step="1" readonly style="width: 150px;">
+                            </div>
+                            <button class="button" onclick="finishCalibration()">Finish Calibration</button>
+                            <button class="button button-danger" onclick="cancelCalibration()">Cancel</button>
+                        </div>
+                        <div id="cal-step-4" class="calibration-step" style="display: none;">
+                            <p><strong>✓ Calibration Complete!</strong></p>
+                            <p>Flow Rate: <strong id="cal-result-flow">--</strong> mL/sec</p>
+                            <button class="button" onclick="resetCalibrationWizard()">Calibrate Again</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Manual Controls -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3>🎮 Manual Controls</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                        <div>
+                            <h4>Dose Now</h4>
+                            <label>Volume (mL):</label>
+                            <input type="number" id="manual-volume" min="0.1" max="50" step="0.1" value="5.0" style="width: 100px;">
+                            <label style="margin-left: 10px;">Speed:</label>
+                            <input type="range" id="manual-speed" min="10" max="100" value="100" style="width: 100px;">
+                            <span id="manual-speed-value">100%</span>
+                            <div style="margin-top: 10px;">
+                                <button class="button" onclick="startManualDose()" id="btn-dose-now">Dose Now</button>
+                                <button class="button button-danger" onclick="stopDosing()" id="btn-stop-dose">Stop</button>
+                            </div>
+                        </div>
+                        <div>
+                            <h4>Maintenance</h4>
+                            <label>Duration (sec):</label>
+                            <input type="number" id="maint-duration" min="1" max="60" value="10" style="width: 80px;">
+                            <div style="margin-top: 10px;">
+                                <button class="button" onclick="primePump()">Prime Pump</button>
+                                <button class="button" onclick="backflushPump()">Backflush</button>
+                            </div>
+                            <div style="margin-top: 5px;">
+                                <button class="button" onclick="cleanPump()">Run Cleaning</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button class="button button-danger" onclick="emergencyStop()">🛑 Emergency Stop</button>
+                    </div>
+                </div>
+                
+                <!-- Schedule Configuration -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3>📅 Automated Schedule</h3>
+                    <div style="margin-bottom: 15px;">
+                        <label>
+                            <input type="checkbox" id="schedule-enabled" onchange="updateScheduleFields()">
+                            Enable Automated Dosing
+                        </label>
+                    </div>
+                    <div id="schedule-fields">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div>
+                                <label>Frequency:</label>
+                                <select id="schedule-frequency" onchange="updateCustomDaysField()" style="width: 150px;">
+                                    <option value="manual">Manual Only</option>
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="custom">Custom Interval</option>
+                                </select>
+                            </div>
+                            <div id="custom-days-field" style="display: none;">
+                                <label>Interval (days):</label>
+                                <input type="number" id="schedule-custom-days" min="1" max="30" value="3" style="width: 80px;">
+                            </div>
+                            <div>
+                                <label>Time:</label>
+                                <input type="time" id="schedule-time" value="09:00" style="width: 120px;">
+                            </div>
+                            <div>
+                                <label>Dose Volume (mL):</label>
+                                <input type="number" id="schedule-volume" min="0.1" max="50" step="0.1" value="5.0" style="width: 100px;">
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <p id="schedule-next-dose">Next dose: <strong>--</strong></p>
+                        </div>
+                        <button class="button" onclick="saveSchedule()">Save Schedule</button>
+                    </div>
+                </div>
+                
+                <!-- Safety Configuration -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3>🛡️ Safety Limits</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div>
+                            <label>Max Dose per Operation (mL):</label>
+                            <input type="number" id="safety-max-dose" min="1" max="100" value="50" style="width: 100px;">
+                        </div>
+                        <div>
+                            <label>Max Daily Volume (mL):</label>
+                            <input type="number" id="safety-max-daily" min="10" max="500" value="200" style="width: 100px;">
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <label>
+                            <input type="checkbox" id="safety-enabled" checked>
+                            Enable Safety Limits
+                        </label>
+                    </div>
+                    <button class="button" onclick="saveSafetyLimits()">Save Safety Settings</button>
+                </div>
+                
+                <!-- Dosing History -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3>📊 Recent Dosing History</h3>
+                    <div style="overflow-x: auto;">
+                        <table id="dose-history-table">
+                            <thead>
+                                <tr>
+                                    <th>Date/Time</th>
+                                    <th>Volume (mL)</th>
+                                    <th>Duration (s)</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dose-history-body">
+                                <tr><td colspan="5">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Statistics -->
+                <div class="card">
+                    <h3>📈 Statistics</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
+                        <div class="info-box">
+                            <div class="info-label">Total Doses</div>
+                            <div class="info-value" id="stats-total-doses">--</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Total Volume</div>
+                            <div class="info-value" id="stats-total-volume">--</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Average Dose</div>
+                            <div class="info-value" id="stats-avg-volume">--</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Total Runtime</div>
+                            <div class="info-value" id="stats-runtime">--</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Days Since Cal.</div>
+                            <div class="info-value" id="stats-days-since-cal">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Calibration Tab -->
+            <div id="calibration-tab" class="tab-content">
+                <h2>pH Sensor Calibration</h2>
+                
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3>📊 Current Readings</h3>
+                    <p>Ambient Temperature: <strong id="cal-ambient-temp">--</strong>°C</p>
+                    <p>Water Temperature: <strong id="cal-water-temp">--</strong>°C</p>
+                    <p>Current pH: <strong id="cal-current-ph">--</strong></p>
+                    <p>Status: <strong id="cal-status">Not calibrating</strong></p>
+                </div>
+                
+                <div class="calibration-steps">
+                    <h3>Calibration Instructions</h3>
+                    <ol>
+                        <li>Click "Start Calibration" to begin (switches to ambient temperature mode)</li>
+                        <li>Measure your buffer solution temperature with a thermometer</li>
+                        <li>Enter the solution values below and calibrate each point</li>
+                        <li>Rinse sensor with distilled water between each solution</li>
+                        <li>Click "Save Calibration" when all points are calibrated</li>
+                        <li>Click "End Calibration" to return to normal operation</li>
+                    </ol>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <button class="btn btn-primary" onclick="startCalibration()">🚀 Start Calibration</button>
+                    <button class="btn btn-success" onclick="endCalibration()">✓ End Calibration</button>
+                    <button class="btn btn-danger" onclick="resetCalibration()">🔄 Reset Calibration</button>
+                </div>
+                
+                <!-- Calibration Point 1 -->
+                <div class="card">
+                    <h3>Point 1: Acidic Buffer (pH 4.0)</h3>
+                    <div class="control-group">
+                        <label>Solution pH (nominal)</label>
+                        <input type="number" id="cal1-ph" value="4.0" step="0.01" min="0" max="14">
+                    </div>
+                    <div class="control-group">
+                        <label>Solution Temperature (°C)</label>
+                        <input type="number" id="cal1-temp" value="25.0" step="0.1" min="0" max="50">
+                        <small>Measure the actual buffer solution temperature</small>
+                    </div>
+                    <div class="control-group">
+                        <label>Reference pH at 25°C (optional)</label>
+                        <input type="number" id="cal1-ref" value="4.01" step="0.01" min="0" max="14">
+                        <small>Check your buffer bottle for the exact pH value</small>
+                    </div>
+                    <button class="btn" onclick="calibrateCustomPoint(1)">Calibrate Point 1</button>
+                </div>
+                
+                <!-- Calibration Point 2 -->
+                <div class="card">
+                    <h3>Point 2: Neutral Buffer (pH 7.0)</h3>
+                    <div class="control-group">
+                        <label>Solution pH (nominal)</label>
+                        <input type="number" id="cal2-ph" value="7.0" step="0.01" min="0" max="14">
+                    </div>
+                    <div class="control-group">
+                        <label>Solution Temperature (°C)</label>
+                        <input type="number" id="cal2-temp" value="25.0" step="0.1" min="0" max="50">
+                        <small>Measure the actual buffer solution temperature</small>
+                    </div>
+                    <div class="control-group">
+                        <label>Reference pH at 25°C (optional)</label>
+                        <input type="number" id="cal2-ref" value="7.00" step="0.01" min="0" max="14">
+                        <small>Check your buffer bottle for the exact pH value</small>
+                    </div>
+                    <button class="btn" onclick="calibrateCustomPoint(2)">Calibrate Point 2</button>
+                </div>
+                
+                <!-- Calibration Point 3 -->
+                <div class="card">
+                    <h3>Point 3: Alkaline Buffer (pH 10.0)</h3>
+                    <div class="control-group">
+                        <label>Solution pH (nominal)</label>
+                        <input type="number" id="cal3-ph" value="10.0" step="0.01" min="0" max="14">
+                    </div>
+                    <div class="control-group">
+                        <label>Solution Temperature (°C)</label>
+                        <input type="number" id="cal3-temp" value="25.0" step="0.1" min="0" max="50">
+                        <small>Measure the actual buffer solution temperature</small>
+                    </div>
+                    <div class="control-group">
+                        <label>Reference pH at 25°C (optional)</label>
+                        <input type="number" id="cal3-ref" value="10.01" step="0.01" min="0" max="14">
+                        <small>Check your buffer bottle for the exact pH value</small>
+                    </div>
+                    <button class="btn" onclick="calibrateCustomPoint(3)">Calibrate Point 3</button>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-success" onclick="saveCalibration()">💾 Save Calibration to NVS</button>
+                </div>
+            </div>
+            
+            <!-- Settings Tab -->
+            <div id="settings-tab" class="tab-content">
+                <h2>WiFi & MQTT Settings</h2>
+                <div class="control-group">
+                    <label>WiFi SSID</label>
+                    <input type="text" id="wifi-ssid">
+                </div>
+                <div class="control-group">
+                    <label>WiFi Password</label>
+                    <input type="password" id="wifi-pass">
+                </div>
+                <div class="control-group">
+                    <label>MQTT Server</label>
+                    <input type="text" id="mqtt-server">
+                </div>
+                <div class="control-group">
+                    <label>MQTT Port</label>
+                    <input type="number" id="mqtt-port" value="1883">
+                </div>
+                <div class="control-group">
+                    <label>MQTT Username</label>
+                    <input type="text" id="mqtt-user">
+                </div>
+                <div class="control-group">
+                    <label>MQTT Password</label>
+                    <input type="password" id="mqtt-pass">
+                </div>
+                <div class="control-group">
+                    <label>MQTT Topic Prefix</label>
+                    <input type="text" id="mqtt-topic-prefix" placeholder="aquarium">
+                    <small style="color: #888; font-size: 0.9em; display: block; margin-top: 5px;">
+                        📝 Topics will be: {prefix}/temperature, {prefix}/ph, etc.
+                    </small>
+                </div>
+                
+                <h3 style="margin-top: 20px;">📤 MQTT Publish Options</h3>
+                <div class="control-group">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="mqtt-publish-individual" checked style="margin-right: 10px; width: auto;">
+                        <span>Publish Individual Topics</span>
+                    </label>
+                    <small style="color: #888; font-size: 0.9em; display: block; margin-top: 5px;">
+                        📊 Separate topics: {prefix}/temperature, {prefix}/ph, etc. (Best for Home Assistant)
+                    </small>
+                </div>
+                <div class="control-group">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="mqtt-publish-json" style="margin-right: 10px; width: auto;">
+                        <span>Publish JSON Payload</span>
+                    </label>
+                    <small style="color: #888; font-size: 0.9em; display: block; margin-top: 5px;">
+                        📦 All data in one topic: {prefix}/data as JSON (Best for data logging)
+                    </small>
+                </div>
+                
+                <h2 style="margin-top: 30px;">⏰ Time & NTP Settings</h2>
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3>Current Time Status</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="info-box">
+                            <div class="info-label">Time Sync Status</div>
+                            <div class="info-value" id="time-sync-status">--</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Current Time</div>
+                            <div class="info-value" id="current-local-time">--</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label>NTP Server</label>
+                    <input type="text" id="ntp-server" value="pool.ntp.org" placeholder="pool.ntp.org">
+                    <small>NTP server for time synchronization</small>
+                </div>
+                <div class="control-group">
+                    <label>GMT Offset (hours)</label>
+                    <select id="gmt-offset">
+                        <option value="-43200">UTC-12</option>
+                        <option value="-39600">UTC-11</option>
+                        <option value="-36000">UTC-10</option>
+                        <option value="-32400">UTC-9</option>
+                        <option value="-28800">UTC-8 (PST)</option>
+                        <option value="-25200">UTC-7 (MST)</option>
+                        <option value="-21600">UTC-6 (CST)</option>
+                        <option value="-18000">UTC-5 (EST)</option>
+                        <option value="-14400">UTC-4</option>
+                        <option value="-10800">UTC-3</option>
+                        <option value="-7200">UTC-2</option>
+                        <option value="-3600">UTC-1</option>
+                        <option value="0" selected>UTC+0 (GMT)</option>
+                        <option value="3600">UTC+1 (CET)</option>
+                        <option value="7200">UTC+2</option>
+                        <option value="10800">UTC+3</option>
+                        <option value="14400">UTC+4</option>
+                        <option value="18000">UTC+5</option>
+                        <option value="19800">UTC+5:30 (IST)</option>
+                        <option value="21600">UTC+6</option>
+                        <option value="25200">UTC+7</option>
+                        <option value="28800">UTC+8 (SGT)</option>
+                        <option value="32400">UTC+9 (JST)</option>
+                        <option value="36000">UTC+10 (AEST)</option>
+                        <option value="39600">UTC+11</option>
+                        <option value="43200">UTC+12 (NZST)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Daylight Saving Time</label>
+                    <select id="dst-offset">
+                        <option value="0" selected>No DST</option>
+                        <option value="3600">+1 hour</option>
+                    </select>
+                </div>
+                
+                <h2 style="margin-top: 30px;">⚙️ Hardware Pin Configuration</h2>
+                <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 15px; margin-bottom: 15px;">
+                    <strong>⚠️ Warning:</strong> Changing pin assignments requires hardware knowledge. Incorrect settings may damage your ESP32 or sensors. Only modify if you know what you're doing!
+                </div>
+                
+                <h3>Sensor Pins (Analog Inputs)</h3>
+                <div class="control-group">
+                    <label>Water Temperature Sensor Pin (DS18B20)</label>
+                    <input type="number" id="temp-sensor-pin" min="0" max="39" value="4">
+                    <small>GPIO pin for water temperature sensor (default: 4)</small>
+                </div>
+                <div class="control-group">
+                    <label>Ambient Temperature Sensor Pin (DS18B20)</label>
+                    <input type="number" id="ambient-sensor-pin" min="0" max="39" value="5">
+                    <small>GPIO pin for ambient temperature sensor (default: 5)</small>
+                </div>
+                <div class="control-group">
+                    <label>pH Sensor Pin (Analog)</label>
+                    <input type="number" id="ph-sensor-pin" min="32" max="39" value="34">
+                    <small>ADC pin for pH sensor (use GPIO 32-39, default: 34)</small>
+                </div>
+                <div class="control-group">
+                    <label>TDS Sensor Pin (Analog)</label>
+                    <input type="number" id="tds-sensor-pin" min="32" max="39" value="35">
+                    <small>ADC pin for TDS sensor (use GPIO 32-39, default: 35)</small>
+                </div>
+                
+                <h3>Control Pins (Digital Outputs)</h3>
+                <div class="control-group">
+                    <label>Heater Relay Pin</label>
+                    <input type="number" id="heater-relay-pin" min="0" max="33" value="26">
+                    <small>GPIO pin for heater relay control (default: 26)</small>
+                </div>
+                <div class="control-group">
+                    <label>CO2 Solenoid Relay Pin</label>
+                    <input type="number" id="co2-relay-pin" min="0" max="33" value="27">
+                    <small>GPIO pin for CO2 solenoid relay control (default: 27)</small>
+                </div>
+                
+                <button class="btn" onclick="saveSettings()">💾 Save All Settings</button>
+                <button class="btn" onclick="syncTimeNow()" style="margin-left: 10px;">Sync Time Now</button>
+                <button class="btn btn-danger" onclick="restartDevice()" style="margin-left: 10px;">Restart Device</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let ws = null;
+        
+        function connectWebSocket() {
+            ws = new WebSocket('ws://' + window.location.hostname + '/ws');
+            
+            ws.onopen = function() {
+                console.log('WebSocket connected');
+                showAlert('Connected to controller', 'success');
+            };
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                updateDisplay(data);
+            };
+            
+            ws.onclose = function() {
+                console.log('WebSocket disconnected');
+                showAlert('Disconnected from controller', 'error');
+                setTimeout(connectWebSocket, 3000);
+            };
+            
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+        }
+        
+        function updateDisplay(data) {
+            if (data.temperature !== undefined) {
+                document.getElementById('temp').textContent = data.temperature.toFixed(2);
+            }
+            if (data.ph !== undefined) {
+                document.getElementById('ph').textContent = data.ph.toFixed(2);
+            }
+            if (data.tds !== undefined) {
+                document.getElementById('tds').textContent = Math.round(data.tds);
+            }
+            if (data.heaterState !== undefined) {
+                const heaterStatus = document.getElementById('heater-status');
+                const heaterState = document.getElementById('heater-state');
+                heaterStatus.className = 'status-indicator ' + (data.heaterState ? 'status-on' : 'status-off');
+                heaterState.textContent = data.heaterState ? 'ON' : 'OFF';
+            }
+            if (data.co2State !== undefined) {
+                const co2Status = document.getElementById('co2-status');
+                const co2State = document.getElementById('co2-state');
+                co2Status.className = 'status-indicator ' + (data.co2State ? 'status-on' : 'status-off');
+                co2State.textContent = data.co2State ? 'ON' : 'OFF';
+            }
+            if (data.emergency) {
+                showAlert('⚠️ EMERGENCY STOP ACTIVE!', 'error');
+            }
+        }
+        
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = 'alert show';
+            setTimeout(() => {
+                alert.className = 'alert';
+            }, 5000);
+        }
+        
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+        }
+        
+        async function updateTargets() {
+            const tempTarget = document.getElementById('temp-target').value;
+            const tempSafetyMax = document.getElementById('temp-safety-max').value;
+            const phTarget = document.getElementById('ph-target').value;
+            const phSafetyMin = document.getElementById('ph-safety-min').value;
+            
+            const response = await fetch('/api/targets', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    temperature: parseFloat(tempTarget),
+                    tempSafetyMax: parseFloat(tempSafetyMax),
+                    ph: parseFloat(phTarget),
+                    phSafetyMin: parseFloat(phSafetyMin)
+                })
+            });
+            
+            if (response.ok) {
+                showAlert('Control settings updated successfully', 'success');
+            } else {
+                showAlert('Failed to update control settings', 'error');
+            }
+        }
+        
+        async function emergencyStop() {
+            const response = await fetch('/api/emergency', {method: 'POST'});
+            if (response.ok) {
+                showAlert('Emergency stop activated', 'success');
+            }
+        }
+        
+        async function clearEmergency() {
+            const response = await fetch('/api/emergency/clear', {method: 'POST'});
+            if (response.ok) {
+                showAlert('Emergency stop cleared', 'success');
+            }
+        }
+        
+        async function startCalibration() {
+            const response = await fetch('/api/calibrate/start', {method: 'POST'});
+            if (response.ok) {
+                showAlert('✓ Calibration started - Using ambient temperature', 'success');
+                document.getElementById('cal-status').textContent = 'CALIBRATING (ambient temp mode)';
+                document.getElementById('cal-status').style.color = '#ff9800';
+                startCalibrationPolling();
+            }
+        }
+        
+        async function endCalibration() {
+            const response = await fetch('/api/calibrate/end', {method: 'POST'});
+            if (response.ok) {
+                showAlert('✓ Calibration ended - Switched to water temperature', 'success');
+                document.getElementById('cal-status').textContent = 'Not calibrating';
+                document.getElementById('cal-status').style.color = '';
+                stopCalibrationPolling();
+            }
+        }
+        
+        let calibrationInterval = null;
+        
+        function startCalibrationPolling() {
+            // Update calibration readings every 500ms
+            calibrationInterval = setInterval(updateCalibrationReadings, 500);
+        }
+        
+        function stopCalibrationPolling() {
+            if (calibrationInterval) {
+                clearInterval(calibrationInterval);
+                calibrationInterval = null;
+            }
+        }
+        
+        async function updateCalibrationReadings() {
+            try {
+                const response = await fetch('/api/calibrate/voltage');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('cal-ambient-temp').textContent = data.ambientTemp.toFixed(1);
+                    document.getElementById('cal-water-temp').textContent = data.waterTemp.toFixed(1);
+                    document.getElementById('cal-current-ph').textContent = data.currentPH.toFixed(2);
+                    
+                    // Auto-fill temperature fields with ambient temp
+                    if (data.calibrating) {
+                        document.getElementById('cal1-temp').value = data.ambientTemp.toFixed(1);
+                        document.getElementById('cal2-temp').value = data.ambientTemp.toFixed(1);
+                        document.getElementById('cal3-temp').value = data.ambientTemp.toFixed(1);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch calibration data:', error);
+            }
+        }
+        
+        async function calibrateCustomPoint(pointNum) {
+            const ph = parseFloat(document.getElementById(`cal${pointNum}-ph`).value);
+            const temp = parseFloat(document.getElementById(`cal${pointNum}-temp`).value);
+            const refPH = parseFloat(document.getElementById(`cal${pointNum}-ref`).value);
+            
+            const response = await fetch('/api/calibrate/point', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    ph: ph,
+                    temp: temp,
+                    refPH: refPH
+                })
+            });
+            
+            if (response.ok) {
+                showAlert(`✓ Point ${pointNum} calibrated: pH ${ph.toFixed(2)} at ${temp.toFixed(1)}°C`, 'success');
+            } else {
+                const result = await response.json();
+                showAlert(`✗ Calibration failed: ${result.message || 'Unknown error'}`, 'error');
+            }
+        }
+        
+        async function calibratePoint(ph) {
+            // Legacy function for backward compatibility
+            const response = await fetch('/api/calibrate/point', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    ph: ph,
+                    temp: 25.0,
+                    refPH: 0
+                })
+            });
+            
+            if (response.ok) {
+                showAlert(`pH ${ph} point calibrated`, 'success');
+            } else {
+                showAlert('Calibration failed', 'error');
+            }
+        }
+        
+        async function saveCalibration() {
+            const response = await fetch('/api/calibrate/save', {method: 'POST'});
+            if (response.ok) {
+                showAlert('Calibration saved', 'success');
+            }
+        }
+        
+        async function resetCalibration() {
+            const response = await fetch('/api/calibrate/reset', {method: 'POST'});
+            if (response.ok) {
+                showAlert('Calibration reset', 'success');
+            }
+        }
+        
+        async function saveSettings() {
+            const settings = {
+                wifiSSID: document.getElementById('wifi-ssid').value,
+                wifiPassword: document.getElementById('wifi-pass').value,
+                mqttServer: document.getElementById('mqtt-server').value,
+                mqttPort: parseInt(document.getElementById('mqtt-port').value),
+                mqttUser: document.getElementById('mqtt-user').value,
+                mqttPassword: document.getElementById('mqtt-pass').value,
+                mqttTopicPrefix: document.getElementById('mqtt-topic-prefix').value || 'aquarium',
+                mqttPublishIndividual: document.getElementById('mqtt-publish-individual').checked,
+                mqttPublishJSON: document.getElementById('mqtt-publish-json').checked,
+                ntpServer: document.getElementById('ntp-server').value,
+                gmtOffsetSec: parseInt(document.getElementById('gmt-offset').value),
+                daylightOffsetSec: parseInt(document.getElementById('dst-offset').value),
+                tempTarget: parseFloat(document.getElementById('temp-target').value),
+                tempSafetyMax: parseFloat(document.getElementById('temp-safety-max').value),
+                phTarget: parseFloat(document.getElementById('ph-target').value),
+                phSafetyMin: parseFloat(document.getElementById('ph-safety-min').value),
+                tempSensorPin: parseInt(document.getElementById('temp-sensor-pin').value),
+                ambientSensorPin: parseInt(document.getElementById('ambient-sensor-pin').value),
+                phSensorPin: parseInt(document.getElementById('ph-sensor-pin').value),
+                tdsSensorPin: parseInt(document.getElementById('tds-sensor-pin').value),
+                heaterRelayPin: parseInt(document.getElementById('heater-relay-pin').value),
+                co2RelayPin: parseInt(document.getElementById('co2-relay-pin').value)
+            };
+            
+            const response = await fetch('/api/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(settings)
+            });
+            
+            if (response.ok) {
+                showAlert('Settings saved. Device will restart.', 'success');
+            } else {
+                showAlert('Failed to save settings', 'error');
+            }
+        }
+        
+        async function updateTimeStatus() {
+            try {
+                const response = await fetch('/api/time/status');
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    document.getElementById('time-sync-status').textContent = 
+                        data.synced ? '✅ Synced' : '⚠️ Not Synced';
+                    document.getElementById('time-sync-status').style.color = 
+                        data.synced ? '#10b981' : '#f59e0b';
+                    document.getElementById('current-local-time').textContent = data.localTime;
+                }
+            } catch (error) {
+                console.error('Failed to fetch time status:', error);
+            }
+        }
+        
+        async function syncTimeNow() {
+            const ntpSettings = {
+                ntpServer: document.getElementById('ntp-server').value,
+                gmtOffset: parseInt(document.getElementById('gmt-offset').value),
+                dstOffset: parseInt(document.getElementById('dst-offset').value)
+            };
+            
+            const response = await fetch('/api/time/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(ntpSettings)
+            });
+            
+            if (response.ok) {
+                showAlert('✓ Time synchronization initiated', 'success');
+                setTimeout(updateTimeStatus, 2000);
+            } else {
+                showAlert('Failed to sync time', 'error');
+            }
+        }
+        
+        async function restartDevice() {
+            if (confirm('Are you sure you want to restart the device?')) {
+                await fetch('/api/restart', {method: 'POST'});
+                showAlert('Device restarting...', 'success');
+            }
+        }
+        
+        // Initialize WebSocket connection
+        connectWebSocket();
+        
+        // Fetch initial settings
+        async function loadSettings() {
+            const response = await fetch('/api/settings');
+            if (response.ok) {
+                const settings = await response.json();
+                document.getElementById('temp-target').value = settings.tempTarget || 25.0;
+                document.getElementById('temp-safety-max').value = settings.tempSafetyMax || 30.0;
+                document.getElementById('ph-target').value = settings.phTarget || 6.8;
+                document.getElementById('ph-safety-min').value = settings.phSafetyMin || 6.0;
+                document.getElementById('wifi-ssid').value = settings.wifiSSID || '';
+                document.getElementById('mqtt-server').value = settings.mqttServer || '';
+                document.getElementById('mqtt-port').value = settings.mqttPort || 1883;
+                document.getElementById('mqtt-user').value = settings.mqttUser || '';
+                document.getElementById('mqtt-topic-prefix').value = settings.mqttTopicPrefix || 'aquarium';
+                document.getElementById('mqtt-publish-individual').checked = settings.mqttPublishIndividual !== false; // Default true
+                document.getElementById('mqtt-publish-json').checked = settings.mqttPublishJSON === true; // Default false
+                
+                // Load NTP settings
+                if (settings.ntpServer) {
+                    document.getElementById('ntp-server').value = settings.ntpServer;
+                }
+                if (settings.gmtOffsetSec !== undefined) {
+                    document.getElementById('gmt-offset').value = settings.gmtOffsetSec;
+                }
+                if (settings.daylightOffsetSec !== undefined) {
+                    document.getElementById('dst-offset').value = settings.daylightOffsetSec;
+                }
+                
+                // Load pin assignments
+                if (settings.tempSensorPin !== undefined) {
+                    document.getElementById('temp-sensor-pin').value = settings.tempSensorPin;
+                }
+                if (settings.ambientSensorPin !== undefined) {
+                    document.getElementById('ambient-sensor-pin').value = settings.ambientSensorPin;
+                }
+                if (settings.phSensorPin !== undefined) {
+                    document.getElementById('ph-sensor-pin').value = settings.phSensorPin;
+                }
+                if (settings.tdsSensorPin !== undefined) {
+                    document.getElementById('tds-sensor-pin').value = settings.tdsSensorPin;
+                }
+                if (settings.heaterRelayPin !== undefined) {
+                    document.getElementById('heater-relay-pin').value = settings.heaterRelayPin;
+                }
+                if (settings.co2RelayPin !== undefined) {
+                    document.getElementById('co2-relay-pin').value = settings.co2RelayPin;
+                }
+            }
+            
+            // Update time sync status
+            updateTimeStatus();
+        }
+        
+        loadSettings();
+        
+        // Update time status every 30 seconds
+        setInterval(updateTimeStatus, 30000);
+        
+        // Water Change Functions
+        let wcUpdateInterval = null;
+        
+        async function updateWaterChangeStatus() {
+            try {
+                const response = await fetch('/api/waterchange/status');
+                if (response.ok) {
+                    const status = await response.json();
+                    
+                    // Update phase description
+                    document.getElementById('wc-phase-desc').textContent = status.phaseDescription;
+                    
+                    // Update elapsed time
+                    const minutes = Math.floor(status.phaseElapsed / 60);
+                    const seconds = status.phaseElapsed % 60;
+                    document.getElementById('wc-elapsed').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    // Update phase steps
+                    for (let i = 0; i <= 5; i++) {
+                        const step = document.getElementById(`phase-${i}`);
+                        step.classList.remove('active', 'completed');
+                        if (i < status.phase) {
+                            step.classList.add('completed');
+                        } else if (i === status.phase) {
+                            step.classList.add('active');
+                        }
+                    }
+                    
+                    // Update buttons
+                    document.getElementById('wc-start-btn').disabled = status.inProgress;
+                    document.getElementById('wc-advance-btn').disabled = !status.inProgress;
+                    document.getElementById('wc-cancel-btn').disabled = !status.inProgress;
+                    
+                    // Update schedule info
+                    document.getElementById('wc-tank-volume').textContent = status.tankVolume.toFixed(1);
+                    const scheduledVol = (status.tankVolume * 0.25).toFixed(1); // Approximate
+                    document.getElementById('wc-scheduled-volume').textContent = scheduledVol;
+                    document.getElementById('wc-days-since').textContent = status.daysSinceLastChange;
+                    document.getElementById('wc-days-until').textContent = status.daysUntilNextChange >= 0 ? status.daysUntilNextChange : '--';
+                    
+                    // Highlight overdue
+                    if (status.isOverdue) {
+                        document.getElementById('wc-days-until').classList.add('overdue');
+                    } else {
+                        document.getElementById('wc-days-until').classList.remove('overdue');
+                    }
+                    
+                    // Update schedule select
+                    document.getElementById('wc-schedule').value = status.schedule;
+                }
+            } catch (error) {
+                console.error('Failed to fetch water change status:', error);
+            }
+        }
+        
+        async function updateWaterChangeHistory() {
+            try {
+                const response = await fetch('/api/waterchange/history?count=10');
+                if (response.ok) {
+                    const history = await response.json();
+                    const tbody = document.getElementById('wc-history-body');
+                    tbody.innerHTML = '';
+                    
+                    if (history.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No water changes recorded yet</td></tr>';
+                    } else {
+                        history.forEach(record => {
+                            const row = document.createElement('tr');
+                            const date = new Date(record.timestamp * 1000).toLocaleDateString();
+                            const tempChange = (record.tempAfter - record.tempBefore).toFixed(1);
+                            const phChange = (record.phAfter - record.phBefore).toFixed(2);
+                            
+                            row.innerHTML = `
+                                <td>${date}</td>
+                                <td>${record.volume.toFixed(1)}</td>
+                                <td>${tempChange > 0 ? '+' : ''}${tempChange}°C</td>
+                                <td>${phChange > 0 ? '+' : ''}${phChange}</td>
+                                <td>${record.duration}</td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch water change history:', error);
+            }
+        }
+        
+        async function updateWaterChangeStats() {
+            try {
+                const response = await fetch('/api/waterchange/stats');
+                if (response.ok) {
+                    const stats = await response.json();
+                    document.getElementById('wc-stat-total').textContent = stats.totalChanges;
+                    document.getElementById('wc-stat-month').textContent = stats.changesThisMonth;
+                    document.getElementById('wc-stat-volume').textContent = stats.volumeThisMonth.toFixed(1);
+                    document.getElementById('wc-stat-avg').textContent = stats.averageVolume.toFixed(1);
+                }
+            } catch (error) {
+                console.error('Failed to fetch water change stats:', error);
+            }
+        }
+        
+        async function startWaterChange() {
+            if (confirm('Start water change? This will pause heating and CO2 systems for safety.')) {
+                const response = await fetch('/api/waterchange/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({})
+                });
+                
+                if (response.ok) {
+                    showAlert('✓ Water change started - Systems paused for safety', 'success');
+                    updateWaterChangeStatus();
+                    // Start auto-updating status
+                    if (wcUpdateInterval) clearInterval(wcUpdateInterval);
+                    wcUpdateInterval = setInterval(updateWaterChangeStatus, 2000);
+                } else {
+                    showAlert('Failed to start water change', 'error');
+                }
+            }
+        }
+        
+        async function advancePhase() {
+            const response = await fetch('/api/waterchange/advance', {method: 'POST'});
+            
+            if (response.ok) {
+                showAlert('✓ Advanced to next phase', 'success');
+                updateWaterChangeStatus();
+            } else {
+                const error = await response.json();
+                showAlert('Failed to advance: ' + (error.error || 'Unknown error'), 'error');
+            }
+        }
+        
+        async function cancelWaterChange() {
+            if (confirm('Cancel water change? Systems will resume immediately. Ensure tank is safe!')) {
+                const response = await fetch('/api/waterchange/cancel', {method: 'POST'});
+                
+                if (response.ok) {
+                    showAlert('Water change cancelled - Systems resumed', 'success');
+                    updateWaterChangeStatus();
+                    if (wcUpdateInterval) {
+                        clearInterval(wcUpdateInterval);
+                        wcUpdateInterval = null;
+                    }
+                } else {
+                    showAlert('Failed to cancel water change', 'error');
+                }
+            }
+        }
+        
+        async function saveWaterChangeSchedule() {
+            const schedule = parseInt(document.getElementById('wc-schedule').value);
+            const volumePercent = parseFloat(document.getElementById('wc-volume-percent').value);
+            
+            const response = await fetch('/api/waterchange/schedule', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    schedule: schedule,
+                    volumePercent: volumePercent
+                })
+            });
+            
+            if (response.ok) {
+                showAlert('✓ Water change schedule saved', 'success');
+                updateWaterChangeStatus();
+            } else {
+                showAlert('Failed to save schedule', 'error');
+            }
+        }
+        
+        // Initialize water change data when tab is shown
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+            
+            // Load water change data when tab is shown
+            if (tabName === 'waterchange') {
+                updateWaterChangeStatus();
+                updateWaterChangeHistory();
+                updateWaterChangeStats();
+            }
+        }
+        
+        // Initial load of water change status
+        updateWaterChangeStatus();
+        updateWaterChangeHistory();
+        updateWaterChangeStats();
+        
+        // Update water change status every 5 seconds
+        setInterval(updateWaterChangeStatus, 5000);
+        
+        // ====================
+        // Pattern Learning Functions
+        // ====================
+        
+        let currentChartType = 'temp';
+        
+        async function updatePatternStatus() {
+            try {
+                const response = await fetch('/api/pattern/status');
+                if (response.ok) {
+                    const status = await response.json();
+                    
+                    // Update status indicators
+                    const statusText = status.established ? 
+                        '✅ Active' : 
+                        '📚 Learning';
+                    document.getElementById('ml-status').textContent = statusText;
+                    document.getElementById('ml-status').style.color = status.established ? '#10b981' : '#f59e0b';
+                    
+                    // Update confidence
+                    const confidencePct = (status.confidence * 100).toFixed(0);
+                    document.getElementById('ml-confidence').textContent = confidencePct + '%';
+                    document.getElementById('ml-confidence-bar').style.width = confidencePct + '%';
+                    
+                    // Color code confidence
+                    const confBar = document.getElementById('ml-confidence-bar');
+                    if (status.confidence >= 0.8) {
+                        confBar.style.background = '#10b981'; // Green
+                    } else if (status.confidence >= 0.5) {
+                        confBar.style.background = '#f59e0b'; // Yellow
+                    } else {
+                        confBar.style.background = '#ef4444'; // Red
+                    }
+                    
+                    document.getElementById('ml-days').textContent = status.daysLearning;
+                    document.getElementById('ml-samples').textContent = status.totalSamples;
+                    
+                    // Update anomaly counts
+                    document.getElementById('ml-total-anomalies').textContent = status.totalAnomalies;
+                }
+            } catch (error) {
+                console.error('Failed to fetch pattern status:', error);
+            }
+        }
+        
+        async function updateSeasonalStats() {
+            try {
+                const response = await fetch('/api/pattern/seasonal');
+                if (response.ok) {
+                    const stats = await response.json();
+                    
+                    // Season icon mapping
+                    const seasonIcons = {
+                        'winter': '❄️',
+                        'spring': '🌸',
+                        'summer': '☀️',
+                        'hot-summer': '🔥',
+                        'fall': '🍂',
+                        'unknown': '❓'
+                    };
+                    
+                    document.getElementById('ml-season-icon').textContent = 
+                        seasonIcons[stats.season] || '❓';
+                    document.getElementById('ml-season').textContent = 
+                        stats.season.charAt(0).toUpperCase() + stats.season.slice(1);
+                    document.getElementById('ml-ambient').textContent = stats.avgAmbient.toFixed(1);
+                    document.getElementById('ml-water').textContent = stats.avgWater.toFixed(1);
+                    document.getElementById('ml-ph').textContent = stats.avgPH.toFixed(2);
+                }
+            } catch (error) {
+                console.error('Failed to fetch seasonal stats:', error);
+            }
+        }
+        
+        async function updateAnomalies() {
+            try {
+                const response = await fetch('/api/pattern/anomalies?count=20');
+                if (response.ok) {
+                    const anomalies = await response.json();
+                    const tbody = document.getElementById('ml-anomaly-list');
+                    tbody.innerHTML = '';
+                    
+                    if (anomalies.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No anomalies detected yet ✅</td></tr>';
+                    } else {
+                        anomalies.reverse().forEach(a => {
+                            const row = document.createElement('tr');
+                            const date = new Date(a.timestamp * 1000);
+                            const timeStr = date.toLocaleTimeString();
+                            
+                            const actualStr = a.type === 'tds' ? 
+                                a.actual.toFixed(0) + ' ppm' : 
+                                a.actual.toFixed(2);
+                            const expectedStr = a.type === 'tds' ?
+                                a.expected.toFixed(0) + ' ppm' :
+                                a.expected.toFixed(2);
+                            
+                            row.innerHTML = `
+                                <td>${timeStr}</td>
+                                <td><strong>${a.type.toUpperCase()}</strong></td>
+                                <td>${actualStr}</td>
+                                <td>${expectedStr}</td>
+                                <td>${a.deviation.toFixed(1)}σ</td>
+                                <td><span class="severity-${a.severity}">${a.severity.toUpperCase()}</span></td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch anomalies:', error);
+            }
+        }
+        
+        async function updatePatternChart(type) {
+            currentChartType = type;
+            
+            try {
+                const response = await fetch('/api/pattern/hourly');
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Simple text-based chart for now
+                    const chartDiv = document.getElementById('pattern-chart-text');
+                    let chartText = '';
+                    
+                    const labels = {
+                        'temp': 'Temperature (°C)',
+                        'ph': 'pH',
+                        'tds': 'TDS (ppm)'
+                    };
+                    
+                    chartText = `${labels[type]} Pattern - 24 Hour Average\n\n`;
+                    chartText += 'Hour  Value    Range (±StdDev)   Samples\n';
+                    chartText += '────  ───────  ────────────────  ───────\n';
+                    
+                    data.hours.forEach(h => {
+                        let value, stdDev;
+                        if (type === 'temp') {
+                            value = h.temp;
+                            stdDev = h.tempStdDev;
+                        } else if (type === 'ph') {
+                            value = h.ph;
+                            stdDev = h.phStdDev;
+                        } else {
+                            value = h.tds;
+                            stdDev = h.tdsStdDev;
+                        }
+                        
+                        const hourStr = h.hour.toString().padStart(2, '0');
+                        const valueStr = value.toFixed(2).padStart(7);
+                        const rangeStr = `±${stdDev.toFixed(2)}`.padStart(16);
+                        const samplesStr = h.samples.toString().padStart(7);
+                        
+                        chartText += `${hourStr}:00  ${valueStr}  ${rangeStr}  ${samplesStr}\n`;
+                    });
+                    
+                    chartDiv.textContent = chartText;
+                }
+            } catch (error) {
+                console.error('Failed to fetch hourly patterns:', error);
+            }
+        }
+        
+        async function loadMLConfig() {
+            try {
+                const response = await fetch('/api/pattern/config');
+                if (response.ok) {
+                    const config = await response.json();
+                    
+                    document.getElementById('ml-enabled').checked = config.enabled;
+                    document.getElementById('ml-auto-adapt').checked = config.autoSeasonalAdapt;
+                    document.getElementById('ml-alerts').checked = config.alertOnAnomaly;
+                    document.getElementById('ml-temp-thresh').value = config.tempThreshold;
+                    document.getElementById('ml-ph-thresh').value = config.phThreshold;
+                    document.getElementById('ml-tds-thresh').value = config.tdsThreshold;
+                }
+            } catch (error) {
+                console.error('Failed to load ML config:', error);
+            }
+        }
+        
+        async function updateMLConfig() {
+            await saveMLConfig();
+        }
+        
+        async function saveMLConfig() {
+            const config = {
+                enabled: document.getElementById('ml-enabled').checked,
+                autoSeasonalAdapt: document.getElementById('ml-auto-adapt').checked,
+                alertOnAnomaly: document.getElementById('ml-alerts').checked,
+                tempThreshold: parseFloat(document.getElementById('ml-temp-thresh').value),
+                phThreshold: parseFloat(document.getElementById('ml-ph-thresh').value),
+                tdsThreshold: parseFloat(document.getElementById('ml-tds-thresh').value)
+            };
+            
+            const response = await fetch('/api/pattern/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(config)
+            });
+            
+            if (response.ok) {
+                showAlert('✓ Pattern learning configuration saved', 'success');
+            } else {
+                showAlert('Failed to save configuration', 'error');
+            }
+        }
+        
+        async function resetPatterns() {
+            if (confirm('Reset all learned patterns? This will clear all historical data and start learning from scratch.')) {
+                const response = await fetch('/api/pattern/reset', {method: 'POST'});
+                
+                if (response.ok) {
+                    showAlert('✓ All patterns reset - starting fresh learning', 'success');
+                    updatePatternStatus();
+                    updateAnomalies();
+                    updatePatternChart(currentChartType);
+                } else {
+                    showAlert('Failed to reset patterns', 'error');
+                }
+            }
+        }
+        
+        async function clearAnomalies() {
+            if (confirm('Clear anomaly history? This will not affect learned patterns.')) {
+                const response = await fetch('/api/pattern/anomalies/clear', {method: 'POST'});
+                
+                if (response.ok) {
+                    showAlert('✓ Anomaly history cleared', 'success');
+                    updateAnomalies();
+                    updatePatternStatus();
+                } else {
+                    showAlert('Failed to clear anomalies', 'error');
+                }
+            }
+        }
+        
+        // Update showTab function to load pattern data
+        const originalShowTab = showTab;
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+            
+            // Load tab-specific data
+            if (tabName === 'waterchange') {
+                updateWaterChangeStatus();
+                updateWaterChangeHistory();
+                updateWaterChangeStats();
+            } else if (tabName === 'pattern') {
+                updatePatternStatus();
+                updateSeasonalStats();
+                updateAnomalies();
+                updatePatternChart(currentChartType);
+                loadMLConfig();
+            }
+        }
+        
+        // Initialize pattern learning data on page load
+        updatePatternStatus();
+        updateSeasonalStats();
+        updateAnomalies();
+        updatePatternChart('temp');
+        loadMLConfig();
+        
+        // Update pattern data periodically
+        setInterval(updatePatternStatus, 10000); // Every 10 seconds
+        setInterval(updateSeasonalStats, 60000); // Every minute
+        setInterval(updateAnomalies, 30000); // Every 30 seconds
+        
+        // ============================================================
+        // DOSING PUMP FUNCTIONS
+        // ============================================================
+        
+        let calibrationStartTime = 0;
+        let dosingCalibrationInterval = null;
+        
+        // Update dosing status
+        async function updateDosingStatus() {
+            try {
+                const response = await fetch('/api/dosing/status');
+                if (response.ok) {
+                    const status = await response.json();
+                    
+                    // Update state display
+                    document.getElementById('dose-state').textContent = status.state.toUpperCase();
+                    document.getElementById('dose-state').style.color = 
+                        status.state === 'idle' ? '#10b981' : 
+                        status.state === 'error' ? '#ef4444' : '#3b82f6';
+                    
+                    // Update calibration status
+                    document.getElementById('dose-calibrated').textContent = 
+                        status.calibrated ? '✅ Calibrated' : '⚠️ Not Calibrated';
+                    document.getElementById('dose-calibrated').style.color = 
+                        status.calibrated ? '#10b981' : '#f59e0b';
+                    
+                    // Update flow rate
+                    document.getElementById('dose-flow-rate').textContent = 
+                        status.calibrated ? `${status.flowRate.toFixed(3)} mL/sec` : '--';
+                    
+                    // Update daily volume
+                    const dailyPct = (status.dailyVolume / status.maxDailyVolume * 100).toFixed(0);
+                    document.getElementById('dose-daily-volume').textContent = 
+                        `${status.dailyVolume.toFixed(1)} / ${status.maxDailyVolume.toFixed(0)} mL (${dailyPct}%)`;
+                    
+                    // Update progress bar
+                    const progressContainer = document.getElementById('dose-progress-container');
+                    if (status.state === 'dosing' || status.state === 'paused') {
+                        progressContainer.style.display = 'block';
+                        document.getElementById('dose-progress-text').textContent = 
+                            `${status.state.charAt(0).toUpperCase() + status.state.slice(1)}: ${status.progress.toFixed(0)}%`;
+                        document.getElementById('dose-progress-volume').textContent = 
+                            `${status.volumePumped.toFixed(1)} / ${status.targetVolume.toFixed(1)} mL`;
+                        document.getElementById('dose-progress-bar').style.width = status.progress + '%';
+                    } else {
+                        progressContainer.style.display = 'none';
+                    }
+                    
+                    // Update next dose info
+                    if (status.scheduleEnabled && status.hoursUntilNext >= 0) {
+                        const hours = Math.floor(status.hoursUntilNext);
+                        const minutes = Math.floor((status.hoursUntilNext - hours) * 60);
+                        document.getElementById('schedule-next-dose').innerHTML = 
+                            `Next dose: <strong>${hours}h ${minutes}m</strong>`;
+                    } else if (status.hoursUntilNext < 0) {
+                        document.getElementById('schedule-next-dose').innerHTML = 
+                            `Next dose: <strong>Overdue</strong>`;
+                    } else {
+                        document.getElementById('schedule-next-dose').innerHTML = 
+                            `Next dose: <strong>Not scheduled</strong>`;
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch dosing status:', error);
+            }
+        }
+        
+        // Calibration wizard functions
+        function startCalibration() {
+            const speed = parseInt(document.getElementById('cal-speed').value);
+            
+            fetch('/api/dosing/calibrate/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({speed: speed})
+            }).then(response => {
+                if (response.ok) {
+                    // Switch to step 2
+                    document.getElementById('cal-step-1').style.display = 'none';
+                    document.getElementById('cal-step-2').style.display = 'block';
+                    
+                    // Start timer
+                    calibrationStartTime = Date.now();
+                    dosingCalibrationInterval = setInterval(() => {
+                        const elapsed = Math.floor((Date.now() - calibrationStartTime) / 1000);
+                        document.getElementById('cal-timer').textContent = 
+                            `Time elapsed: ${elapsed} seconds`;
+                    }, 100);
+                    
+                    showAlert('✓ Calibration started - collect output', 'success');
+                } else {
+                    showAlert('Failed to start calibration', 'error');
+                }
+            });
+        }
+        
+        function stopCalibrationForMeasure() {
+            if (dosingCalibrationInterval) {
+                clearInterval(dosingCalibrationInterval);
+            }
+            
+            const elapsed = Math.floor((Date.now() - calibrationStartTime) / 1000);
+            document.getElementById('cal-duration').value = elapsed;
+            
+            // Switch to step 3
+            document.getElementById('cal-step-2').style.display = 'none';
+            document.getElementById('cal-step-3').style.display = 'block';
+        }
+        
+        function finishCalibration() {
+            const measuredML = parseFloat(document.getElementById('cal-volume').value);
+            const seconds = parseInt(document.getElementById('cal-duration').value);
+            
+            if (!measuredML || measuredML <= 0) {
+                showAlert('Please enter a valid volume', 'error');
+                return;
+            }
+            
+            fetch('/api/dosing/calibrate/finish', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({measuredML: measuredML, seconds: seconds})
+            }).then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    // Switch to step 4
+                    document.getElementById('cal-step-3').style.display = 'none';
+                    document.getElementById('cal-step-4').style.display = 'block';
+                    document.getElementById('cal-result-flow').textContent = 
+                        data.flowRate.toFixed(3);
+                    
+                    showAlert('✓ Calibration complete!', 'success');
+                    updateDosingStatus();
+                } else {
+                    showAlert('Calibration failed: ' + data.error, 'error');
+                }
+            }).catch(error => {
+                showAlert('Failed to finish calibration', 'error');
+            });
+        }
+        
+        function cancelCalibration() {
+            if (dosingCalibrationInterval) {
+                clearInterval(dosingCalibrationInterval);
+            }
+            
+            fetch('/api/dosing/calibrate/cancel', {method: 'POST'})
+            .then(response => {
+                if (response.ok) {
+                    resetCalibrationWizard();
+                    showAlert('Calibration cancelled', 'info');
+                }
+            });
+        }
+        
+        function resetCalibrationWizard() {
+            if (dosingCalibrationInterval) {
+                clearInterval(dosingCalibrationInterval);
+            }
+            
+            document.getElementById('cal-step-1').style.display = 'block';
+            document.getElementById('cal-step-2').style.display = 'none';
+            document.getElementById('cal-step-3').style.display = 'none';
+            document.getElementById('cal-step-4').style.display = 'none';
+            document.getElementById('cal-volume').value = '';
+        }
+        
+        // Update calibration speed display
+        document.getElementById('cal-speed').addEventListener('input', function() {
+            document.getElementById('cal-speed-value').textContent = this.value + '%';
+        });
+        
+        // Update manual speed display
+        document.getElementById('manual-speed').addEventListener('input', function() {
+            document.getElementById('manual-speed-value').textContent = this.value + '%';
+        });
+        
+        // Manual dosing
+        function startManualDose() {
+            const volume = parseFloat(document.getElementById('manual-volume').value);
+            const speed = parseInt(document.getElementById('manual-speed').value);
+            
+            if (!volume || volume <= 0) {
+                showAlert('Please enter a valid volume', 'error');
+                return;
+            }
+            
+            fetch('/api/dosing/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({volume: volume, speed: speed})
+            }).then(response => {
+                if (response.ok) {
+                    showAlert(`✓ Dosing ${volume} mL`, 'success');
+                    updateDosingStatus();
+                } else {
+                    return response.json().then(data => {
+                        showAlert('Failed to start: ' + (data.error || 'Unknown error'), 'error');
+                    });
+                }
+            }).catch(error => {
+                showAlert('Failed to start dosing', 'error');
+            });
+        }
+        
+        function stopDosing() {
+            fetch('/api/dosing/stop', {method: 'POST'})
+            .then(response => {
+                if (response.ok) {
+                    showAlert('✓ Dosing stopped', 'info');
+                    updateDosingStatus();
+                }
+            });
+        }
+        
+        function emergencyStop() {
+            fetch('/api/dosing/stop', {method: 'POST'})
+            .then(response => {
+                if (response.ok) {
+                    showAlert('🛑 Emergency stop activated', 'warning');
+                    updateDosingStatus();
+                }
+            });
+        }
+        
+        // Maintenance functions
+        function primePump() {
+            const duration = parseInt(document.getElementById('maint-duration').value);
+            
+            fetch('/api/dosing/prime', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({duration: duration, speed: 50})
+            }).then(response => {
+                if (response.ok) {
+                    showAlert(`✓ Priming pump for ${duration} seconds`, 'success');
+                    updateDosingStatus();
+                } else {
+                    showAlert('Failed to start priming', 'error');
+                }
+            });
+        }
+        
+        function backflushPump() {
+            const duration = parseInt(document.getElementById('maint-duration').value);
+            
+            fetch('/api/dosing/backflush', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({duration: duration, speed: 30})
+            }).then(response => {
+                if (response.ok) {
+                    showAlert(`✓ Backflushing pump for ${duration} seconds`, 'success');
+                    updateDosingStatus();
+                } else {
+                    showAlert('Failed to start backflush', 'error');
+                }
+            });
+        }
+        
+        function cleanPump() {
+            if (confirm('Run cleaning cycle? This will run 3 forward/reverse cycles.')) {
+                fetch('/api/dosing/clean', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({cycles: 3})
+                }).then(response => {
+                    if (response.ok) {
+                        showAlert('✓ Running cleaning cycle', 'success');
+                        updateDosingStatus();
+                    } else {
+                        showAlert('Failed to start cleaning', 'error');
+                    }
+                });
+            }
+        }
+        
+        // Schedule management
+        function updateScheduleFields() {
+            const enabled = document.getElementById('schedule-enabled').checked;
+            const fieldsDiv = document.getElementById('schedule-fields');
+            fieldsDiv.style.opacity = enabled ? '1' : '0.5';
+            fieldsDiv.style.pointerEvents = enabled ? 'auto' : 'none';
+        }
+        
+        function updateCustomDaysField() {
+            const frequency = document.getElementById('schedule-frequency').value;
+            const customField = document.getElementById('custom-days-field');
+            customField.style.display = frequency === 'custom' ? 'block' : 'none';
+        }
+        
+        async function loadSchedule() {
+            try {
+                const response = await fetch('/api/dosing/schedule');
+                if (response.ok) {
+                    const schedule = await response.json();
+                    
+                    document.getElementById('schedule-enabled').checked = schedule.enabled;
+                    document.getElementById('schedule-frequency').value = schedule.schedule;
+                    document.getElementById('schedule-custom-days').value = schedule.customDays;
+                    
+                    const timeStr = `${String(schedule.hour).padStart(2, '0')}:${String(schedule.minute).padStart(2, '0')}`;
+                    document.getElementById('schedule-time').value = timeStr;
+                    document.getElementById('schedule-volume').value = schedule.doseVolume;
+                    
+                    updateScheduleFields();
+                    updateCustomDaysField();
+                }
+            } catch (error) {
+                console.error('Failed to load schedule:', error);
+            }
+        }
+        
+        function saveSchedule() {
+            const enabled = document.getElementById('schedule-enabled').checked;
+            const frequency = document.getElementById('schedule-frequency').value;
+            const customDays = parseInt(document.getElementById('schedule-custom-days').value);
+            const time = document.getElementById('schedule-time').value.split(':');
+            const volume = parseFloat(document.getElementById('schedule-volume').value);
+            
+            const schedule = {
+                enabled: enabled,
+                schedule: frequency,
+                customDays: customDays,
+                hour: parseInt(time[0]),
+                minute: parseInt(time[1]),
+                doseVolume: volume
+            };
+            
+            fetch('/api/dosing/schedule', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(schedule)
+            }).then(response => {
+                if (response.ok) {
+                    showAlert('✓ Schedule saved', 'success');
+                    updateDosingStatus();
+                } else {
+                    showAlert('Failed to save schedule', 'error');
+                }
+            });
+        }
+        
+        // Safety limits
+        function saveSafetyLimits() {
+            const maxDose = parseFloat(document.getElementById('safety-max-dose').value);
+            const maxDaily = parseFloat(document.getElementById('safety-max-daily').value);
+            const enabled = document.getElementById('safety-enabled').checked;
+            
+            fetch('/api/dosing/safety', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    maxDose: maxDose,
+                    maxDaily: maxDaily,
+                    enabled: enabled
+                })
+            }).then(response => {
+                if (response.ok) {
+                    showAlert('✓ Safety limits updated', 'success');
+                } else {
+                    showAlert('Failed to update safety limits', 'error');
+                }
+            });
+        }
+        
+        // Dosing history
+        async function updateDosingHistory() {
+            try {
+                const response = await fetch('/api/dosing/history?count=20');
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('dose-history-body');
+                    tbody.innerHTML = '';
+                    
+                    if (data.history.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No dosing history yet</td></tr>';
+                    } else {
+                        data.history.forEach(record => {
+                            const row = document.createElement('tr');
+                            const date = new Date(record.timestamp * 1000);
+                            const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                            
+                            row.innerHTML = `
+                                <td>${dateStr}</td>
+                                <td>${record.volumeDosed.toFixed(2)}</td>
+                                <td>${record.duration}</td>
+                                <td>${record.type}</td>
+                                <td class="${record.success ? 'status-success' : 'status-failed'}">
+                                    ${record.success ? '✓' : '✗'}
+                                </td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch dosing history:', error);
+            }
+        }
+        
+        // Statistics
+        async function updateDosingStats() {
+            try {
+                const response = await fetch('/api/dosing/stats');
+                if (response.ok) {
+                    const stats = await response.json();
+                    
+                    document.getElementById('stats-total-doses').textContent = stats.totalDoses;
+                    document.getElementById('stats-total-volume').textContent = 
+                        stats.totalVolume.toFixed(1) + ' mL';
+                    document.getElementById('stats-avg-volume').textContent = 
+                        stats.averageVolume.toFixed(1) + ' mL';
+                    
+                    const hours = Math.floor(stats.totalRuntime / 3600);
+                    const minutes = Math.floor((stats.totalRuntime % 3600) / 60);
+                    document.getElementById('stats-runtime').textContent = `${hours}h ${minutes}m`;
+                    
+                    document.getElementById('stats-days-since-cal').textContent = 
+                        stats.daysSinceCalibration + ' days';
+                    
+                    // Warning if calibration is old
+                    const daysEl = document.getElementById('stats-days-since-cal');
+                    if (stats.daysSinceCalibration > 30) {
+                        daysEl.style.color = '#ef4444';
+                        daysEl.textContent += ' ⚠️';
+                    } else {
+                        daysEl.style.color = '';
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch dosing stats:', error);
+            }
+        }
+        
+        // Initialize dosing pump data on page load
+        updateDosingStatus();
+        loadSchedule();
+        updateDosingHistory();
+        updateDosingStats();
+        
+        // Update dosing data periodically
+        setInterval(updateDosingStatus, 2000); // Every 2 seconds
+        setInterval(updateDosingHistory, 30000); // Every 30 seconds
+        setInterval(updateDosingStats, 60000); // Every minute
+    </script>
+</body>
+</html>
