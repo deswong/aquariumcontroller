@@ -3,10 +3,12 @@
 
 WaterChangeAssistant::WaterChangeAssistant() 
     : schedule(SCHEDULE_NONE), lastChangeTime(0), scheduledVolumePercent(25.0),
-      tankVolumeGallons(20.0), currentPhase(PHASE_IDLE), phaseStartTime(0),
-      currentChangeVolume(0), tempBeforeChange(0), phBeforeChange(0), systemsPaused(false),
+      tankVolumeLitres(75.0), currentPhase(PHASE_IDLE), phaseStartTime(0),
+      waterChangeStartTimestamp(0), currentChangeVolume(0), tempBeforeChange(0), 
+      phBeforeChange(0), tdsBeforeChange(0), systemsPaused(false),
       maxTempDifference(2.0), maxPhDifference(0.5),
-      maxDrainTime(600000), maxFillTime(600000), stabilizationTime(300000) {
+      maxDrainTime(600000), maxFillTime(600000), stabilizationTime(300000),
+      settingsDirty(false), historyDirty(false), lastSaveTime(0) {
     
     prefs = new Preferences();
 }
@@ -23,7 +25,7 @@ void WaterChangeAssistant::begin() {
     loadHistory();
     
     Serial.println("Water Change Assistant initialized");
-    Serial.printf("Tank volume: %.1f gallons\n", tankVolumeGallons);
+    Serial.printf("Tank volume: %.1f litres\n", tankVolumeLitres);
     Serial.printf("Schedule: %d days, %.1f%% volume\n", (int)schedule, scheduledVolumePercent);
     
     if (eventLogger) {
@@ -32,6 +34,18 @@ void WaterChangeAssistant::begin() {
 }
 
 void WaterChangeAssistant::update() {
+    // Deferred save check
+    if ((settingsDirty || historyDirty) && (millis() - lastSaveTime > SAVE_DELAY_MS)) {
+        if (settingsDirty) {
+            Serial.println("Auto-saving water change settings (deferred)...");
+            saveSettings();
+        }
+        if (historyDirty) {
+            Serial.println("Auto-saving water change history (deferred)...");
+            saveHistory();
+        }
+    }
+    
     if (currentPhase == PHASE_IDLE || currentPhase == PHASE_COMPLETE) {
         return; // Nothing to do
     }
@@ -69,7 +83,7 @@ void WaterChangeAssistant::loadSettings() {
     schedule = (WaterChangeSchedule)prefs->getInt("schedule", SCHEDULE_WEEKLY);
     lastChangeTime = prefs->getULong("lastChange", 0);
     scheduledVolumePercent = prefs->getFloat("volumePct", 25.0);
-    tankVolumeGallons = prefs->getFloat("tankVol", 20.0);
+    tankVolumeLitres = prefs->getFloat("tankVol", 75.0);
     maxTempDifference = prefs->getFloat("maxTempDiff", 2.0);
     maxPhDifference = prefs->getFloat("maxPhDiff", 0.5);
     
@@ -86,12 +100,35 @@ void WaterChangeAssistant::saveSettings() {
     prefs->putInt("schedule", (int)schedule);
     prefs->putULong("lastChange", lastChangeTime);
     prefs->putFloat("volumePct", scheduledVolumePercent);
-    prefs->putFloat("tankVol", tankVolumeGallons);
+    prefs->putFloat("tankVol", tankVolumeLitres);
     prefs->putFloat("maxTempDiff", maxTempDifference);
     prefs->putFloat("maxPhDiff", maxPhDifference);
     
     prefs->end();
     Serial.println("Water change settings saved");
+    
+    settingsDirty = false;
+    lastSaveTime = millis();
+}
+
+void WaterChangeAssistant::markSettingsDirty() {
+    settingsDirty = true;
+}
+
+void WaterChangeAssistant::markHistoryDirty() {
+    historyDirty = true;
+}
+
+void WaterChangeAssistant::forceSave() {
+    // Immediate save for critical operations
+    if (settingsDirty) {
+        Serial.println("Force-saving water change settings...");
+        saveSettings();
+    }
+    if (historyDirty) {
+        Serial.println("Force-saving water change history...");
+        saveHistory();
+    }
 }
 
 void WaterChangeAssistant::loadHistory() {
@@ -124,6 +161,12 @@ void WaterChangeAssistant::loadHistory() {
         
         snprintf(key, sizeof(key), "pa_%d", i);
         record.phAfter = prefs->getFloat(key, 0.0f);
+        
+        snprintf(key, sizeof(key), "tdsb_%d", i);
+        record.tdsBefore = prefs->getFloat(key, 0.0f);
+        
+        snprintf(key, sizeof(key), "tdsa_%d", i);
+        record.tdsAfter = prefs->getFloat(key, 0.0f);
         
         snprintf(key, sizeof(key), "dur_%d", i);
         record.durationMinutes = prefs->getInt(key, 0);
@@ -170,6 +213,12 @@ void WaterChangeAssistant::saveHistory() {
         snprintf(key, sizeof(key), "pa_%d", i);
         prefs->putFloat(key, record.phAfter);
         
+        snprintf(key, sizeof(key), "tdsb_%d", i);
+        prefs->putFloat(key, record.tdsBefore);
+        
+        snprintf(key, sizeof(key), "tdsa_%d", i);
+        prefs->putFloat(key, record.tdsAfter);
+        
         snprintf(key, sizeof(key), "dur_%d", i);
         prefs->putInt(key, record.durationMinutes);
         
@@ -179,6 +228,9 @@ void WaterChangeAssistant::saveHistory() {
     
     prefs->end();
     Serial.println("Water change history saved to NVS");
+    
+    historyDirty = false;
+    lastSaveTime = millis();
 }
 
 void WaterChangeAssistant::addToHistory(const WaterChangeRecord& record) {
@@ -189,13 +241,13 @@ void WaterChangeAssistant::addToHistory(const WaterChangeRecord& record) {
         history.erase(history.begin());
     }
     
-    saveHistory();
+    markHistoryDirty(); // Mark for deferred save
 }
 
 void WaterChangeAssistant::setSchedule(WaterChangeSchedule sched, float volumePercent) {
     schedule = sched;
     scheduledVolumePercent = constrain(volumePercent, 10.0, 50.0); // 10-50% range
-    saveSettings();
+    markSettingsDirty(); // Deferred save
     
     Serial.printf("Water change schedule set: every %d days, %.1f%% volume\n", 
                   (int)schedule, scheduledVolumePercent);
@@ -213,8 +265,20 @@ int WaterChangeAssistant::getDaysUntilNextChange() {
         return -1; // No schedule set
     }
     
-    unsigned long currentTime = millis() / 1000;
-    unsigned long timeSinceLastChange = currentTime - lastChangeTime;
+    // Get current Unix timestamp
+    time_t now;
+    time(&now);
+    
+    // Check if we have a valid time (NTP synced)
+    struct tm timeinfo;
+    localtime_r(&now, &timeinfo);
+    if (timeinfo.tm_year <= (2020 - 1900)) {
+        // NTP not synced, can't calculate days accurately
+        return -1;
+    }
+    
+    // Calculate using Unix timestamps
+    unsigned long timeSinceLastChange = now - lastChangeTime;
     int daysSinceChange = timeSinceLastChange / 86400;
     
     int daysUntilNext = (int)schedule - daysSinceChange;
@@ -226,8 +290,20 @@ int WaterChangeAssistant::getDaysSinceLastChange() {
         return 999; // Never changed
     }
     
-    unsigned long currentTime = millis() / 1000;
-    unsigned long timeSinceLastChange = currentTime - lastChangeTime;
+    // Get current Unix timestamp
+    time_t now;
+    time(&now);
+    
+    // Check if we have a valid time (NTP synced)
+    struct tm timeinfo;
+    localtime_r(&now, &timeinfo);
+    if (timeinfo.tm_year <= (2020 - 1900)) {
+        // NTP not synced, can't calculate days accurately
+        return 999;
+    }
+    
+    // Calculate days since last change using Unix timestamps
+    unsigned long timeSinceLastChange = now - lastChangeTime;
     return timeSinceLastChange / 86400;
 }
 
@@ -239,30 +315,30 @@ bool WaterChangeAssistant::isChangeOverdue() {
     return getDaysUntilNextChange() == 0;
 }
 
-void WaterChangeAssistant::setTankVolume(float gallons) {
-    tankVolumeGallons = constrain(gallons, 5.0, 1000.0); // 5-1000 gallon range
-    saveSettings();
+void WaterChangeAssistant::setTankVolume(float litres) {
+    tankVolumeLitres = constrain(litres, 20.0, 4000.0); // 20-4000 litre range
+    markSettingsDirty(); // Deferred save
     
-    Serial.printf("Tank volume set to %.1f gallons\n", tankVolumeGallons);
+    Serial.printf("Tank volume set to %.1f litres\n", tankVolumeLitres);
 }
 
 float WaterChangeAssistant::getScheduledChangeVolume() {
-    return tankVolumeGallons * (scheduledVolumePercent / 100.0);
+    return tankVolumeLitres * (scheduledVolumePercent / 100.0);
 }
 
-bool WaterChangeAssistant::startWaterChange(float volumeGallons) {
+bool WaterChangeAssistant::startWaterChange(float volumeLitres) {
     if (isInProgress()) {
         Serial.println("ERROR: Water change already in progress");
         return false;
     }
     
     // Use scheduled volume if not specified
-    if (volumeGallons == 0) {
-        volumeGallons = getScheduledChangeVolume();
+    if (volumeLitres == 0) {
+        volumeLitres = getScheduledChangeVolume();
     }
     
     // Validate volume
-    if (volumeGallons > tankVolumeGallons * 0.5) {
+    if (volumeLitres > tankVolumeLitres * 0.5) {
         Serial.println("ERROR: Change volume exceeds 50% of tank capacity");
         if (eventLogger) {
             eventLogger->error("waterchange", "Change volume too large - safety limit");
@@ -270,14 +346,20 @@ bool WaterChangeAssistant::startWaterChange(float volumeGallons) {
         return false;
     }
     
-    currentChangeVolume = volumeGallons;
+    currentChangeVolume = volumeLitres;
     currentPhase = PHASE_PREPARE;
     phaseStartTime = millis();
+    
+    // Capture Unix timestamp when water change starts
+    time_t now;
+    time(&now);
+    waterChangeStartTimestamp = (unsigned long)now;
     
     // Capture pre-change values
     SensorData data = getSensorData();
     tempBeforeChange = data.temperature;
     phBeforeChange = data.ph;
+    tdsBeforeChange = data.tds;
     
     // Notify water change predictor
     if (wcPredictor) {
@@ -290,8 +372,8 @@ bool WaterChangeAssistant::startWaterChange(float volumeGallons) {
     if (co2Relay) co2Relay->safetyDisable();
     
     Serial.println("\n=== Water Change Started ===");
-    Serial.printf("Volume: %.1f gallons (%.1f%%)\n", 
-                  currentChangeVolume, (currentChangeVolume/tankVolumeGallons)*100);
+    Serial.printf("Volume: %.1f litres (%.1f%%)\n", 
+                  currentChangeVolume, (currentChangeVolume/tankVolumeLitres)*100);
     Serial.printf("Temperature before: %.1f°C\n", tempBeforeChange);
     Serial.printf("pH before: %.2f\n", phBeforeChange);
     Serial.println("Systems paused for safety");
@@ -300,7 +382,7 @@ bool WaterChangeAssistant::startWaterChange(float volumeGallons) {
     if (eventLogger) {
         char msg[128];
         snprintf(msg, sizeof(msg), 
-                 "Water change started: %.1f gal (Temp: %.1f°C, pH: %.2f)", 
+                 "Water change started: %.1f L (Temp: %.1f°C, pH: %.2f)", 
                  currentChangeVolume, tempBeforeChange, phBeforeChange);
         eventLogger->info("waterchange", msg);
     }
@@ -405,48 +487,79 @@ bool WaterChangeAssistant::completeWaterChange() {
         return false;
     }
     
+    // Check if we have a valid timestamp (NTP synced)
+    time_t now;
+    time(&now);
+    struct tm timeinfo;
+    localtime_r(&now, &timeinfo);
+    
+    // Check if time is valid (year > 2020) - this means NTP is synced
+    if (timeinfo.tm_year <= (2020 - 1900)) {
+        Serial.println("WARNING: NTP not synced - water change will not be logged");
+        Serial.println("Please ensure NTP time synchronization is working");
+        
+        // Still resume systems, but don't log the change
+        systemsPaused = false;
+        currentPhase = PHASE_COMPLETE;
+        currentChangeVolume = 0;
+        
+        if (eventLogger) {
+            eventLogger->warning("waterchange", "Water change completed but not logged - NTP not synced");
+        }
+        
+        sendMQTTAlert("waterchange", "Water change completed - not logged (NTP not synced)", true);
+        return false;
+    }
+    
     // Get final readings
     SensorData data = getSensorData();
     float tempAfter = data.temperature;
     float phAfter = data.ph;
+    float tdsAfter = data.tds;
     
     // Create history record
     WaterChangeRecord record;
-    record.timestamp = millis() / 1000;
+    record.timestamp = waterChangeStartTimestamp; // Use the timestamp from when water change started
     record.volumeChanged = currentChangeVolume;
     record.tempBefore = tempBeforeChange;
     record.tempAfter = tempAfter;
     record.phBefore = phBeforeChange;
     record.phAfter = phAfter;
+    record.tdsBefore = tdsBeforeChange;
+    record.tdsAfter = tdsAfter;
     record.durationMinutes = (millis() - phaseStartTime) / 60000;
     record.completedSuccessfully = true;
     
     addToHistory(record);
     
     // Update last change time
-    lastChangeTime = millis() / 1000;
-    saveSettings();
+    lastChangeTime = waterChangeStartTimestamp;
+    markSettingsDirty(); // Deferred save for settings
+    forceSave(); // But force save immediately for completed water change (critical)
     
     // Resume systems
     systemsPaused = false;
     currentPhase = PHASE_COMPLETE;
     
     Serial.println("\n=== Water Change Complete ===");
-    Serial.printf("Volume changed: %.1f gallons\n", currentChangeVolume);
+    Serial.printf("Volume changed: %.1f litres\n", currentChangeVolume);
     Serial.printf("Temperature: %.1f°C → %.1f°C (Δ%.2f°C)\n", 
                   tempBeforeChange, tempAfter, tempAfter - tempBeforeChange);
     Serial.printf("pH: %.2f → %.2f (Δ%.2f)\n", 
                   phBeforeChange, phAfter, phAfter - phBeforeChange);
+    Serial.printf("TDS: %.0f ppm → %.0f ppm (Δ%.0f ppm)\n", 
+                  tdsBeforeChange, tdsAfter, tdsAfter - tdsBeforeChange);
     Serial.printf("Duration: %d minutes\n", record.durationMinutes);
     Serial.println("Systems resumed");
     Serial.println("============================\n");
     
     if (eventLogger) {
-        char msg[128];
+        char msg[256];
         snprintf(msg, sizeof(msg), 
-                 "Water change completed: %.1f gal in %d min (Temp: %.1f→%.1f°C, pH: %.2f→%.2f)", 
+                 "Water change completed: %.1f L in %d min (Temp: %.1f→%.1f°C, pH: %.2f→%.2f, TDS: %.0f→%.0f ppm)", 
                  currentChangeVolume, record.durationMinutes, 
-                 tempBeforeChange, tempAfter, phBeforeChange, phAfter);
+                 tempBeforeChange, tempAfter, phBeforeChange, phAfter,
+                 tdsBeforeChange, tdsAfter);
         eventLogger->info("waterchange", msg);
     }
     
@@ -454,7 +567,7 @@ bool WaterChangeAssistant::completeWaterChange() {
     
     // Notify water change predictor
     if (wcPredictor) {
-        float volumePercent = (currentChangeVolume / tankVolumeGallons) * 100.0;
+        float volumePercent = (currentChangeVolume / tankVolumeLitres) * 100.0;
         wcPredictor->completeWaterChange(volumePercent);
     }
     

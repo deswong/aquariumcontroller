@@ -27,12 +27,14 @@ enum WaterChangePhase {
 
 // Water change record
 struct WaterChangeRecord {
-    unsigned long timestamp;    // Seconds since boot
+    unsigned long timestamp;    // Unix timestamp (seconds since epoch)
     float volumeChanged;        // Liters
     float tempBefore;
     float tempAfter;
     float phBefore;
     float phAfter;
+    float tdsBefore;
+    float tdsAfter;
     int durationMinutes;
     bool completedSuccessfully;
 };
@@ -45,14 +47,16 @@ private:
     WaterChangeSchedule schedule;
     unsigned long lastChangeTime;    // Seconds since boot
     float scheduledVolumePercent;    // Percentage of tank volume
-    float tankVolumeGallons;
+    float tankVolumeLitres;
     
     // Current water change state
     WaterChangePhase currentPhase;
     unsigned long phaseStartTime;
+    unsigned long waterChangeStartTimestamp; // Unix timestamp when water change started
     float currentChangeVolume;
     float tempBeforeChange;
     float phBeforeChange;
+    float tdsBeforeChange;
     bool systemsPaused;
     
     // History tracking
@@ -66,11 +70,20 @@ private:
     unsigned long maxFillTime;    // Max time for fill phase (ms)
     unsigned long stabilizationTime; // Time to wait for stabilization (ms)
     
+    // Deferred saving (dirty flag pattern)
+    bool settingsDirty;
+    bool historyDirty;
+    unsigned long lastSaveTime;
+    static const unsigned long SAVE_DELAY_MS = 5000; // 5 seconds
+    
     void loadSettings();
     void saveSettings();
     void loadHistory();
     void saveHistory();
     void addToHistory(const WaterChangeRecord& record);
+    
+    void markSettingsDirty();
+    void markHistoryDirty();
 
 public:
     WaterChangeAssistant();
@@ -87,15 +100,18 @@ public:
     bool isChangeOverdue();
     
     // Tank configuration
-    void setTankVolume(float gallons);
-    float getTankVolume() { return tankVolumeGallons; }
-    float getScheduledChangeVolume(); // Returns gallons
+    void setTankVolume(float litres);
+    float getTankVolume() { return tankVolumeLitres; }
+    float getScheduledChangeVolume(); // Returns litres
     
     // Water change operations
-    bool startWaterChange(float volumeGallons = 0); // 0 = use scheduled volume
+    bool startWaterChange(float volumeLitres = 0); // 0 = use scheduled volume
     bool advancePhase();
     bool cancelWaterChange();
     bool completeWaterChange();
+    
+    // Deferred save management
+    void forceSave(); // Immediate save for critical operations
     
     // Phase control
     WaterChangePhase getCurrentPhase() { return currentPhase; }
@@ -120,6 +136,7 @@ public:
     float getCurrentChangeVolume() { return currentChangeVolume; }
     float getTempBeforeChange() { return tempBeforeChange; }
     float getPhBeforeChange() { return phBeforeChange; }
+    float getTdsBeforeChange() { return tdsBeforeChange; }
 };
 
 #endif

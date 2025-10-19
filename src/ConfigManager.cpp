@@ -3,6 +3,8 @@
 
 ConfigManager::ConfigManager() {
     prefs = new Preferences();
+    isDirty = false;
+    lastSaveTime = 0;
 }
 
 ConfigManager::~ConfigManager() {
@@ -39,6 +41,10 @@ void ConfigManager::load() {
     prefs->getString("ntpServer", config.ntpServer, sizeof(config.ntpServer));
     config.gmtOffsetSec = prefs->getInt("gmtOffset", 0);
     config.daylightOffsetSec = prefs->getInt("dstOffset", 0);
+    
+    config.tankLength = prefs->getFloat("tankLength", 0.0f);
+    config.tankWidth = prefs->getFloat("tankWidth", 0.0f);
+    config.tankHeight = prefs->getFloat("tankHeight", 0.0f);
     
     config.tempTarget = prefs->getFloat("tempTarget", 25.0);
     config.tempSafetyMax = prefs->getFloat("tempSafetyMax", 30.0);
@@ -77,6 +83,10 @@ void ConfigManager::save() {
     prefs->putInt("gmtOffset", config.gmtOffsetSec);
     prefs->putInt("dstOffset", config.daylightOffsetSec);
     
+    prefs->putFloat("tankLength", config.tankLength);
+    prefs->putFloat("tankWidth", config.tankWidth);
+    prefs->putFloat("tankHeight", config.tankHeight);
+    
     prefs->putFloat("tempTarget", config.tempTarget);
     prefs->putFloat("tempSafetyMax", config.tempSafetyMax);
     prefs->putFloat("phTarget", config.phTarget);
@@ -90,23 +100,48 @@ void ConfigManager::save() {
     
     prefs->end();
     Serial.println("Configuration saved to NVS");
+    
+    isDirty = false;  // Clear dirty flag after successful save
+    lastSaveTime = millis();
+}
+
+// Deferred save management
+void ConfigManager::markDirty() {
+    isDirty = true;
+}
+
+void ConfigManager::update() {
+    // Periodic save check - call this in main loop
+    if (isDirty && (millis() - lastSaveTime > SAVE_DELAY_MS)) {
+        Serial.println("Auto-saving configuration (deferred)...");
+        save();
+    }
+}
+
+void ConfigManager::forceSave() {
+    // Immediate save for critical operations (reboot, manual save button)
+    if (isDirty) {
+        Serial.println("Force-saving configuration...");
+        save();
+    }
 }
 
 void ConfigManager::reset() {
     config = SystemConfig(); // Reset to defaults
-    save();
+    markDirty();
+    forceSave(); // Force immediate save for reset
     Serial.println("Configuration reset to defaults");
 }
 
 void ConfigManager::setConfig(const SystemConfig& newConfig) {
     config = newConfig;
-    save();
+    markDirty();
 }
 
 void ConfigManager::setWiFi(const char* ssid, const char* password) {
     strncpy(config.wifiSSID, ssid, sizeof(config.wifiSSID) - 1);
     strncpy(config.wifiPassword, password, sizeof(config.wifiPassword) - 1);
-    save();
+    markDirty();
 }
 
 void ConfigManager::setMQTT(const char* server, int port, const char* user, const char* password, const char* topicPrefix, bool publishIndividual, bool publishJSON) {
@@ -119,26 +154,33 @@ void ConfigManager::setMQTT(const char* server, int port, const char* user, cons
     }
     config.mqttPublishIndividual = publishIndividual;
     config.mqttPublishJSON = publishJSON;
-    save();
+    markDirty();
 }
 
 void ConfigManager::setTemperatureTarget(float target, float safetyMax) {
     config.tempTarget = target;
     config.tempSafetyMax = safetyMax;
-    save();
+    markDirty();
 }
 
 void ConfigManager::setPHTarget(float target, float safetyMin) {
     config.phTarget = target;
     config.phSafetyMin = safetyMin;
-    save();
+    markDirty();
 }
 
 void ConfigManager::setNTP(const char* server, int gmtOffset, int dstOffset) {
     strncpy(config.ntpServer, server, sizeof(config.ntpServer) - 1);
     config.gmtOffsetSec = gmtOffset;
     config.daylightOffsetSec = dstOffset;
-    save();
+    markDirty();
+}
+
+void ConfigManager::setTankDimensions(float length, float width, float height) {
+    config.tankLength = length;
+    config.tankWidth = width;
+    config.tankHeight = height;
+    markDirty();
 }
 
 void ConfigManager::printConfig() {
@@ -168,6 +210,10 @@ String ConfigManager::exportToJSON() {
     doc["mqttPassword"] = config.mqttPassword;
     doc["mqttClientId"] = config.mqttClientId;
     doc["mqttTopicPrefix"] = config.mqttTopicPrefix;
+    doc["ntpServer"] = config.ntpServer;
+    doc["tankLength"] = config.tankLength;
+    doc["tankWidth"] = config.tankWidth;
+    doc["tankHeight"] = config.tankHeight;
     doc["tempTarget"] = config.tempTarget;
     doc["tempSafetyMax"] = config.tempSafetyMax;
     doc["phTarget"] = config.phTarget;
@@ -231,7 +277,8 @@ bool ConfigManager::importFromJSON(const String& json) {
     if (doc.containsKey("co2RelayPin")) 
         config.co2RelayPin = doc["co2RelayPin"];
     
-    save();
+    markDirty();
+    forceSave(); // Force immediate save for import
     Serial.println("Configuration imported successfully");
     return true;
 }

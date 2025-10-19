@@ -88,6 +88,12 @@ private:
     // Storage
     Preferences* prefs;
     
+    // Deferred saving (dirty flag pattern)
+    bool configDirty;
+    bool historyDirty;
+    unsigned long lastSaveTime;
+    static const unsigned long SAVE_DELAY_MS = 5000; // 5 seconds
+    
     // Internal methods
     void setMotorForward(int speed);
     void setMotorReverse(int speed);
@@ -100,6 +106,9 @@ private:
     int calculateScheduleInterval();
     void calculateNextDoseTime();
     
+    void markConfigDirty();
+    void markHistoryDirty();
+    
 public:
     DosingPump(uint8_t in1, uint8_t in2, uint8_t pwmCh = 0);
     ~DosingPump();
@@ -110,6 +119,8 @@ public:
     void saveConfig();
     void loadCalibration();
     void saveCalibration();
+    void loadHistory();
+    void saveHistory();
     
     // Basic pump control
     void start(float volumeML, int speedPercent = 100);
@@ -117,6 +128,9 @@ public:
     void pause();
     void resume();
     void emergencyStop();
+    
+    // Deferred save management
+    void forceSave(); // Immediate save for critical operations
     
     // Maintenance functions
     void prime(int durationSeconds, int speedPercent = 50);

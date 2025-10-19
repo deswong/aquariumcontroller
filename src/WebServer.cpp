@@ -341,6 +341,17 @@ void WebServerManager::setupRoutes() {
         }
     });
     
+    // API: Get current configuration (for displaying in settings tab)
+    server->on("/api/config", HTTP_GET, [this](AsyncWebServerRequest* request) {
+        if (!configMgr) {
+            request->send(500, "application/json", "{\"error\":\"Config manager not initialized\"}");
+            return;
+        }
+        
+        String json = configMgr->exportToJSON();
+        request->send(200, "application/json", json);
+    });
+    
     // API: Export configuration
     server->on("/api/config/export", HTTP_GET, [this](AsyncWebServerRequest* request) {
         if (!configMgr) {
@@ -350,6 +361,22 @@ void WebServerManager::setupRoutes() {
         
         String json = configMgr->exportToJSON();
         request->send(200, "application/json", json);
+    });
+    
+    // API: Force save configuration (for explicit "Save Settings" button)
+    server->on("/api/config/save", HTTP_POST, [this](AsyncWebServerRequest* request) {
+        if (!configMgr) {
+            request->send(500, "application/json", "{\"error\":\"Config manager not initialized\"}");
+            return;
+        }
+        
+        configMgr->forceSave();
+        request->send(200, "application/json", "{\"status\":\"ok\",\"message\":\"Configuration saved to flash\"}");
+        
+        Serial.println("Configuration force-saved via API");
+        if (eventLogger) {
+            eventLogger->info("config", "Configuration manually saved");
+        }
     });
     
     // API: Import configuration
@@ -372,6 +399,39 @@ void WebServerManager::setupRoutes() {
             }
         } else {
             request->send(400, "application/json", "{\"error\":\"Invalid configuration JSON\"}");
+        }
+    });
+    
+    // API: Save tank dimensions
+    server->on("/api/config/tank", HTTP_POST, [this](AsyncWebServerRequest* request) {}, 
+        NULL, [this](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+        if (!configMgr) {
+            request->send(500, "application/json", "{\"error\":\"Config manager not initialized\"}");
+            return;
+        }
+        
+        StaticJsonDocument<128> doc;
+        DeserializationError error = deserializeJson(doc, data, len);
+        
+        if (error) {
+            request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+            return;
+        }
+        
+        if (doc.containsKey("length") && doc.containsKey("width") && doc.containsKey("height")) {
+            float length = doc["length"];
+            float width = doc["width"];
+            float height = doc["height"];
+            
+            configMgr->setTankDimensions(length, width, height);
+            request->send(200, "application/json", "{\"status\":\"ok\"}");
+            
+            Serial.printf("Tank dimensions saved: %.1f x %.1f x %.1f cm\n", length, width, height);
+            if (eventLogger) {
+                eventLogger->info("config", "Tank dimensions updated");
+            }
+        } else {
+            request->send(400, "application/json", "{\"error\":\"Missing required fields\"}");
         }
     });
     
@@ -476,6 +536,8 @@ void WebServerManager::setupRoutes() {
             json += "\"tempAfter\":" + String(records[i].tempAfter) + ",";
             json += "\"phBefore\":" + String(records[i].phBefore) + ",";
             json += "\"phAfter\":" + String(records[i].phAfter) + ",";
+            json += "\"tdsBefore\":" + String(records[i].tdsBefore) + ",";
+            json += "\"tdsAfter\":" + String(records[i].tdsAfter) + ",";
             json += "\"duration\":" + String(records[i].durationMinutes) + ",";
             json += "\"successful\":" + String(records[i].completedSuccessfully ? "true" : "false");
             json += "}";
@@ -508,6 +570,36 @@ void WebServerManager::setupRoutes() {
             request->send(200, "application/json", "{\"status\":\"ok\"}");
         } else {
             request->send(400, "application/json", "{\"error\":\"Missing required fields\"}");
+        }
+    });
+    
+    // API: Water Change - Configuration (set tank volume)
+    server->on("/api/waterchange/config", HTTP_POST, [](AsyncWebServerRequest* request) {}, 
+        NULL, [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+        if (!waterChangeAssistant) {
+            request->send(500, "application/json", "{\"error\":\"Water change assistant not initialized\"}");
+            return;
+        }
+        
+        StaticJsonDocument<128> doc;
+        DeserializationError error = deserializeJson(doc, data, len);
+        
+        if (error) {
+            request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+            return;
+        }
+        
+        if (doc.containsKey("tankVolume")) {
+            float tankVolume = doc["tankVolume"];
+            waterChangeAssistant->setTankVolume(tankVolume);
+            request->send(200, "application/json", "{\"status\":\"ok\"}");
+            
+            Serial.printf("Tank volume updated via API: %.1f litres\n", tankVolume);
+            if (eventLogger) {
+                eventLogger->info("waterchange", "Tank volume updated via web interface");
+            }
+        } else {
+            request->send(400, "application/json", "{\"error\":\"Missing tankVolume field\"}");
         }
     });
     

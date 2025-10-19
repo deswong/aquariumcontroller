@@ -8,7 +8,8 @@ DosingPump::DosingPump(uint8_t in1, uint8_t in2, uint8_t pwmCh)
       targetVolume(0), volumePumped(0), maxHistoryRecords(100),
       safetyEnabled(true), maxDoseVolume(50), maxDailyVolume(200),
       dailyVolumeDosed(0), lastDayReset(0), totalRuntime(0),
-      lastMaintenanceTime(0), totalDoses(0) {
+      lastMaintenanceTime(0), totalDoses(0),
+      configDirty(false), historyDirty(false), lastSaveTime(0) {
     
     prefs = new Preferences();
     
@@ -48,6 +49,7 @@ void DosingPump::begin() {
     // Load saved configuration
     loadConfig();
     loadCalibration();
+    loadHistory();
     
     // Reset daily volume tracking
     lastDayReset = millis();
@@ -114,6 +116,29 @@ void DosingPump::saveConfig() {
     
     prefs->end();
     Serial.println("Dosing pump config saved");
+    
+    configDirty = false;
+    lastSaveTime = millis();
+}
+
+void DosingPump::markConfigDirty() {
+    configDirty = true;
+}
+
+void DosingPump::markHistoryDirty() {
+    historyDirty = true;
+}
+
+void DosingPump::forceSave() {
+    // Immediate save for critical operations
+    if (configDirty) {
+        Serial.println("Force-saving dosing pump config...");
+        saveConfig();
+    }
+    if (historyDirty) {
+        Serial.println("Force-saving dosing pump history...");
+        saveHistory();
+    }
 }
 
 void DosingPump::loadCalibration() {
@@ -146,6 +171,83 @@ void DosingPump::saveCalibration() {
     
     prefs->end();
     Serial.printf("Calibration saved: %.3f mL/sec\n", mlPerSecond);
+}
+
+void DosingPump::loadHistory() {
+    if (!prefs->begin("dosepump-hist", true)) {
+        Serial.println("No dosing history found");
+        return;
+    }
+    
+    int count = prefs->getInt("count", 0);
+    Serial.printf("Loading %d dose records from NVS\n", count);
+    
+    history.clear();
+    for (int i = 0; i < count && i < maxHistoryRecords; i++) {
+        DosingRecord record;
+        char key[16];
+        
+        snprintf(key, sizeof(key), "ts_%d", i);
+        record.timestamp = prefs->getULong(key, 0);
+        
+        snprintf(key, sizeof(key), "vol_%d", i);
+        record.volumeDosed = prefs->getFloat(key, 0.0);
+        
+        snprintf(key, sizeof(key), "dur_%d", i);
+        record.durationMs = prefs->getInt(key, 0);
+        
+        snprintf(key, sizeof(key), "ok_%d", i);
+        record.success = prefs->getBool(key, true);
+        
+        snprintf(key, sizeof(key), "type_%d", i);
+        record.type = prefs->getString(key, "manual");
+        
+        history.push_back(record);
+    }
+    
+    prefs->end();
+    Serial.printf("Loaded %d dose records\n", history.size());
+    
+    // Clear dirty flag after load
+    historyDirty = false;
+}
+
+void DosingPump::saveHistory() {
+    if (!prefs->begin("dosepump-hist", false)) {
+        Serial.println("Failed to save dosing history");
+        return;
+    }
+    
+    // Store count
+    prefs->putInt("count", history.size());
+    
+    // Store each record
+    for (int i = 0; i < history.size(); i++) {
+        char key[16];
+        const DosingRecord& record = history[i];
+        
+        snprintf(key, sizeof(key), "ts_%d", i);
+        prefs->putULong(key, record.timestamp);
+        
+        snprintf(key, sizeof(key), "vol_%d", i);
+        prefs->putFloat(key, record.volumeDosed);
+        
+        snprintf(key, sizeof(key), "dur_%d", i);
+        prefs->putInt(key, record.durationMs);
+        
+        snprintf(key, sizeof(key), "ok_%d", i);
+        prefs->putBool(key, record.success);
+        
+        snprintf(key, sizeof(key), "type_%d", i);
+        prefs->putString(key, record.type.c_str());
+    }
+    
+    prefs->end();
+    Serial.printf("Saved %d dose records to NVS\n", history.size());
+    
+    // Clear dirty flag and update timestamp after successful save
+    historyDirty = false;
+    lastSaveTime = millis();
 }
 
 // ============================================================================
@@ -266,7 +368,7 @@ void DosingPump::stop() {
         totalDoses++;
         totalRuntime += record.durationMs;
         
-        saveConfig();
+        markConfigDirty(); // Deferred save for stats
     }
     
     Serial.printf("Pump stopped. Dosed: %.2fmL in %dms\n", 
@@ -368,7 +470,7 @@ void DosingPump::runCleaning(int cycles) {
     }
     
     lastMaintenanceTime = millis() / 1000;
-    saveConfig();
+    forceSave(); // Force save after maintenance (important)
     
     Serial.println("Cleaning cycle complete");
 }
@@ -460,7 +562,7 @@ void DosingPump::doseScheduled() {
     
     scheduleConfig.lastDoseTime = millis() / 1000;
     calculateNextDoseTime();
-    saveConfig();
+    markConfigDirty(); // Deferred save
     
     // Update history with scheduled type
     DosingRecord record;
@@ -491,7 +593,7 @@ void DosingPump::setSchedule(DosingSchedule schedule, int hour, int minute, floa
     scheduleConfig.doseVolume = volumeML;
     
     calculateNextDoseTime();
-    saveConfig();
+    markConfigDirty(); // Deferred save
     
     Serial.printf("Schedule set: %s at %02d:%02d, %.1fmL\n",
                  schedule == DOSE_DAILY ? "DAILY" : 
@@ -507,7 +609,7 @@ void DosingPump::setCustomSchedule(int days, int hour, int minute, float volumeM
     scheduleConfig.doseVolume = volumeML;
     
     calculateNextDoseTime();
-    saveConfig();
+    markConfigDirty(); // Deferred save
     
     Serial.printf("Custom schedule set: Every %d days at %02d:%02d, %.1fmL\n",
                  days, hour, minute, volumeML);
@@ -518,7 +620,7 @@ void DosingPump::enableSchedule(bool enable) {
     if (enable) {
         calculateNextDoseTime();
     }
-    saveConfig();
+    markConfigDirty(); // Deferred save
     Serial.printf("Schedule %s\n", enable ? "ENABLED" : "DISABLED");
 }
 
@@ -602,14 +704,14 @@ bool DosingPump::isDoseOverdue() {
 void DosingPump::setSafetyLimits(int maxDoseML, int maxDailyML) {
     maxDoseVolume = maxDoseML;
     maxDailyVolume = maxDailyML;
-    saveConfig();
+    markConfigDirty(); // Deferred save
     Serial.printf("Safety limits set: %dmL per dose, %dmL per day\n",
                  maxDoseML, maxDailyML);
 }
 
 void DosingPump::setSafetyEnabled(bool enable) {
     safetyEnabled = enable;
-    saveConfig();
+    markConfigDirty(); // Deferred save
     Serial.printf("Safety limits %s\n", enable ? "ENABLED" : "DISABLED");
 }
 
@@ -678,16 +780,22 @@ int DosingPump::getElapsedTime() {
 // ============================================================================
 
 void DosingPump::addToHistory(DosingRecord record) {
+    // Add to history immediately
     history.push_back(record);
     
     // Limit history size
     while (history.size() > (size_t)maxHistoryRecords) {
         history.erase(history.begin());
     }
+    
+    // Save immediately to prevent data loss (only 1 dose/day expected)
+    Serial.println("Saving dose history immediately...");
+    saveHistory();
 }
 
 std::vector<DosingRecord> DosingPump::getHistory(int count) {
     std::vector<DosingRecord> recent;
+    
     int start = max(0, (int)history.size() - count);
     
     for (size_t i = start; i < history.size(); i++) {
@@ -753,6 +861,19 @@ void DosingPump::resetMaintenanceCounter() {
 // ============================================================================
 
 void DosingPump::update() {
+    // Deferred save check
+    if ((configDirty || historyDirty) && 
+        (millis() - lastSaveTime > SAVE_DELAY_MS)) {
+        if (configDirty) {
+            Serial.println("Auto-saving dosing pump config (deferred)...");
+            saveConfig();
+        }
+        if (historyDirty) {
+            Serial.println("Auto-saving dosing pump history (deferred)...");
+            saveHistory();
+        }
+    }
+    
     // Reset daily volume at midnight
     if (millis() - lastDayReset > 24 * 60 * 60 * 1000) {
         resetDailyVolume();

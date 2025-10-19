@@ -12,7 +12,7 @@
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
@@ -27,22 +27,39 @@
             color: white;
             text-align: center;
             margin-bottom: 30px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
         
         .card {
             background: white;
-            border-radius: 15px;
-            padding: 25px;
+            border-radius: 12px;
+            padding: 28px;
             margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.16);
         }
         
         .card h2 {
             color: #667eea;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
+            margin-bottom: 24px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 12px;
+            font-weight: 600;
+            font-size: 24px;
+        }
+        
+        .card h3 {
+            color: #4b5563;
+            font-weight: 600;
+            margin-bottom: 16px;
+            font-size: 18px;
         }
         
         .sensor-grid {
@@ -54,26 +71,37 @@
         .sensor-box {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 20px;
-            border-radius: 10px;
+            padding: 24px;
+            border-radius: 12px;
             text-align: center;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .sensor-box:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.5);
         }
         
         .sensor-box h3 {
-            font-size: 14px;
+            font-size: 13px;
             opacity: 0.9;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            font-weight: 600;
+            letter-spacing: 1px;
         }
         
         .sensor-value {
-            font-size: 32px;
-            font-weight: bold;
-            margin: 10px 0;
+            font-size: 36px;
+            font-weight: 700;
+            margin: 12px 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         
         .sensor-unit {
             font-size: 14px;
-            opacity: 0.8;
+            opacity: 0.85;
+            font-weight: 500;
         }
         
         .control-group {
@@ -89,42 +117,72 @@
         
         .control-group input {
             width: 100%;
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
             font-size: 16px;
+            transition: all 0.2s;
+            background: white;
+        }
+        
+        .control-group input:hover {
+            border-color: #d1d5db;
         }
         
         .control-group input:focus {
             outline: none;
             border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         
         .btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 12px 30px;
+            padding: 14px 32px;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
         
         .btn:hover {
             transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
         
         .btn:active {
             transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
         
         .btn-danger {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        .btn-danger:hover {
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
         }
         
         .btn-success {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        
+        .btn-success:hover {
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
         }
         
         .status-indicator {
@@ -145,36 +203,80 @@
         }
         
         .alert {
-            background: #ff9800;
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
+            padding: 16px 20px;
+            border-radius: 8px;
             margin-bottom: 20px;
             display: none;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
         
         .alert.show {
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .alert.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .alert.error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+        
+        .alert.info {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+        
+        .alert.warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
         }
         
         .tabs {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 8px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
         }
         
         .tab {
-            padding: 10px 20px;
-            background: #f0f0f0;
+            padding: 12px 24px;
+            background: #f3f4f6;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            color: #6b7280;
+        }
+        
+        .tab:hover {
+            background: #e5e7eb;
+            transform: translateY(-1px);
         }
         
         .tab.active {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
         
         .tab-content {
@@ -569,7 +671,12 @@
 </head>
 <body>
     <div class="container">
-        <h1>🐠 Aquarium Controller</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h1 style="margin: 0;">🐠 Aquarium Controller</h1>
+            <div id="current-datetime" style="font-size: 18px; color: white; font-weight: 500;">
+                Loading...
+            </div>
+        </div>
         
         <div id="alert" class="alert"></div>
         
@@ -578,8 +685,13 @@
             <h2>📊 Live Sensor Readings</h2>
             <div class="sensor-grid">
                 <div class="sensor-box">
-                    <h3>TEMPERATURE</h3>
+                    <h3>TANK TEMP</h3>
                     <div class="sensor-value" id="temp">--</div>
+                    <div class="sensor-unit">°C</div>
+                </div>
+                <div class="sensor-box">
+                    <h3>AMBIENT TEMP</h3>
+                    <div class="sensor-value" id="ambient-temp">--</div>
                     <div class="sensor-unit">°C</div>
                 </div>
                 <div class="sensor-box">
@@ -720,12 +832,12 @@
                         <div class="schedule-box">
                             <h4>Tank Volume</h4>
                             <div class="value" id="wc-tank-volume">--</div>
-                            <div>gallons</div>
+                            <div>litres</div>
                         </div>
                         <div class="schedule-box">
                             <h4>Scheduled Volume</h4>
                             <div class="value" id="wc-scheduled-volume">--</div>
-                            <div>gallons</div>
+                            <div>litres</div>
                         </div>
                         <div class="schedule-box">
                             <h4>Last Change</h4>
@@ -765,15 +877,19 @@
                     <table class="history-table" id="wc-history-table">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Volume (gal)</th>
-                                <th>Temp Change</th>
-                                <th>pH Change</th>
+                                <th>Date & Time</th>
+                                <th>Volume (L)</th>
+                                <th>Temp Before</th>
+                                <th>Temp After</th>
+                                <th>pH Before</th>
+                                <th>pH After</th>
+                                <th>TDS Before</th>
+                                <th>TDS After</th>
                                 <th>Duration (min)</th>
                             </tr>
                         </thead>
                         <tbody id="wc-history-body">
-                            <tr><td colspan="5" style="text-align: center;">Loading history...</td></tr>
+                            <tr><td colspan="9" style="text-align: center;">Loading history...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -793,12 +909,12 @@
                         <div class="schedule-box">
                             <h4>Volume This Month</h4>
                             <div class="value" id="wc-stat-volume">--</div>
-                            <div>gallons</div>
+                            <div>litres</div>
                         </div>
                         <div class="schedule-box">
                             <h4>Average Volume</h4>
                             <div class="value" id="wc-stat-avg">--</div>
-                            <div>gallons</div>
+                            <div>litres</div>
                         </div>
                     </div>
                 </div>
@@ -1455,6 +1571,41 @@
                     </select>
                 </div>
                 
+                <h2 style="margin-top: 30px;">🐠 Tank Volume Calculator</h2>
+                <div class="card" style="background: #f0f9ff; border: 2px solid #3b82f6; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0;">Calculate Your Tank Volume</h3>
+                    <p style="color: #666; margin-bottom: 15px;">Enter your tank dimensions to calculate the water volume in litres.</p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                        <div class="control-group">
+                            <label>Length (cm)</label>
+                            <input type="number" id="tank-length" step="0.1" min="0" placeholder="e.g., 60">
+                        </div>
+                        <div class="control-group">
+                            <label>Width (cm)</label>
+                            <input type="number" id="tank-width" step="0.1" min="0" placeholder="e.g., 30">
+                        </div>
+                        <div class="control-group">
+                            <label>Height (cm)</label>
+                            <input type="number" id="tank-height" step="0.1" min="0" placeholder="e.g., 35">
+                        </div>
+                    </div>
+                    
+                    <button class="btn" onclick="calculateTankVolume()" style="margin-right: 10px;">📐 Calculate Volume</button>
+                    <button class="btn btn-success" onclick="applyTankVolume()">✅ Apply to Water Change Assistant</button>
+                    
+                    <div id="tank-calc-result" style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; display: none;">
+                        <h4 style="margin: 0 0 10px 0; color: #3b82f6;">💧 Calculated Volume</h4>
+                        <div style="font-size: 32px; font-weight: bold; color: #1e40af; margin-bottom: 10px;">
+                            <span id="calculated-litres">0</span> <span style="font-size: 20px;">litres</span>
+                        </div>
+                        <div style="color: #666; font-size: 14px;">
+                            Tank dimensions: <span id="calc-dimensions">--</span><br>
+                            Actual water volume (accounting for substrate/decorations): ~<span id="actual-litres">0</span> litres (90%)
+                        </div>
+                    </div>
+                </div>
+                
                 <h2 style="margin-top: 30px;">⚙️ Hardware Pin Configuration</h2>
                 <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 15px; margin-bottom: 15px;">
                     <strong>⚠️ Warning:</strong> Changing pin assignments requires hardware knowledge. Incorrect settings may damage your ESP32 or sensors. Only modify if you know what you're doing!
@@ -1532,6 +1683,9 @@
             if (data.temperature !== undefined) {
                 document.getElementById('temp').textContent = data.temperature.toFixed(2);
             }
+            if (data.ambientTemp !== undefined) {
+                document.getElementById('ambient-temp').textContent = data.ambientTemp.toFixed(2);
+            }
             if (data.ph !== undefined) {
                 document.getElementById('ph').textContent = data.ph.toFixed(2);
             }
@@ -1555,13 +1709,17 @@
             }
         }
         
-        function showAlert(message, type) {
+        function showAlert(message, type = 'info') {
             const alert = document.getElementById('alert');
             alert.textContent = message;
-            alert.className = 'alert show';
-            setTimeout(() => {
-                alert.className = 'alert';
-            }, 5000);
+            alert.className = `alert show ${type}`;
+            
+            // Auto-hide after 5 seconds, except for info messages about reloading
+            if (!message.includes('reload') && !message.includes('Restarting')) {
+                setTimeout(() => {
+                    alert.className = 'alert';
+                }, 5000);
+            }
         }
         
         function showTab(tabName) {
@@ -1577,8 +1735,11 @@
             document.getElementById(tabName + '-tab').classList.add('active');
             event.target.classList.add('active');
             
-            // Load tab-specific data
-            if (tabName === 'waterchange') {
+            // Load tab-specific data with fresh information
+            if (tabName === 'control') {
+                // Reload current settings/targets
+                loadSettings();
+            } else if (tabName === 'waterchange') {
                 updateWaterChangeStatus();
                 updateWaterChangeHistory();
                 updateWaterChangeStats();
@@ -1590,6 +1751,12 @@
                 loadMLConfig();
             } else if (tabName === 'firmware') {
                 updateFirmwareInfo();
+            } else if (tabName === 'settings') {
+                loadCurrentSettings();
+                updateTimeStatus();
+            } else if (tabName === 'calibration') {
+                // Reload calibration data if needed
+                updateCalibrationStatus();
             }
         }
         
@@ -1686,6 +1853,11 @@
             }
         }
         
+        // Alias for tab switching
+        function updateCalibrationStatus() {
+            updateCalibrationReadings();
+        }
+        
         async function calibrateCustomPoint(pointNum) {
             const ph = parseFloat(document.getElementById(`cal${pointNum}-ph`).value);
             const temp = parseFloat(document.getElementById(`cal${pointNum}-temp`).value);
@@ -1742,7 +1914,123 @@
             }
         }
         
+        // Load current settings when opening settings tab
+        async function loadCurrentSettings() {
+            try {
+                const response = await fetch('/api/config');
+                if (response.ok) {
+                    const config = await response.json();
+                    
+                    // Populate MQTT settings
+                    if (config.mqttServer) {
+                        document.getElementById('mqtt-server').value = config.mqttServer;
+                    }
+                    if (config.mqttUser) {
+                        document.getElementById('mqtt-user').value = config.mqttUser;
+                    }
+                    if (config.mqttTopicPrefix) {
+                        document.getElementById('mqtt-topic-prefix').value = config.mqttTopicPrefix;
+                    }
+                    if (config.mqttPort) {
+                        document.getElementById('mqtt-port').value = config.mqttPort;
+                    }
+                    if (config.ntpServer) {
+                        document.getElementById('ntp-server').value = config.ntpServer;
+                    }
+                    if (config.gmtOffsetSec !== undefined) {
+                        document.getElementById('gmt-offset').value = config.gmtOffsetSec;
+                    }
+                    if (config.daylightOffsetSec !== undefined) {
+                        document.getElementById('dst-offset').value = config.daylightOffsetSec;
+                    }
+                    // Restore tank dimensions
+                    if (config.tankLength && config.tankWidth && config.tankHeight) {
+                        document.getElementById('tank-length').value = config.tankLength;
+                        document.getElementById('tank-width').value = config.tankWidth;
+                        document.getElementById('tank-height').value = config.tankHeight;
+                        // Auto-calculate volume from stored dimensions
+                        calculateTankVolume();
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+            }
+        }
+        
+        // Tank volume calculator
+        async function calculateTankVolume() {
+            const length = parseFloat(document.getElementById('tank-length').value);
+            const width = parseFloat(document.getElementById('tank-width').value);
+            const height = parseFloat(document.getElementById('tank-height').value);
+            
+            if (!length || !width || !height || length <= 0 || width <= 0 || height <= 0) {
+                showAlert('Please enter valid dimensions (length, width, height in cm)', 'error');
+                return;
+            }
+            
+            // Calculate volume in litres (cm³ / 1000)
+            const volumeLitres = (length * width * height) / 1000;
+            // Actual water volume accounting for substrate and decorations (typically 90%)
+            const actualLitres = volumeLitres * 0.9;
+            
+            document.getElementById('calculated-litres').textContent = volumeLitres.toFixed(1);
+            document.getElementById('actual-litres').textContent = actualLitres.toFixed(1);
+            document.getElementById('calc-dimensions').textContent = 
+                `${length} × ${width} × ${height} cm`;
+            document.getElementById('tank-calc-result').style.display = 'block';
+            
+            // Store the calculated volume for later use
+            window.calculatedTankVolume = actualLitres;
+            window.tankDimensions = { length, width, height };
+            
+            // Save dimensions to NVS
+            try {
+                await fetch('/api/config/tank', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ length, width, height })
+                });
+            } catch (error) {
+                console.error('Failed to save tank dimensions:', error);
+            }
+        }
+        
+        async function applyTankVolume() {
+            if (!window.calculatedTankVolume) {
+                showAlert('Please calculate the tank volume first', 'error');
+                return;
+            }
+            
+            // Send to water change assistant
+            const response = await fetch('/api/waterchange/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    tankVolume: window.calculatedTankVolume
+                })
+            });
+            
+            if (response.ok) {
+                showAlert(`✓ Tank volume set to ${window.calculatedTankVolume.toFixed(1)} litres`, 'success');
+                
+                // Update the Water Change tab display immediately
+                updateWaterChangeStatus();
+                updateWaterChangeStats();
+                
+                // Also update the displayed values directly
+                setTimeout(() => {
+                    document.getElementById('wc-tank-volume').textContent = 
+                        window.calculatedTankVolume.toFixed(1);
+                }, 500);
+            } else {
+                showAlert('Failed to update tank volume', 'error');
+            }
+        }
+        
         async function saveSettings() {
+            // Show loading state
+            showAlert('💾 Saving settings to memory...', 'info');
+            
             const settings = {
                 wifiSSID: document.getElementById('wifi-ssid').value,
                 wifiPassword: document.getElementById('wifi-pass').value,
@@ -1768,16 +2056,51 @@
                 co2RelayPin: parseInt(document.getElementById('co2-relay-pin').value)
             };
             
-            const response = await fetch('/api/settings', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(settings)
-            });
-            
-            if (response.ok) {
-                showAlert('Settings saved. Device will restart.', 'success');
-            } else {
-                showAlert('Failed to save settings', 'error');
+            try {
+                // First, save settings to memory
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(settings)
+                });
+                
+                if (response.ok) {
+                    showAlert('✅ Settings saved to memory. Writing to flash...', 'success');
+                    
+                    // Force immediate save to flash
+                    const saveResponse = await fetch('/api/config/save', {
+                        method: 'POST'
+                    });
+                    
+                    if (saveResponse.ok) {
+                        showAlert('✅ Settings written to flash memory! Device will restart in 3 seconds...', 'success');
+                        
+                        // Countdown timer
+                        let countdown = 3;
+                        const countdownInterval = setInterval(() => {
+                            countdown--;
+                            if (countdown > 0) {
+                                showAlert(`✅ Settings saved! Restarting in ${countdown}...`, 'success');
+                            } else {
+                                clearInterval(countdownInterval);
+                                showAlert('🔄 Device restarting... Page will reload in 30 seconds', 'info');
+                                
+                                // Auto-reload page after device restart
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 30000);
+                            }
+                        }, 1000);
+                    } else {
+                        showAlert('⚠️ Settings saved to memory. Will auto-save to flash in 5 seconds.', 'warning');
+                    }
+                } else {
+                    const error = await response.text();
+                    showAlert('❌ Failed to save settings: ' + error, 'error');
+                }
+            } catch (error) {
+                showAlert('❌ Failed to save settings: ' + error.message, 'error');
+                console.error('Settings save error:', error);
             }
         }
         
@@ -1889,12 +2212,34 @@
         
         // Water Change Functions
         let wcUpdateInterval = null;
+        let lastWaterChangePhase = null;
         
         async function updateWaterChangeStatus() {
             try {
                 const response = await fetch('/api/waterchange/status');
                 if (response.ok) {
                     const status = await response.json();
+                    
+                    // Check if water change just completed (phase changed to complete/idle from in-progress)
+                    if (lastWaterChangePhase !== null && 
+                        lastWaterChangePhase > 0 && 
+                        lastWaterChangePhase < 6 && 
+                        (status.phase === 0 || status.phase === 6)) {
+                        // Water change just completed, refresh history and stats
+                        console.log('Water change completed, refreshing history...');
+                        updateWaterChangeHistory();
+                        updateWaterChangeStats();
+                        
+                        // Stop the update interval timer
+                        if (wcUpdateInterval) {
+                            clearInterval(wcUpdateInterval);
+                            wcUpdateInterval = null;
+                            console.log('Water change timer stopped');
+                        }
+                    }
+                    
+                    // Store current phase for next comparison
+                    lastWaterChangePhase = status.phase;
                     
                     // Update phase description
                     document.getElementById('wc-phase-desc').textContent = status.phaseDescription;
@@ -1951,19 +2296,22 @@
                     tbody.innerHTML = '';
                     
                     if (history.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No water changes recorded yet</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center;">No water changes recorded yet</td></tr>';
                     } else {
                         history.forEach(record => {
                             const row = document.createElement('tr');
-                            const date = new Date(record.timestamp * 1000).toLocaleDateString();
-                            const tempChange = (record.tempAfter - record.tempBefore).toFixed(1);
-                            const phChange = (record.phAfter - record.phBefore).toFixed(2);
+                            const date = new Date(record.timestamp * 1000);
+                            const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
                             
                             row.innerHTML = `
-                                <td>${date}</td>
+                                <td>${dateStr}</td>
                                 <td>${record.volume.toFixed(1)}</td>
-                                <td>${tempChange > 0 ? '+' : ''}${tempChange}°C</td>
-                                <td>${phChange > 0 ? '+' : ''}${phChange}</td>
+                                <td>${record.tempBefore.toFixed(1)}°C</td>
+                                <td>${record.tempAfter.toFixed(1)}°C</td>
+                                <td>${record.phBefore.toFixed(2)}</td>
+                                <td>${record.phAfter.toFixed(2)}</td>
+                                <td>${record.tdsBefore.toFixed(0)} ppm</td>
+                                <td>${record.tdsAfter.toFixed(0)} ppm</td>
                                 <td>${record.duration}</td>
                             `;
                             tbody.appendChild(row);
@@ -2873,6 +3221,27 @@
                 console.error('Firmware upload error:', error);
             }
         }
+        
+        // Update current date/time display
+        function updateDateTime() {
+            const now = new Date();
+            const options = {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            };
+            document.getElementById('current-datetime').textContent = 
+                now.toLocaleString('en-AU', options);
+        }
+        
+        // Update clock every second
+        setInterval(updateDateTime, 1000);
+        updateDateTime(); // Initial call
     </script>
 </body>
 </html>

@@ -24,6 +24,11 @@ struct SystemConfig {
     int gmtOffsetSec;
     int daylightOffsetSec;
     
+    // Tank dimensions (for volume calculator)
+    float tankLength;   // cm
+    float tankWidth;    // cm
+    float tankHeight;   // cm
+    
     // Temperature control
     float tempTarget;
     float tempSafetyMax;
@@ -57,6 +62,10 @@ struct SystemConfig {
         gmtOffsetSec = 36000;      // AEST (UTC+10) - Sydney/Melbourne/Brisbane
         daylightOffsetSec = 3600;  // Australian Daylight Saving Time (+1 hour)
         
+        tankLength = 0;            // No default tank dimensions
+        tankWidth = 0;
+        tankHeight = 0;
+        
         tempTarget = 25.0;         // 25°C - typical for tropical aquariums
         tempSafetyMax = 30.0;      // 30°C - safety limit for Australian climate
         phTarget = 6.8;            // Slightly acidic for planted tanks
@@ -75,6 +84,11 @@ class ConfigManager {
 private:
     Preferences* prefs;
     SystemConfig config;
+    
+    // Deferred saving (dirty flag pattern)
+    bool isDirty;
+    unsigned long lastSaveTime;
+    static const unsigned long SAVE_DELAY_MS = 5000; // 5 seconds
 
 public:
     ConfigManager();
@@ -85,15 +99,21 @@ public:
     void save();
     void reset();
     
+    // Deferred save management
+    void markDirty();
+    void update();      // Call this in main loop
+    void forceSave();   // Immediate save for critical operations
+    
     SystemConfig& getConfig() { return config; }
     void setConfig(const SystemConfig& newConfig);
     
-    // Individual setters
+    // Individual setters (now use deferred save)
     void setWiFi(const char* ssid, const char* password);
     void setMQTT(const char* server, int port, const char* user, const char* password, const char* topicPrefix = nullptr, bool publishIndividual = true, bool publishJSON = false);
     void setNTP(const char* server, int gmtOffset, int dstOffset);
     void setTemperatureTarget(float target, float safetyMax);
     void setPHTarget(float target, float safetyMin);
+    void setTankDimensions(float length, float width, float height);
     
     // Backup and restore
     String exportToJSON();

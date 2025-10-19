@@ -233,7 +233,7 @@ void setup() {
     Serial.println("\nInitializing water change assistant...");
     waterChangeAssistant = new WaterChangeAssistant();
     waterChangeAssistant->begin();
-    waterChangeAssistant->setTankVolume(20.0); // Default 20 gallon tank
+    waterChangeAssistant->setTankVolume(75.0); // Default 75 litre tank
     waterChangeAssistant->setSchedule(SCHEDULE_WEEKLY, 25.0); // 25% weekly
     waterChangeAssistant->setSafetyLimits(2.0, 0.5); // ±2°C, ±0.5 pH
     
@@ -353,6 +353,11 @@ void loop() {
         reconnectMQTT();
     } else {
         mqttClient->loop();
+    }
+    
+    // Update config manager (deferred NVS saves)
+    if (configMgr) {
+        configMgr->update();
     }
     
     // Update water change assistant
