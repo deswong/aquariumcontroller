@@ -1,14 +1,15 @@
 #include "WaterChangeAssistant.h"
+#include "ConfigManager.h"
 #include "SystemTasks.h"
 
 WaterChangeAssistant::WaterChangeAssistant() 
     : schedule(SCHEDULE_NONE), lastChangeTime(0), scheduledVolumePercent(25.0),
-      tankVolumeLitres(75.0), currentPhase(PHASE_IDLE), phaseStartTime(0),
+      currentPhase(PHASE_IDLE), phaseStartTime(0),
       waterChangeStartTimestamp(0), currentChangeVolume(0), tempBeforeChange(0), 
       phBeforeChange(0), tdsBeforeChange(0), systemsPaused(false),
       maxTempDifference(2.0), maxPhDifference(0.5),
       maxDrainTime(600000), maxFillTime(600000), stabilizationTime(300000),
-      settingsDirty(false), historyDirty(false), lastSaveTime(0) {
+      settingsDirty(false), historyDirty(false), lastSaveTime(0), configMgr(nullptr) {
     
     prefs = new Preferences();
 }
@@ -25,12 +26,17 @@ void WaterChangeAssistant::begin() {
     loadHistory();
     
     Serial.println("Water Change Assistant initialized");
-    Serial.printf("Tank volume: %.1f litres\n", tankVolumeLitres);
+    Serial.printf("Tank volume: %.1f litres\n", getTankVolume());
     Serial.printf("Schedule: %d days, %.1f%% volume\n", (int)schedule, scheduledVolumePercent);
     
     if (eventLogger) {
         eventLogger->info("waterchange", "Water change assistant initialized");
     }
+}
+
+void WaterChangeAssistant::begin(ConfigManager* config) {
+    configMgr = config;
+    begin(); // Call the regular begin() which now uses configMgr
 }
 
 void WaterChangeAssistant::update() {
@@ -83,7 +89,6 @@ void WaterChangeAssistant::loadSettings() {
     schedule = (WaterChangeSchedule)prefs->getInt("schedule", SCHEDULE_WEEKLY);
     lastChangeTime = prefs->getULong("lastChange", 0);
     scheduledVolumePercent = prefs->getFloat("volumePct", 25.0);
-    tankVolumeLitres = prefs->getFloat("tankVol", 75.0);
     maxTempDifference = prefs->getFloat("maxTempDiff", 2.0);
     maxPhDifference = prefs->getFloat("maxPhDiff", 0.5);
     
@@ -100,7 +105,6 @@ void WaterChangeAssistant::saveSettings() {
     prefs->putInt("schedule", (int)schedule);
     prefs->putULong("lastChange", lastChangeTime);
     prefs->putFloat("volumePct", scheduledVolumePercent);
-    prefs->putFloat("tankVol", tankVolumeLitres);
     prefs->putFloat("maxTempDiff", maxTempDifference);
     prefs->putFloat("maxPhDiff", maxPhDifference);
     
@@ -315,15 +319,30 @@ bool WaterChangeAssistant::isChangeOverdue() {
     return getDaysUntilNextChange() == 0;
 }
 
-void WaterChangeAssistant::setTankVolume(float litres) {
-    tankVolumeLitres = constrain(litres, 20.0, 4000.0); // 20-4000 litre range
-    markSettingsDirty(); // Deferred save
+void WaterChangeAssistant::setConfigManager(ConfigManager* config) {
+    configMgr = config;
+    Serial.printf("ConfigManager linked to WaterChangeAssistant\n");
+}
+
+float WaterChangeAssistant::getTankVolume() {
+    if (configMgr) {
+        // Calculate volume from ConfigManager dimensions (L x W x H in cm)
+        SystemConfig& config = configMgr->getConfig();
+        float volumeCubicCm = config.tankLength * config.tankWidth * config.tankHeight;
+        float volumeLitres = volumeCubicCm / 1000.0; // Convert cm³ to litres
+        
+        if (volumeLitres > 0) {
+            return volumeLitres;
+        }
+    }
     
-    Serial.printf("Tank volume set to %.1f litres\n", tankVolumeLitres);
+    // Fallback to default if ConfigManager not set or dimensions not configured
+    Serial.println("WARNING: Tank dimensions not configured, using default 75L");
+    return 75.0;
 }
 
 float WaterChangeAssistant::getScheduledChangeVolume() {
-    return tankVolumeLitres * (scheduledVolumePercent / 100.0);
+    return getTankVolume() * (scheduledVolumePercent / 100.0);
 }
 
 bool WaterChangeAssistant::startWaterChange(float volumeLitres) {
@@ -338,7 +357,7 @@ bool WaterChangeAssistant::startWaterChange(float volumeLitres) {
     }
     
     // Validate volume
-    if (volumeLitres > tankVolumeLitres * 0.5) {
+    if (volumeLitres > getTankVolume() * 0.5) {
         Serial.println("ERROR: Change volume exceeds 50% of tank capacity");
         if (eventLogger) {
             eventLogger->error("waterchange", "Change volume too large - safety limit");
@@ -373,7 +392,7 @@ bool WaterChangeAssistant::startWaterChange(float volumeLitres) {
     
     Serial.println("\n=== Water Change Started ===");
     Serial.printf("Volume: %.1f litres (%.1f%%)\n", 
-                  currentChangeVolume, (currentChangeVolume/tankVolumeLitres)*100);
+                  currentChangeVolume, (currentChangeVolume/getTankVolume())*100);
     Serial.printf("Temperature before: %.1f°C\n", tempBeforeChange);
     Serial.printf("pH before: %.2f\n", phBeforeChange);
     Serial.println("Systems paused for safety");
@@ -567,7 +586,7 @@ bool WaterChangeAssistant::completeWaterChange() {
     
     // Notify water change predictor
     if (wcPredictor) {
-        float volumePercent = (currentChangeVolume / tankVolumeLitres) * 100.0;
+        float volumePercent = (currentChangeVolume / getTankVolume()) * 100.0;
         wcPredictor->completeWaterChange(volumePercent);
     }
     

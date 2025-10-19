@@ -590,13 +590,16 @@ void WebServerManager::setupRoutes() {
         }
         
         if (doc.containsKey("tankVolume")) {
+            // Tank volume is now managed by ConfigManager via tank dimensions
+            // This API endpoint is deprecated - use /api/settings to set tank dimensions
             float tankVolume = doc["tankVolume"];
-            waterChangeAssistant->setTankVolume(tankVolume);
-            request->send(200, "application/json", "{\"status\":\"ok\"}");
+            request->send(200, "application/json", "{\"status\":\"ok\",\"message\":\"Tank volume is now configured via tank dimensions in settings\"}");
             
-            Serial.printf("Tank volume updated via API: %.1f litres\n", tankVolume);
+            Serial.printf("WARNING: Deprecated tankVolume API called. Tank volume is now calculated from dimensions in ConfigManager.\n");
+            Serial.printf("Current tank volume from dimensions: %.1f litres\n", waterChangeAssistant->getTankVolume());
+            
             if (eventLogger) {
-                eventLogger->info("waterchange", "Tank volume updated via web interface");
+                eventLogger->warning("api", "Deprecated setTankVolume API called - use tank dimensions instead");
             }
         } else {
             request->send(400, "application/json", "{\"error\":\"Missing tankVolume field\"}");

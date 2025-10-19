@@ -5,6 +5,9 @@
 #include <Preferences.h>
 #include <vector>
 
+// Forward declaration
+class ConfigManager;
+
 // Water change schedule types
 enum WaterChangeSchedule {
     SCHEDULE_NONE = 0,
@@ -42,12 +45,12 @@ struct WaterChangeRecord {
 class WaterChangeAssistant {
 private:
     Preferences* prefs;
+    ConfigManager* configMgr;  // Pointer to config for tank dimensions
     
     // Schedule settings
     WaterChangeSchedule schedule;
     unsigned long lastChangeTime;    // Seconds since boot
     float scheduledVolumePercent;    // Percentage of tank volume
-    float tankVolumeLitres;
     
     // Current water change state
     WaterChangePhase currentPhase;
@@ -90,6 +93,7 @@ public:
     ~WaterChangeAssistant();
     
     void begin();
+    void begin(ConfigManager* config); // Preferred: pass config manager
     void update();
     
     // Schedule management
@@ -100,8 +104,8 @@ public:
     bool isChangeOverdue();
     
     // Tank configuration
-    void setTankVolume(float litres);
-    float getTankVolume() { return tankVolumeLitres; }
+    void setConfigManager(ConfigManager* config); // Set config manager reference
+    float getTankVolume(); // Returns calculated volume from ConfigManager
     float getScheduledChangeVolume(); // Returns litres
     
     // Water change operations
