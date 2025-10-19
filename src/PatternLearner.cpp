@@ -412,7 +412,7 @@ bool PatternLearner::checkForAnomalies(float temp, float ph, float tds, float am
 
 Anomaly PatternLearner::detectTemperatureAnomaly(int hour, float temp) {
     Anomaly anomaly;
-    anomaly.timestamp = millis() / 1000;
+    anomaly.timestamp = time(nullptr);  // Use NTP time instead of millis
     anomaly.type = "temperature";
     anomaly.actualValue = temp;
     anomaly.expectedValue = hourlyTempPattern[hour];
@@ -429,7 +429,7 @@ Anomaly PatternLearner::detectTemperatureAnomaly(int hour, float temp) {
 
 Anomaly PatternLearner::detectPHAnomaly(int hour, float ph) {
     Anomaly anomaly;
-    anomaly.timestamp = millis() / 1000;
+    anomaly.timestamp = time(nullptr);  // Use NTP time instead of millis
     anomaly.type = "ph";
     anomaly.actualValue = ph;
     anomaly.expectedValue = hourlyPHPattern[hour];
@@ -446,7 +446,7 @@ Anomaly PatternLearner::detectPHAnomaly(int hour, float ph) {
 
 Anomaly PatternLearner::detectTDSAnomaly(int hour, float tds) {
     Anomaly anomaly;
-    anomaly.timestamp = millis() / 1000;
+    anomaly.timestamp = time(nullptr);  // Use NTP time instead of millis
     anomaly.type = "tds";
     anomaly.actualValue = tds;
     anomaly.expectedValue = hourlyTDSPattern[hour];
@@ -658,7 +658,7 @@ bool PatternLearner::predictAnomalyLikelihood(int hoursAhead) {
     if (anomalyHistory.size() < 3) return false;
     
     int recentAnomalies = 0;
-    unsigned long currentTime = millis() / 1000;
+    unsigned long currentTime = time(nullptr);  // Use NTP time instead of millis
     unsigned long lookback = 3600 * hoursAhead; // Look back same duration
     
     for (const auto& anomaly : anomalyHistory) {

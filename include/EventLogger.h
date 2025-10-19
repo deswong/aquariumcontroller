@@ -12,7 +12,7 @@ enum EventLevel {
 };
 
 struct LogEvent {
-    unsigned long timestamp;  // Milliseconds since boot
+    unsigned long timestamp;  // Unix timestamp (seconds since 1970-01-01)
     EventLevel level;
     String category;
     String message;

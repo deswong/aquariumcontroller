@@ -1,4 +1,5 @@
 #include "EventLogger.h"
+#include <time.h>
 
 EventLogger::EventLogger() {
 }
@@ -36,7 +37,7 @@ EventLevel EventLogger::stringToLevel(const String& str) {
 void EventLogger::log(EventLevel level, const String& category, const String& message) {
     // Create formatted log message
     LogEvent event;
-    event.timestamp = millis();
+    event.timestamp = time(nullptr);  // Use NTP time instead of millis
     event.level = level;
     event.category = category;
     event.message = message;
@@ -88,24 +89,23 @@ int EventLogger::getLogCount() {
 
 String EventLogger::formatEvent(const LogEvent& event) {
     // Format: timestamp|level|category|message
-    unsigned long seconds = event.timestamp / 1000;
-    unsigned long minutes = seconds / 60;
-    unsigned long hours = minutes / 60;
-    unsigned long days = hours / 24;
+    // Convert Unix timestamp to readable format
+    time_t rawtime = event.timestamp;
+    struct tm* timeinfo = localtime(&rawtime);
     
-    String timeStr;
-    if (days > 0) {
-        timeStr = String(days) + "d " + String(hours % 24) + "h";
-    } else if (hours > 0) {
-        timeStr = String(hours) + "h " + String(minutes % 60) + "m";
-    } else if (minutes > 0) {
-        timeStr = String(minutes) + "m " + String(seconds % 60) + "s";
+    char timeStr[20];
+    if (timeinfo && event.timestamp > 1000000000) {  // Valid NTP time
+        strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", timeinfo);
     } else {
-        timeStr = String(seconds) + "s";
+        // NTP not synced yet, show boot time
+        unsigned long seconds = millis() / 1000;
+        unsigned long minutes = seconds / 60;
+        unsigned long hours = minutes / 60;
+        snprintf(timeStr, sizeof(timeStr), "Boot+%luh%lum", hours, minutes % 60);
     }
     
     return String(event.timestamp) + "|" + 
            levelToString(event.level) + "|" + 
            event.category + "|" + 
-           event.message + " [" + timeStr + "]";
+           event.message + " [" + String(timeStr) + "]";
 }

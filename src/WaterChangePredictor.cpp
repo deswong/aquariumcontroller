@@ -1,5 +1,6 @@
 #include "WaterChangePredictor.h"
 #include <cmath>
+#include <time.h>
 
 WaterChangePredictor::WaterChangePredictor() {
     prefs = new Preferences();
@@ -128,7 +129,7 @@ void WaterChangePredictor::completeWaterChange(float volumePercent) {
     
     // Create new event
     WaterChangeEvent event;
-    event.timestamp = millis() / 1000;  // Convert to seconds
+    event.timestamp = time(nullptr);  // Use NTP time instead of millis
     event.tdsBeforeChange = tdsBeforeWaterChange;
     event.tdsAfterChange = currentTDS;
     event.volumeChangedPercent = volumePercent;
@@ -350,7 +351,7 @@ float WaterChangePredictor::getTDSAtLastChange() {
 
 unsigned long WaterChangePredictor::getDaysSinceLastChange() {
     if (lastWaterChangeTime == 0) return 0;
-    unsigned long now = millis() / 1000;
+    unsigned long now = time(nullptr);  // Use NTP time instead of millis
     return (now - lastWaterChangeTime) / 86400;
 }
 
