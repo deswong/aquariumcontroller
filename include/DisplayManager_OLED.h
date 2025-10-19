@@ -1,66 +1,98 @@
-#ifndef DISPLAYMANAGER_OLED_H
-#define DISPLAYMANAGER_OLED_H
+#ifndef DISPLAY_MANAGER_OLED_H
+#define DISPLAY_MANAGER_OLED_H
 
-#include <Arduino.h>
 #include <U8g2lib.h>
-
-// I2C pins (using default ESP32 I2C)
-// SDA: GPIO 21
-// SCL: GPIO 22
-// I2C Address: 0x3C (typical for SSD1309)
+#include <Wire.h>
 
 class DisplayManager {
 private:
-    // U8g2 display object for SSD1309 128x64 OLED
     U8G2_SSD1309_128X64_NONAME0_F_HW_I2C* display;
     
-    // Display update timing
+    // Display state
     unsigned long lastUpdate;
-    static const unsigned long UPDATE_INTERVAL = 1000; // 1 Hz (once per second)
+    unsigned long lastScreenSwitch;
+    uint8_t currentScreen;
+    static const uint8_t NUM_SCREENS = 3;
+    static const unsigned long UPDATE_INTERVAL = 1000;      // 1 Hz
+    static const unsigned long SCREEN_SWITCH_INTERVAL = 5000; // 5 seconds
     
-    // Cached sensor data
-    float cachedTemp;
-    float cachedPH;
-    float cachedTDS;
-    float cachedAmbientTemp;
-    float cachedTargetTemp;
-    float cachedTargetPH;
-    bool cachedHeaterState;
-    bool cachedCO2State;
-    String cachedWaterChangeDate;
-    String cachedIPAddress;
-    bool cachedWiFiConnected;
+    // Sensor data
+    float currentTemp;
+    float targetTemp;
+    float currentPH;
+    float targetPH;
+    float currentTDS;
+    float ambientTemp;
+    bool heaterActive;
+    bool co2Active;
+    bool dosingActive;
+    String waterChangeDate;
+    bool wifiConnected;
+    String ipAddress;
+    String currentTime;
     
-    // Display helper methods
-    void drawMainScreen();
-    void drawIcon(int x, int y, const char* icon);
+    // Trends (for graphing)
+    static const uint8_t TREND_SIZE = 32;
+    float tempTrend[TREND_SIZE];
+    float phTrend[TREND_SIZE];
+    float tdsTrend[TREND_SIZE];
+    uint8_t trendIndex;
     
+    // Animation
+    uint8_t animationFrame;
+    unsigned long lastAnimation;
+    static const unsigned long ANIMATION_INTERVAL = 200; // 5 FPS
+    
+    // Private methods
+    void drawScreen0(); // Main status screen
+    void drawScreen1(); // Graph screen
+    void drawScreen2(); // Network & system info
+    
+    void drawStatusBar();
+    void drawIcon(uint8_t x, uint8_t y, const uint8_t* icon);
+    void drawGraph(uint8_t x, uint8_t y, uint8_t w, uint8_t h, float* data, uint8_t len, float min, float max);
+    void drawProgressBar(uint8_t x, uint8_t y, uint8_t w, uint8_t h, float value, float min, float max);
+    void drawWaveAnimation(uint8_t x, uint8_t y, uint8_t w, uint8_t h);
+    void addToTrend(float* trend, float value);
+    
+    // Icons (8x8 bitmaps)
+    static const uint8_t ICON_TEMP[];
+    static const uint8_t ICON_PH[];
+    static const uint8_t ICON_TDS[];
+    static const uint8_t ICON_HEATER[];
+    static const uint8_t ICON_CO2[];
+    static const uint8_t ICON_WIFI[];
+    static const uint8_t ICON_WIFI_OFF[];
+    static const uint8_t ICON_DROPLET[];
+    static const uint8_t ICON_CALENDAR[];
+    static const uint8_t ICON_DOSING[];
+
 public:
     DisplayManager();
     ~DisplayManager();
     
-    // Initialization
     bool begin();
-    
-    // Main update loop (call from main loop)
     void update();
+    void clear();
+    void setBrightness(uint8_t brightness);
+    void setContrast(uint8_t contrast);
+    void test();
     
-    // Data update methods (call from sensor tasks)
-    void updateTemperature(float temp, float target);
-    void updatePH(float ph, float target);
+    // Data update methods
+    void updateTemperature(float current, float target);
+    void updatePH(float current, float target);
     void updateTDS(float tds);
     void updateAmbientTemperature(float temp);
-    void updateHeaterState(bool state);
-    void updateCO2State(bool state);
-    void updateWaterChangeDate(const String& date);
-    void updateNetworkStatus(bool connected, const String& ipAddress);
+    void updateHeaterState(bool active);
+    void updateCO2State(bool active);
+    void updateDosingState(bool active);
+    void updateWaterChangeDate(const char* date);
+    void updateNetworkStatus(bool connected, const char* ip);
+    void updateTime(const char* time);
     
-    // Display control
-    void clear();
-    void setBrightness(uint8_t brightness); // 0-255
-    
-    // Display test
-    void test();
+    // Screen control
+    void nextScreen();
+    void setScreen(uint8_t screen);
 };
 
-#endif // DISPLAYMANAGER_OLED_H
+#endif // DISPLAY_MANAGER_OLED_H

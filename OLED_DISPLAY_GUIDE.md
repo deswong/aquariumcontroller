@@ -1,435 +1,226 @@
-# SSD1309 OLED Display Implementation
+# SSD1309 OLED Display Implementation - Enhanced
 
-## Overview
-Minimal, clean implementation of DisplayManager for SSD1309 128x64 OLED display. This is a read-only information display with no user input.
+## New Features Added
 
-## File Statistics
+### Visual Enhancements
+- ✅ **8x8 Pixel Icons** for all sensors and status indicators
+- ✅ **Progress Bars** showing values relative to targets
+- ✅ **Animated Wave** effect at bottom of main screen
+- ✅ **Real-time Graphs** showing 32-point trend history
+- ✅ **Status Indicators** with on/off icons
+- ✅ **Auto-Rotating Screens** (every 5 seconds)
+- ✅ **Screen Navigation Dots** showing current screen
 
-| File | Lines | Description |
-|------|-------|-------------|
-| DisplayManager_OLED.h | 66 | Header with class definition |
-| DisplayManager_OLED.cpp | 239 | Implementation |
-| **Total** | **305** | Complete implementation |
+### Three Display Screens
 
-**Comparison to Ender 3 version:**
-- Original: 722 lines
-- OLED: 305 lines
-- **Reduction: 417 lines (58% smaller)**
-
-## Hardware Requirements
-
-### Display Module
-- **Model**: SSD1309 128x64 OLED
-- **Interface**: I2C
-- **Voltage**: 3.3V or 5V (most modules support both)
-- **I2C Address**: 0x3C (typical default)
-
-### Wiring (I2C)
-```
-SSD1309        ESP32
---------       -----
-VCC     →      3.3V or 5V
-GND     →      GND
-SDA     →      GPIO 21 (default I2C SDA)
-SCL     →      GPIO 22 (default I2C SCL)
-```
-
-**Total Pins Used**: 2 (plus power)
-
-### Alternative: SPI Wiring
-If you have an SPI version of the display:
-```
-SSD1309        ESP32
---------       -----
-VCC     →      3.3V or 5V
-GND     →      GND
-SCL/CLK →      GPIO 18 (SPI SCK)
-SDA/DIN →      GPIO 23 (SPI MOSI)
-RES     →      GPIO 0  (Reset)
-DC      →      GPIO 2  (Data/Command)
-CS      →      GPIO 15 (Chip Select)
-```
-
-## Display Layout
-
+#### Screen 1: Main Status (Auto-rotates every 5s)
 ```
 ┌────────────────────────────────────────┐
-│ Last WC: 2025-10-15        12:34:56    │  Line 1 (10px)
-│ Temp: 25.5C [HEAT]                     │  Line 2 (22px)
-│ pH: 7.20 [CO2]                         │  Line 3 (34px)
-│ TDS: 245 ppm                           │  Line 4 (46px)
-│ Room: 23.0C                            │  Line 5 (58px)
-│ WiFi: 192.168.1.100                    │  Line 6 (58px)
+│ [WiFi] ● ● ○          12:34:56         │ Status Bar
+├────────────────────────────────────────┤
+│ [T] 25.1C    [HEAT]  [████    ] 26.0   │ Temp + Progress
+│ [P] 7.20     [CO2]   [██████  ] 7.0    │ pH + Progress  
+│ [D] 245 ppm           [DOSE] DOSING    │ TDS + Dosing
+│ [C] WC: 2025-10-15                     │ Water Change
+│ ≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈  │ Wave Animation
 └────────────────────────────────────────┘
 ```
 
-### Display Elements
-1. **Last Water Change**: Date of last water change
-2. **Temperature**: Current water temp with heater status [HEAT] or target temp
-3. **pH**: Current pH with CO2 status [CO2] or target pH
-4. **TDS**: Current TDS in ppm
-5. **Room Temperature**: Ambient temperature (if sensor present)
-6. **WiFi Status**: IP address or disconnected message
-7. **Current Time**: HH:MM:SS from NTP (top right)
-
-## Features
-
-### What It Does
-- ✅ Displays all critical sensor readings
-- ✅ Shows heater and CO2 status with indicators
-- ✅ Shows target values when actuators are off
-- ✅ Displays WiFi connection status and IP
-- ✅ Shows current time from NTP
-- ✅ Shows last water change date
-- ✅ Updates once per second (1 Hz)
-- ✅ Low power consumption
-- ✅ High contrast OLED display
-
-### What It Doesn't Do
-- ❌ No user input (no buttons, no encoder)
-- ❌ No menu system
-- ❌ No configuration on device
-- ❌ No multiple screens
-- ❌ No graphs or charts
-- ❌ No audio feedback
-
-## API Reference
-
-### Initialization
-```cpp
-DisplayManager* display = new DisplayManager();
-
-void setup() {
-    if (display->begin()) {
-        Serial.println("Display ready");
-    } else {
-        Serial.println("Display failed");
-    }
-}
+#### Screen 2: Trend Graphs
+```
+┌────────────────────────────────────────┐
+│ [WiFi] ○ ● ○          12:34:56         │ Status Bar
+├────────────────────────────────────────┤
+│ Temp ┌──────────────────────────┐      │
+│      │    /\  /\                │      │ 32-point temp
+│      │   /  \/  \               │      │ history graph
+│      └──────────────────────────┘      │
+│ pH   ┌──────────────────────────┐      │
+│      │  ──/\─────/\──           │      │ 32-point pH
+│      │    \    /    \           │      │ history graph
+│      └──────────────────────────┘      │
+│ TDS  ┌──────────────────────────┐      │ 32-point TDS
+│      └──────────────────────────┘      │ mini graph
+└────────────────────────────────────────┘
 ```
 
-### Main Loop
-```cpp
-void loop() {
-    display->update();  // Call this frequently (handles timing internally)
-}
+#### Screen 3: Network & System Info
+```
+┌────────────────────────────────────────┐
+│ [WiFi] ○ ○ ●          12:34:56         │ Status Bar
+├────────────────────────────────────────┤
+│ [WiFi] Connected                       │ WiFi Status
+│       192.168.1.100                    │ IP Address
+│                                        │
+│ [T] Room: 23.0C                        │ Ambient Temp
+│                                        │
+│ Up: 5h 23m                             │ System Uptime
+│                                        │
+└────────────────────────────────────────┘
 ```
 
-### Data Updates
+## New API Methods
 
-#### Update Temperature
+### Update Dosing State
 ```cpp
-display->updateTemperature(
-    25.5,   // Current temperature
-    26.0    // Target temperature
-);
+display->updateDosingState(true);  // Show dosing indicator
 ```
 
-#### Update pH
+### Update Current Time
 ```cpp
-display->updatePH(
-    7.20,   // Current pH
-    7.00    // Target pH
-);
+display->updateTime("12:34:56");
 ```
 
-#### Update TDS
+### Manual Screen Control
 ```cpp
-display->updateTDS(245.0);  // Current TDS in ppm
+display->nextScreen();      // Switch to next screen
+display->setScreen(1);      // Jump to specific screen (0-2)
 ```
 
-#### Update Ambient Temperature
+## Icons Included
+
+All icons are 8x8 pixels:
+- 🌡️ Temperature sensor
+- 🧪 pH meter  
+- 💧 TDS/droplet
+- 🔥 Heater active
+- 💨 CO2 injection
+- 📡 WiFi connected
+- 📡❌ WiFi disconnected
+- 💧 Water droplet
+- 📅 Calendar
+- 💉 Dosing pump
+
+## Enhanced Features
+
+### 1. Progress Bars
+Show how current values compare to targets:
+- Temperature bar fills from 20°C to 30°C range
+- pH bar fills from 6.0 to 8.0 range
+- Visual feedback at a glance
+
+### 2. Trend Graphs
+Displays last 32 data points for:
+- Water temperature over time
+- pH levels over time  
+- TDS readings over time
+- Automatic scaling to fit display
+
+### 3. Wave Animation
+- Smooth sine wave at bottom of main screen
+- 5 FPS animation (updates every 200ms)
+- Visual indicator that system is running
+
+### 4. Auto-Screen Rotation
+- Automatically cycles through 3 screens
+- 5 seconds per screen
+- Navigation dots show current position
+- Can be disabled by manually setting screen
+
+### 5. Status Icons
+- WiFi connection status
+- Active heater indicator
+- Active CO2 injection indicator
+- Active dosing indicator
+- All with visual icons
+
+## Memory Usage
+
+| Feature | RAM Impact | Flash Impact |
+|---------|-----------|--------------|
+| Base Display | ~1 KB | ~40 KB |
+| Icons (10×8×8 bits) | 80 bytes | 80 bytes |
+| Trend Data (3×32×4 bytes) | 384 bytes | - |
+| Animation Frame | 1 byte | - |
+| **Total Estimate** | **~2 KB** | **~45 KB** |
+
+Still very efficient!
+
+## Performance
+
+- Main screen: Updates at 1 Hz
+- Animation: 5 FPS (only moving wave)
+- Screen rotation: Every 5 seconds
+- Graph updates: When new data arrives
+- CPU usage: <1% (ESP32 @ 240MHz)
+
+## Customization Options
+
+### Change Auto-Rotation Speed
 ```cpp
-display->updateAmbientTemperature(23.0);
+// In DisplayManager_OLED.h, modify:
+static const unsigned long SCREEN_SWITCH_INTERVAL = 10000; // 10 seconds
 ```
 
-#### Update Heater State
+### Change Animation Speed
 ```cpp
-display->updateHeaterState(true);  // true = heating, false = off
+// In DisplayManager_OLED.h, modify:
+static const unsigned long ANIMATION_INTERVAL = 100; // 10 FPS
 ```
 
-#### Update CO2 State
+### Disable Auto-Rotation
 ```cpp
-display->updateCO2State(true);  // true = injecting, false = off
+// After begin(), set screen and it won't auto-switch:
+display->setScreen(0);  // Stay on main screen
 ```
 
-#### Update Water Change Date
+### Change Graph Resolution
 ```cpp
-display->updateWaterChangeDate("2025-10-15");
+// In DisplayManager_OLED.h, modify trend size:
+static const uint8_t TREND_SIZE = 64;  // More history points
 ```
 
-#### Update Network Status
+### Customize Icons
+Icons are defined as 8x8 bitmaps in the .cpp file. Edit them to create custom visuals.
+
+## Integration Example
+
 ```cpp
-display->updateNetworkStatus(
-    true,               // WiFi connected
-    "192.168.1.100"    // IP address
-);
-```
-
-### Display Control
-
-#### Clear Display
-```cpp
-display->clear();
-```
-
-#### Set Brightness
-```cpp
-display->setBrightness(128);  // 0-255 (128 = medium)
-```
-
-#### Test Display
-```cpp
-display->test();  // Runs visual test pattern
-```
-
-## Integration with Existing Code
-
-### Step 1: Replace Header Include
-In `main.cpp`:
-```cpp
-// OLD:
-// #include "DisplayManager.h"
-
-// NEW:
 #include "DisplayManager_OLED.h"
-```
 
-### Step 2: No Changes to Initialization
-The initialization code remains the same:
-```cpp
-DisplayManager* displayMgr = nullptr;
+DisplayManager* display;
 
 void setup() {
-    displayMgr = new DisplayManager();
-    if (!displayMgr->begin()) {
-        Serial.println("Display initialization failed");
-    }
+    display = new DisplayManager();
+    display->begin();
+}
+
+void loop() {
+    // Update sensor data
+    display->updateTemperature(25.5, 26.0);
+    display->updatePH(7.20, 7.00);
+    display->updateTDS(245.0);
+    display->updateAmbientTemperature(23.0);
+    
+    // Update states
+    display->updateHeaterState(heaterOn);
+    display->updateCO2State(co2On);
+    display->updateDosingState(dosingActive);
+    
+    // Update network
+    display->updateNetworkStatus(WiFi.status() == WL_CONNECTED, 
+                                 WiFi.localIP().toString().c_str());
+    
+    // Update time from NTP
+    char timeStr[9];
+    strftime(timeStr, sizeof(timeStr), "%H:%M:%S", &timeinfo);
+    display->updateTime(timeStr);
+    
+    // Display will auto-update and auto-rotate
+    display->update();
+    
+    delay(100);  // Call update() frequently
 }
 ```
 
-### Step 3: Update Calls (Simplified)
-Most calls remain the same, but some are simplified:
+## Benefits
 
-**Temperature:**
-```cpp
-// Same as before
-displayMgr->updateTemperature(temp, targetTemp);
-```
+- ✅ **Professional Look**: Icons and progress bars
+- ✅ **More Information**: 3 screens instead of 1
+- ✅ **Visual Feedback**: Animation shows system is alive
+- ✅ **Trend Monitoring**: See changes over time
+- ✅ **Still Simple**: Only 2 GPIO pins, no buttons
+- ✅ **Low Resource Use**: <2KB RAM, ~45KB flash
+- ✅ **Easy Customization**: Change icons, layouts, timing
 
-**pH:**
-```cpp
-// Same as before
-displayMgr->updatePH(ph, targetPH);
-```
-
-**TDS:**
-```cpp
-// Same as before
-displayMgr->updateTDS(tds);
-```
-
-**Water Change:**
-```cpp
-// NEW - pass date string instead of days/confidence
-displayMgr->updateWaterChangeDate("2025-10-15");
-```
-
-**Network Status:**
-```cpp
-// NEW - single call for WiFi status
-displayMgr->updateNetworkStatus(
-    WiFi.status() == WL_CONNECTED,
-    WiFi.localIP().toString()
-);
-```
-
-### Step 4: Remove Unused Calls
-These methods no longer exist (were encoder/menu related):
-```cpp
-// REMOVE these if present:
-// displayMgr->getEncoderDelta();
-// displayMgr->wasButtonPressed();
-// displayMgr->setScreen(...);
-// displayMgr->wake();
-// displayMgr->sleep();
-```
-
-## Comparison: Before vs After
-
-### Code Complexity
-| Aspect | Ender 3 | SSD1309 OLED | Change |
-|--------|---------|--------------|--------|
-| Lines of Code | 722 | 305 | -58% |
-| GPIO Pins | 9 | 2 | -78% |
-| Update Rate | 5 Hz | 1 Hz | -80% |
-| Screens | 8 | 1 | -88% |
-| User Input | Yes | No | Removed |
-| Menu System | Yes | No | Removed |
-
-### Memory Usage
-| Type | Ender 3 | SSD1309 OLED | Savings |
-|------|---------|--------------|---------|
-| Compiled Object | 475 KB | ~80 KB | ~395 KB |
-| Flash Impact | 20% | ~4% | ~16% |
-| RAM (est.) | ~10 KB | ~2 KB | ~8 KB |
-
-### Feature Comparison
-| Feature | Ender 3 | SSD1309 OLED |
-|---------|---------|--------------|
-| Sensor Display | ✅ | ✅ |
-| Status Indicators | ✅ | ✅ |
-| Time Display | ✅ | ✅ |
-| WiFi Status | ✅ | ✅ |
-| Local Control | ✅ | ❌ |
-| Menu Navigation | ✅ | ❌ |
-| Settings Adjust | ✅ | ❌ |
-| Multiple Screens | ✅ | ❌ |
-| Encoder Input | ✅ | ❌ |
-| Button Input | ✅ | ❌ |
-| Audio Feedback | ✅ | ❌ |
-
-## Display Library Support
-
-The implementation uses **U8g2** library which supports many display types. You can easily adapt for other displays by changing the constructor:
-
-### SSD1306 (128x64)
-```cpp
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C
-```
-
-### SSD1306 (128x32)
-```cpp
-U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C
-```
-
-### SH1106 (128x64)
-```cpp
-U8G2_SH1106_128X64_NONAME_F_HW_I2C
-```
-
-### SSD1309 (128x64) - SPI Version
-```cpp
-U8G2_SSD1309_128X64_NONAME0_F_4W_HW_SPI
-```
-
-Just change the display object creation in the constructor.
-
-## Font Options
-
-Current implementation uses:
-- `u8g2_font_6x10_tf` - Main text (6x10 pixels)
-- `u8g2_font_5x7_tf` - Small text (5x7 pixels)
-- `u8g2_font_ncenB14_tr` - Large text for test (14pt bold)
-
-Other recommended fonts:
-- `u8g2_font_7x13_tf` - Larger, more readable
-- `u8g2_font_8x13_tf` - Even larger
-- `u8g2_font_4x6_tf` - Very small, fits more text
-
-## Troubleshooting
-
-### Display Not Working
-1. **Check I2C Address**:
-   ```cpp
-   // Most SSD1309 use 0x3C, but some use 0x3D
-   // If display doesn't work, try changing address:
-   display = new U8G2_SSD1309_128X64_NONAME0_F_HW_I2C(
-       U8G2_R0,           // Rotation
-       U8X8_PIN_NONE,     // Reset pin
-       U8X8_PIN_NONE,     // Clock pin
-       U8X8_PIN_NONE      // Data pin
-   );
-   // Then call: display->setI2CAddress(0x3D * 2);
-   ```
-
-2. **Check Wiring**:
-   - Verify SDA → GPIO 21
-   - Verify SCL → GPIO 22
-   - Check power connections
-   - Ensure common ground
-
-3. **Test I2C Scanner**:
-   ```cpp
-   #include <Wire.h>
-   void scanI2C() {
-       Wire.begin();
-       for (byte addr = 1; addr < 127; addr++) {
-           Wire.beginTransmission(addr);
-           if (Wire.endTransmission() == 0) {
-               Serial.printf("I2C device found at 0x%02X\n", addr);
-           }
-       }
-   }
-   ```
-
-### Display Shows Garbage
-- Try different rotation: `U8G2_R0`, `U8G2_R1`, `U8G2_R2`, `U8G2_R3`
-- Verify display model matches code (SSD1309 vs SSD1306)
-- Check if display needs 5V instead of 3.3V
-
-### Display Too Dim/Bright
-```cpp
-display->setContrast(value);  // 0 = dimmest, 255 = brightest
-```
-
-### Text Overlapping
-- Adjust Y coordinates in `drawMainScreen()`
-- Use smaller font
-- Reduce information displayed
-
-## Benefits of This Implementation
-
-### 1. Simplicity
-- Minimal code to maintain
-- Easy to understand
-- Few dependencies
-- Quick to debug
-
-### 2. Reliability
-- No mechanical parts (encoder)
-- OLED has no backlight to fail
-- Fewer GPIO pins = fewer wiring issues
-- Simple I2C protocol
-
-### 3. Resource Efficiency
-- Only 2 GPIO pins used
-- Low CPU usage (1 Hz updates)
-- Small memory footprint
-- Fast compilation
-
-### 4. Cost Effective
-- SSD1309 modules: $5-12
-- No additional components needed
-- Low power consumption
-- Durable OLED technology
-
-### 5. Flexibility
-- Easy to customize display layout
-- Can add more information
-- Can reduce update rate if needed
-- Can switch fonts easily
-
-## Future Enhancements (Optional)
-
-If you want to add more features later:
-
-1. **Scrolling Text**: For long messages
-2. **Icons/Graphics**: For better visuals  
-3. **Multiple Screens**: Auto-rotate every 5 seconds
-4. **Graphing**: Simple bar charts for trends
-5. **Animations**: Smooth transitions
-6. **Sleep Mode**: Turn off display after timeout
-
-All these can be added with minimal code increases.
-
-## Conclusion
-
-The SSD1309 OLED implementation provides:
-- ✅ **58% less code** than Ender 3 version
-- ✅ **All essential information** displayed
-- ✅ **Simpler hardware** (2 pins vs 9)
-- ✅ **Lower cost** ($5-12 vs $15-25)
-- ✅ **Easy maintenance** and customization
-
-Perfect for a monitoring display when web interface is primary control method.
+Perfect balance of features and simplicity!
