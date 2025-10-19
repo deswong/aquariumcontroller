@@ -2,7 +2,6 @@
 #define EVENT_LOGGER_H
 
 #include <Arduino.h>
-#include <SPIFFS.h>
 #include <vector>
 
 enum EventLevel {
@@ -21,10 +20,6 @@ struct LogEvent {
 
 class EventLogger {
 private:
-    static const int MAX_LOG_SIZE = 1000;  // Maximum lines in log file
-    static const char* LOG_FILE;
-    
-    void rotateLogIfNeeded();
     String levelToString(EventLevel level);
     EventLevel stringToLevel(const String& str);
 

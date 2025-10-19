@@ -5,7 +5,6 @@
 #include <ESPAsyncWebServer.h>
 #include <AsyncTCP.h>
 #include <ArduinoJson.h>
-#include <SPIFFS.h>
 #include "SystemTasks.h"
 #include "ConfigManager.h"
 #include "PHSensor.h"

@@ -15,14 +15,6 @@ WebServerManager::~WebServerManager() {
 }
 
 void WebServerManager::begin() {
-    // Initialize SPIFFS only for event logs (not needed for web interface anymore)
-    // Web interface is now embedded in firmware as PROGMEM
-    if (!SPIFFS.begin(false)) {
-        Serial.println("WARNING: Failed to mount SPIFFS - event logs will not be available");
-    } else {
-        Serial.println("SPIFFS mounted successfully for event logging");
-    }
-    
     Serial.println("Web interface embedded in firmware (PROGMEM) - always available!");
     Serial.printf("Compressed HTML size: %u bytes\n", index_html_gz_len);
     
@@ -154,38 +146,6 @@ void WebServerManager::setupRoutes() {
         co2Relay->safetyEnable();
         Serial.println("Emergency stop cleared via web interface");
         request->send(200, "application/json", "{\"status\":\"ok\"}");
-    });
-    
-    // API: Get system logs
-    server->on("/api/logs", HTTP_GET, [](AsyncWebServerRequest* request) {
-        int count = 200; // Default
-        if (request->hasParam("count")) {
-            count = request->getParam("count")->value().toInt();
-            if (count > 500) count = 500; // Max limit
-        }
-        
-        if (!eventLogger) {
-            request->send(500, "application/json", "{\"error\":\"Event logger not initialized\"}");
-            return;
-        }
-        
-        std::vector<LogEvent> logs = eventLogger->getRecentLogs(count);
-        
-        String json = "{\"logs\":[";
-        for (size_t i = 0; i < logs.size(); i++) {
-            if (i > 0) json += ",";
-            json += "{";
-            json += "\"timestamp\":" + String(logs[i].timestamp / 1000) + ",";
-            json += "\"level\":\"" + String(logs[i].level == EVENT_INFO ? "INFO" : 
-                                           logs[i].level == EVENT_WARNING ? "WARNING" : 
-                                           logs[i].level == EVENT_ERROR ? "ERROR" : "CRITICAL") + "\",";
-            json += "\"category\":\"" + String(logs[i].category) + "\",";
-            json += "\"message\":\"" + String(logs[i].message) + "\"";
-            json += "}";
-        }
-        json += "],\"count\":" + String(logs.size()) + "}";
-        
-        request->send(200, "application/json", json);
     });
     
     // API: pH Calibration
@@ -379,46 +339,6 @@ void WebServerManager::setupRoutes() {
         } else {
             request->send(400, "application/json", "{\"status\":\"error\"}");
         }
-    });
-    
-    // API: Get event logs
-    server->on("/api/logs", HTTP_GET, [](AsyncWebServerRequest* request) {
-        if (!eventLogger) {
-            request->send(500, "application/json", "{\"error\":\"Event logger not initialized\"}");
-            return;
-        }
-        
-        int count = 50; // Default to 50 most recent
-        if (request->hasParam("count")) {
-            count = request->getParam("count")->value().toInt();
-        }
-        
-        std::vector<LogEvent> logs = eventLogger->getRecentLogs(count);
-        
-        String json = "[";
-        for (size_t i = 0; i < logs.size(); i++) {
-            if (i > 0) json += ",";
-            json += "{";
-            json += "\"timestamp\":" + String(logs[i].timestamp) + ",";
-            json += "\"level\":" + String(logs[i].level) + ",";
-            json += "\"category\":\"" + String(logs[i].category) + "\",";
-            json += "\"message\":\"" + String(logs[i].message) + "\"";
-            json += "}";
-        }
-        json += "]";
-        
-        request->send(200, "application/json", json);
-    });
-    
-    // API: Clear event logs
-    server->on("/api/logs/clear", HTTP_POST, [](AsyncWebServerRequest* request) {
-        if (!eventLogger) {
-            request->send(500, "application/json", "{\"error\":\"Event logger not initialized\"}");
-            return;
-        }
-        
-        eventLogger->clearLogs();
-        request->send(200, "application/json", "{\"status\":\"ok\"}");
     });
     
     // API: Export configuration

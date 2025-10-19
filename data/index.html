@@ -618,7 +618,6 @@
                 <button class="tab" onclick="showTab('pattern')">🧠 Pattern Learning</button>
                 <button class="tab" onclick="showTab('dosing')">💊 Dosing Pump</button>
                 <button class="tab" onclick="showTab('calibration')">🔬 pH Calibration</button>
-                <button class="tab" onclick="showTab('logs')">📜 Logs</button>
                 <button class="tab" onclick="showTab('firmware')">🔄 Firmware</button>
                 <button class="tab" onclick="showTab('settings')">🔧 Settings</button>
             </div>
@@ -1499,52 +1498,6 @@
                 <button class="btn" onclick="syncTimeNow()" style="margin-left: 10px;">⏰ Sync Time Now</button>
                 <button class="btn btn-danger" onclick="restartDevice()" style="margin-left: 10px;">🔄 Restart Device</button>
             </div>
-            
-            <!-- Logs Tab -->
-            <div id="logs-tab" class="tab-content">
-                <h2>📜 System Logs</h2>
-                <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn" onclick="refreshLogs()">🔄 Refresh</button>
-                    <button class="btn" onclick="clearLogsDisplay()">🗑️ Clear Display</button>
-                    <button class="btn" onclick="downloadLogs()">💾 Download Logs</button>
-                    <label style="display: flex; align-items: center; cursor: pointer; padding: 8px 15px; background: #f5f5f5; border-radius: 5px;">
-                        <input type="checkbox" id="auto-scroll-logs" checked style="margin-right: 8px; width: auto;">
-                        <span>Auto-scroll</span>
-                    </label>
-                    <select id="log-filter" onchange="filterLogs()" style="padding: 8px; border-radius: 5px; border: 1px solid #ddd;">
-                        <option value="all">All Levels</option>
-                        <option value="ERROR">🔴 Errors Only</option>
-                        <option value="WARNING">🟡 Warnings +</option>
-                        <option value="INFO">🔵 Info +</option>
-                    </select>
-                </div>
-                
-                <div style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; max-height: 600px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word;" id="log-container">
-                    <div id="log-content">Connecting to logs...</div>
-                </div>
-                
-                <div style="margin-top: 15px; padding: 15px; background: #f5f5f5; border-radius: 8px;">
-                    <h3>📊 Log Statistics</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 10px;">
-                        <div class="info-box">
-                            <div class="info-label">Total Logs</div>
-                            <div class="info-value" id="log-count-total">0</div>
-                        </div>
-                        <div class="info-box">
-                            <div class="info-label">🔴 Errors</div>
-                            <div class="info-value" id="log-count-error">0</div>
-                        </div>
-                        <div class="info-box">
-                            <div class="info-label">🟡 Warnings</div>
-                            <div class="info-value" id="log-count-warning">0</div>
-                        </div>
-                        <div class="info-box">
-                            <div class="info-label">🔵 Info</div>
-                            <div class="info-value" id="log-count-info">0</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
     
@@ -1635,8 +1588,6 @@
                 updateAnomalies();
                 updatePatternChart(currentChartType);
                 loadMLConfig();
-            } else if (tabName === 'logs') {
-                refreshLogs();
             } else if (tabName === 'firmware') {
                 updateFirmwareInfo();
             }
@@ -2812,143 +2763,6 @@
         setInterval(updateDosingStatus, 2000); // Every 2 seconds
         setInterval(updateDosingHistory, 30000); // Every 30 seconds
         setInterval(updateDosingStats, 60000); // Every minute
-        
-        // ============================================
-        // LOGGING TAB FUNCTIONS
-        // ============================================
-        
-        let logData = [];
-        let logFilterLevel = 'all';
-        
-        async function refreshLogs() {
-            try {
-                const response = await fetch('/api/logs?count=200');
-                if (response.ok) {
-                    const data = await response.json();
-                    logData = data.logs || [];
-                    updateLogDisplay();
-                    updateLogStats();
-                } else {
-                    console.error('Failed to fetch logs');
-                }
-            } catch (error) {
-                console.error('Error fetching logs:', error);
-                document.getElementById('log-content').textContent = 'Error loading logs: ' + error.message;
-            }
-        }
-        
-        function updateLogDisplay() {
-            const container = document.getElementById('log-content');
-            const autoScroll = document.getElementById('auto-scroll-logs').checked;
-            const scrollContainer = document.getElementById('log-container');
-            const wasAtBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop === scrollContainer.clientHeight;
-            
-            if (logData.length === 0) {
-                container.innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">No logs available</div>';
-                return;
-            }
-            
-            // Filter logs based on selected level
-            const filtered = filterLogsByLevel(logData);
-            
-            // Format logs with colors
-            const formatted = filtered.map(log => {
-                const timestamp = new Date(log.timestamp * 1000).toLocaleString();
-                const level = log.level || 'INFO';
-                const category = log.category || 'system';
-                const message = log.message || '';
-                
-                let color = '#d4d4d4'; // default white
-                let icon = 'ℹ️';
-                
-                if (level === 'ERROR') {
-                    color = '#f48771';
-                    icon = '🔴';
-                } else if (level === 'WARNING') {
-                    color = '#dcdcaa';
-                    icon = '🟡';
-                } else if (level === 'INFO') {
-                    color = '#9cdcfe';
-                    icon = '🔵';
-                }
-                
-                return `<div style="margin-bottom: 8px; border-left: 3px solid ${color}; padding-left: 10px;">` +
-                       `<span style="color: #858585;">${timestamp}</span> ` +
-                       `${icon} ` +
-                       `<span style="color: ${color}; font-weight: bold;">[${level}]</span> ` +
-                       `<span style="color: #4ec9b0;">[${category}]</span> ` +
-                       `<span style="color: #d4d4d4;">${message}</span>` +
-                       `</div>`;
-            }).join('');
-            
-            container.innerHTML = formatted;
-            
-            // Auto-scroll if enabled and user was at bottom
-            if (autoScroll && wasAtBottom) {
-                scrollContainer.scrollTop = scrollContainer.scrollHeight;
-            }
-        }
-        
-        function filterLogsByLevel(logs) {
-            if (logFilterLevel === 'all') return logs;
-            
-            const levelPriority = { ERROR: 3, WARNING: 2, INFO: 1 };
-            const filterPriority = levelPriority[logFilterLevel] || 0;
-            
-            return logs.filter(log => {
-                const logPriority = levelPriority[log.level] || 0;
-                return logPriority >= filterPriority;
-            });
-        }
-        
-        function filterLogs() {
-            logFilterLevel = document.getElementById('log-filter').value;
-            updateLogDisplay();
-            updateLogStats();
-        }
-        
-        function updateLogStats() {
-            const total = logData.length;
-            const errors = logData.filter(l => l.level === 'ERROR').length;
-            const warnings = logData.filter(l => l.level === 'WARNING').length;
-            const info = logData.filter(l => l.level === 'INFO').length;
-            
-            document.getElementById('log-count-total').textContent = total;
-            document.getElementById('log-count-error').textContent = errors;
-            document.getElementById('log-count-warning').textContent = warnings;
-            document.getElementById('log-count-info').textContent = info;
-        }
-        
-        function clearLogsDisplay() {
-            logData = [];
-            document.getElementById('log-content').innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">Logs cleared</div>';
-            updateLogStats();
-        }
-        
-        function downloadLogs() {
-            const logText = logData.map(log => {
-                const timestamp = new Date(log.timestamp * 1000).toISOString();
-                return `${timestamp} [${log.level}] [${log.category}] ${log.message}`;
-            }).join('\n');
-            
-            const blob = new Blob([logText], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `aquarium-logs-${new Date().toISOString().split('T')[0]}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-        
-        // Auto-refresh logs every 5 seconds when on logs tab
-        setInterval(() => {
-            const logsTab = document.getElementById('logs-tab');
-            if (logsTab && logsTab.classList.contains('active')) {
-                refreshLogs();
-            }
-        }, 5000);
         
         // ============================================================
         // FIRMWARE UPDATE FUNCTIONS

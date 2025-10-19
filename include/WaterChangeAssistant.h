@@ -66,9 +66,6 @@ private:
     unsigned long maxFillTime;    // Max time for fill phase (ms)
     unsigned long stabilizationTime; // Time to wait for stabilization (ms)
     
-    // File storage
-    const char* HISTORY_FILE = "/waterchange.log";
-    
     void loadSettings();
     void saveSettings();
     void loadHistory();

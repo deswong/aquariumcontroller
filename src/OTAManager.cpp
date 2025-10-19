@@ -1,5 +1,4 @@
 #include "OTAManager.h"
-#include <SPIFFS.h>
 
 OTAManager::OTAManager() : initialized(false) {
 }
@@ -15,7 +14,6 @@ void OTAManager::begin(AsyncWebServer* server) {
             type = "sketch";
         } else { // U_SPIFFS
             type = "filesystem";
-            SPIFFS.end();
         }
         Serial.println("OTA Update Start: " + type);
     });

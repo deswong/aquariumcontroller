@@ -1,6 +1,5 @@
 #include "WaterChangeAssistant.h"
 #include "SystemTasks.h"
-#include <SPIFFS.h>
 
 WaterChangeAssistant::WaterChangeAssistant() 
     : schedule(SCHEDULE_NONE), lastChangeTime(0), scheduledVolumePercent(25.0),
@@ -96,42 +95,90 @@ void WaterChangeAssistant::saveSettings() {
 }
 
 void WaterChangeAssistant::loadHistory() {
-    if (!SPIFFS.exists(HISTORY_FILE)) {
-        Serial.println("No water change history file found");
-        return;
-    }
+    // Load history from NVS
+    prefs->begin("wc_history", false);
     
-    File file = SPIFFS.open(HISTORY_FILE, "r");
-    if (!file) {
-        Serial.println("ERROR: Failed to open water change history");
-        return;
-    }
+    int count = prefs->getInt("count", 0);
+    Serial.printf("Loading %d water change records from NVS\n", count);
     
     history.clear();
-    while (file.available() && history.size() < MAX_HISTORY) {
+    for (int i = 0; i < count && i < MAX_HISTORY; i++) {
+        char key[16];
         WaterChangeRecord record;
-        file.read((uint8_t*)&record, sizeof(WaterChangeRecord));
-        history.push_back(record);
+        
+        // Load each field separately since NVS can't store structs directly
+        snprintf(key, sizeof(key), "ts_%d", i);
+        record.timestamp = prefs->getULong(key, 0);
+        
+        snprintf(key, sizeof(key), "vol_%d", i);
+        record.volumeChanged = prefs->getFloat(key, 0.0f);
+        
+        snprintf(key, sizeof(key), "tb_%d", i);
+        record.tempBefore = prefs->getFloat(key, 0.0f);
+        
+        snprintf(key, sizeof(key), "ta_%d", i);
+        record.tempAfter = prefs->getFloat(key, 0.0f);
+        
+        snprintf(key, sizeof(key), "pb_%d", i);
+        record.phBefore = prefs->getFloat(key, 0.0f);
+        
+        snprintf(key, sizeof(key), "pa_%d", i);
+        record.phAfter = prefs->getFloat(key, 0.0f);
+        
+        snprintf(key, sizeof(key), "dur_%d", i);
+        record.durationMinutes = prefs->getInt(key, 0);
+        
+        snprintf(key, sizeof(key), "ok_%d", i);
+        record.completedSuccessfully = prefs->getBool(key, false);
+        
+        if (record.timestamp > 0) {
+            history.push_back(record);
+        }
     }
     
-    file.close();
-    Serial.printf("Loaded %d water change records\n", history.size());
+    prefs->end();
+    Serial.printf("Loaded %d water change records from NVS\n", history.size());
 }
 
 void WaterChangeAssistant::saveHistory() {
-    File file = SPIFFS.open(HISTORY_FILE, "w");
-    if (!file) {
-        Serial.println("ERROR: Failed to save water change history");
-        return;
+    // Save history to NVS
+    prefs->begin("wc_history", false);
+    
+    // Store count
+    prefs->putInt("count", history.size());
+    
+    // Store each record
+    for (int i = 0; i < history.size(); i++) {
+        char key[16];
+        const WaterChangeRecord& record = history[i];
+        
+        snprintf(key, sizeof(key), "ts_%d", i);
+        prefs->putULong(key, record.timestamp);
+        
+        snprintf(key, sizeof(key), "vol_%d", i);
+        prefs->putFloat(key, record.volumeChanged);
+        
+        snprintf(key, sizeof(key), "tb_%d", i);
+        prefs->putFloat(key, record.tempBefore);
+        
+        snprintf(key, sizeof(key), "ta_%d", i);
+        prefs->putFloat(key, record.tempAfter);
+        
+        snprintf(key, sizeof(key), "pb_%d", i);
+        prefs->putFloat(key, record.phBefore);
+        
+        snprintf(key, sizeof(key), "pa_%d", i);
+        prefs->putFloat(key, record.phAfter);
+        
+        snprintf(key, sizeof(key), "dur_%d", i);
+        prefs->putInt(key, record.durationMinutes);
+        
+        snprintf(key, sizeof(key), "ok_%d", i);
+        prefs->putBool(key, record.completedSuccessfully);
     }
     
-    // Write all records
-    for (const auto& record : history) {
-        file.write((uint8_t*)&record, sizeof(WaterChangeRecord));
-    }
-    
-    file.close();
-    Serial.println("Water change history saved");
+    prefs->end();
+    Serial.println("Water change history saved to NVS");
 }
 
 void WaterChangeAssistant::addToHistory(const WaterChangeRecord& record) {
