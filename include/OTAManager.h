@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include <ArduinoOTA.h>
-#include <AsyncElegantOTA.h>
+// #include <AsyncElegantOTA.h>  // Temporarily disabled
 #include <ESPAsyncWebServer.h>
 
 class OTAManager {

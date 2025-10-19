@@ -349,8 +349,8 @@ void displayTask(void* parameter) {
             
             // Update water change prediction if available
             if (wcPredictor != nullptr) {
-                float daysUntil = wcPredictor->getDaysUntilChange();
-                int confidence = wcPredictor->getConfidencePercent();
+                float daysUntil = wcPredictor->getPredictedDaysUntilChange();
+                int confidence = wcPredictor->getConfidenceLevel();
                 if (daysUntil > 0) {
                     displayMgr->updateWaterChangePrediction(daysUntil, confidence);
                 }

@@ -421,18 +421,18 @@ void DisplayManager::drawDosingScreen() {
     
     // Status
     if (dosingPump) {
-        bool isRunning = dosingPump->isRunning();
+        bool isRunning = dosingPump->isDosing();
         display->drawStr(0, 20, "Status:");
         display->drawStr(60, 20, isRunning ? "RUNNING" : "IDLE");
         
         // Today's volume
         char str[32];
-        float todayVolume = dosingPump->getTodayVolume();
+        float todayVolume = dosingPump->getDailyVolumeDosed();
         snprintf(str, sizeof(str), "Today: %.1f mL", todayVolume);
         display->drawStr(0, 30, str);
         
         // Max daily limit
-        float maxDaily = dosingPump->getMaxDailyVolume();
+        float maxDaily = dosingPump->getRemainingDailyVolume() + todayVolume;
         snprintf(str, sizeof(str), "Max: %.1f mL", maxDaily);
         display->drawStr(0, 40, str);
         

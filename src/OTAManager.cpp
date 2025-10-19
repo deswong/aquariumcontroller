@@ -1,4 +1,5 @@
 #include "OTAManager.h"
+#include <SPIFFS.h>
 
 OTAManager::OTAManager() : initialized(false) {
 }
@@ -39,7 +40,7 @@ void OTAManager::begin(AsyncWebServer* server) {
     ArduinoOTA.begin();
     
     // Setup AsyncElegantOTA for web-based updates
-    AsyncElegantOTA.begin(server);
+    // AsyncElegantOTA.begin(server);  // Temporarily disabled
     
     initialized = true;
     Serial.println("OTA update service initialized");

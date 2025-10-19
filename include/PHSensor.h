@@ -1,24 +1,5 @@
-#ifndef PH_SENSOR_H    float acidVoltage;    // pH 4.0 at calibration temp
-    float neutralVoltage; // pH 7.0 at calibration temp
-    float baseVoltage;    // pH 10.0 at calibration temp
-    bool calibrated;
-    
-    // Temperature compensation data
-    float acidCalTemp;      // Temperature when pH 4.0 was calibrated
-    float neutralCalTemp;   // Temperature when pH 7.0 was calibrated
-    float baseCalTemp;      // Temperature when pH 10.0 was calibrated
-    float acidTrueRef;      // True pH of acid solution at reference temp (usually 4.01)
-    float neutralTrueRef;   // True pH of neutral solution at reference temp (usually 7.00)
-    float baseTrueRef;      // True pH of base solution at reference temp (usually 10.01)
-    float refTemp;          // Reference temperature (usually 25°C)
-    bool isCalibrating;     // Flag to indicate calibration mode
-    
-    // Calibration age tracking
-    unsigned long lastCalibrationTime; // Unix timestamp of last calibration
-    static const int CALIBRATION_WARNING_DAYS = 30;
-    static const int CALIBRATION_EXPIRED_DAYS = 60;
-    
-    Preferences* prefs;SOR_H
+#ifndef PH_SENSOR_H
+#define PH_SENSOR_H
 
 #include <Arduino.h>
 #include <Preferences.h>
@@ -50,6 +31,11 @@ private:
     float baseTrueRef;      // True pH of base solution at reference temp (usually 10.01)
     float refTemp;          // Reference temperature (usually 25°C)
     bool isCalibrating;     // Flag to indicate calibration mode
+    
+    // Calibration age tracking
+    unsigned long lastCalibrationTime; // Unix timestamp of last calibration
+    static const int CALIBRATION_WARNING_DAYS = 30;
+    static const int CALIBRATION_EXPIRED_DAYS = 60;
     
     Preferences* prefs;
     

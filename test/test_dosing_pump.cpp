@@ -1,55 +1,16 @@
-#include <unity.h>
-#include <cstring>
+#include "test_common.h"
 #include <cmath>
 
 // ============================================================================
 // DosingPump Unit Tests
 // ============================================================================
 
-// Mock millis for testing
-static unsigned long mockMillis = 0;
-
-unsigned long millis() {
-    return mockMillis;
+void setUp(void) {
+    commonSetUp();
 }
 
-void setMockMillis(unsigned long value) {
-    mockMillis = value;
-}
-
-void advanceMockMillis(unsigned long amount) {
-    mockMillis += amount;
-}
-
-// Mock time functions for scheduling tests
-static time_t mockTime = 0;
-static struct tm mockLocalTime;
-
-time_t time(time_t* t) {
-    if (t != nullptr) {
-        *t = mockTime;
-    }
-    return mockTime;
-}
-
-struct tm* localtime_r(const time_t* timep, struct tm* result) {
-    if (result != nullptr) {
-        *result = mockLocalTime;
-    }
-    return result;
-}
-
-void setMockTime(int year, int month, int day, int hour, int minute, int second) {
-    mockLocalTime.tm_year = year - 1900;
-    mockLocalTime.tm_mon = month - 1;
-    mockLocalTime.tm_mday = day;
-    mockLocalTime.tm_hour = hour;
-    mockLocalTime.tm_min = minute;
-    mockLocalTime.tm_sec = second;
-    
-    // Calculate unix timestamp (simplified)
-    mockTime = 1704067200; // 2024-01-01 00:00:00 as base
-    mockTime += (hour * 3600) + (minute * 60) + second;
+void tearDown(void) {
+    commonTearDown();
 }
 
 // ============================================================================
@@ -266,16 +227,16 @@ void test_dosing_pump_schedule_next_day() {
     // Expected: Schedule for tomorrow (22.5 hours from now)
     
     int currentHour = 16;
+    int currentMinute = 0;
     int targetHour = 14;
     int targetMinute = 30;
     
-    // If target hour already passed, add 24 hours
-    int hoursUntil = targetHour - currentHour;
-    if (hoursUntil < 0) {
-        hoursUntil += 24; // Next day
+    // Calculate total minutes until next dose
+    int minutesUntil = (targetHour - currentHour) * 60 + (targetMinute - currentMinute);
+    if (minutesUntil <= 0) {
+        minutesUntil += 24 * 60; // Next day
     }
-    float totalHours = hoursUntil - 0.5; // -30 minutes
-    if (totalHours < 0) totalHours += 24;
+    float totalHours = minutesUntil / 60.0;
     
     TEST_ASSERT_EQUAL_FLOAT(22.5, totalHours);
 }
@@ -590,15 +551,7 @@ void test_dosing_pump_duration_at_partial_speed() {
 // Main Test Runner
 // ============================================================================
 
-void setUp(void) {
-    // Reset mock state before each test
-    setMockMillis(0);
-    mockTime = 0;
-}
-
-void tearDown(void) {
-    // Cleanup after each test
-}
+// Note: setUp/tearDown moved to top of file to avoid conflicts
 
 int main(int argc, char **argv) {
     UNITY_BEGIN();

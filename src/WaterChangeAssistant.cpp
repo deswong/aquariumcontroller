@@ -299,7 +299,7 @@ bool WaterChangeAssistant::advancePhase() {
             }
             break;
             
-        case PHASE_FILLING:
+        case PHASE_FILLING: {
             // Check if it's safe to proceed
             SensorData data = getSensorData();
             if (!isSafeToFill(data.temperature, data.ph)) {
@@ -317,7 +317,8 @@ bool WaterChangeAssistant::advancePhase() {
                 eventLogger->info("waterchange", "Phase: Stabilizing");
             }
             break;
-            
+        }
+        
         case PHASE_STABILIZING:
             completeWaterChange();
             break;

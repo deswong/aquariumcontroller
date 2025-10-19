@@ -1,26 +1,8 @@
 #ifdef UNIT_TEST
 
-#include <unity.h>
+#include "test_common.h"
 #include <string.h>
 #include <stdlib.h>
-#include <time.h>
-
-// Mock Arduino functions and types
-unsigned long millis() {
-    static unsigned long mock_time = 0;
-    return mock_time;
-}
-
-void setMockMillis(unsigned long time) {
-    extern unsigned long millis();
-    // In real implementation, this would update the static variable
-}
-
-unsigned long micros() { return millis() * 1000; }
-void delay(unsigned long ms) { /* No-op in tests */ }
-void pinMode(int pin, int mode) { /* No-op in tests */ }
-void digitalWrite(int pin, int value) { /* No-op in tests */ }
-int digitalRead(int pin) { return 1; } // Default HIGH
 
 // Mock display class for testing
 class MockU8G2Display {
@@ -196,12 +178,14 @@ public:
 // Global test object
 TestDisplayManager* testDisplay = nullptr;
 
-// Setup and teardown
+// Setup and teardown functions
 void setUp(void) {
+    commonSetUp();
     testDisplay = new TestDisplayManager();
 }
 
 void tearDown(void) {
+    commonTearDown();
     delete testDisplay;
     testDisplay = nullptr;
 }
@@ -371,7 +355,7 @@ void test_display_rapid_updates(void) {
     for (int i = 0; i < 100; i++) {
         testDisplay->updateTemperature(25.0f + i * 0.1f, 25.0f);
         testDisplay->updatePH(7.0f - i * 0.01f, 6.8f);
-        testDisplay->updateTDS(300.0f + i, 0.0f);
+        testDisplay->updateTDS(300.0f + i);
     }
     
     // Last values should be preserved
