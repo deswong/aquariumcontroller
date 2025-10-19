@@ -2,6 +2,8 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <esp_task_wdt.h>
+#include <esp_bt.h>
+#include <esp_bt_main.h>
 #include "TemperatureSensor.h"
 #include "AmbientTempSensor.h"
 #include "PHSensor.h"
@@ -99,6 +101,15 @@ void reconnectMQTT() {
 void setup() {
     Serial.begin(115200);
     delay(1000);
+    
+    // Disable Bluetooth to free up memory (not used in this application)
+    #if CONFIG_BT_ENABLED
+        btStop();
+        esp_bt_controller_disable();
+        esp_bt_controller_deinit();
+        esp_bt_mem_release(ESP_BT_MODE_BTDM);
+        Serial.println("Bluetooth disabled - freeing RAM and Flash");
+    #endif
     
     Serial.println("\n\n=================================");
     Serial.println("Aquarium Controller Starting...");
