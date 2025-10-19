@@ -20,7 +20,7 @@ AdaptivePID* tempPID = NULL;
 AdaptivePID* co2PID = NULL;
 RelayController* heaterRelay = NULL;
 RelayController* co2Relay = NULL;
-ConfigManager* configMgr = NULL;
+extern ConfigManager* configMgr;
 PubSubClient* mqttClient = NULL;
 EventLogger* eventLogger = NULL;
 WaterChangeAssistant* waterChangeAssistant = NULL;
@@ -28,6 +28,10 @@ PatternLearner* patternLearner = NULL;
 DosingPump* dosingPump = NULL;
 WaterChangePredictor* wcPredictor = NULL;
 DisplayManager* displayMgr = NULL;
+
+// Forward declarations
+class WiFiManager;
+WiFiManager* wifiMgr = NULL;
 
 void updateSensorData(float temp, float ambientTemp, float ph, float tds) {
     if (xSemaphoreTake(dataMutex, portMAX_DELAY) == pdTRUE) {
@@ -378,7 +382,7 @@ void initializeTasks() {
     xTaskCreatePinnedToCore(
         sensorTask,
         "SensorTask",
-        4096,           // Stack size
+        6144,           // Stack size (increased for safety)
         NULL,
         2,              // Priority
         &sensorTaskHandle,
@@ -389,7 +393,7 @@ void initializeTasks() {
     xTaskCreatePinnedToCore(
         controlTask,
         "ControlTask",
-        4096,
+        6144,           // Increased for safety
         NULL,
         2,
         &controlTaskHandle,
@@ -400,7 +404,7 @@ void initializeTasks() {
     xTaskCreatePinnedToCore(
         mqttTask,
         "MQTTTask",
-        4096,
+        8192,           // Increased from 4096 to prevent stack overflow
         NULL,
         1,
         &mqttTaskHandle,

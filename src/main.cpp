@@ -23,7 +23,7 @@ PubSubClient mqttClientObj(wifiClient);
 
 // Managers
 ConfigManager* configMgr;
-WiFiManager* wifiMgr;
+extern WiFiManager* wifiMgr;
 WebServerManager* webServer;
 OTAManager* otaManager;
 
@@ -263,9 +263,8 @@ void setup() {
     dosingPump->begin();
     
     // Set default safety limits
-    dosingPump->setMaxDoseVolume(50.0);     // 50 mL maximum per dose
-    dosingPump->setMaxDailyVolume(200.0);   // 200 mL maximum per day
-    dosingPump->setSafetyLimitsEnabled(true);
+    dosingPump->setSafetyLimits(50.0, 200.0);  // 50 mL per dose, 200 mL per day
+    dosingPump->setSafetyEnabled(true);
     
     // Initialize Water Change Predictor
     Serial.println("\nInitializing water change predictor...");
@@ -291,14 +290,8 @@ void setup() {
     }
     
     // Configure default schedule (weekly dosing at 9:00 AM, 5 mL)
-    DosingScheduleConfig defaultSchedule;
-    defaultSchedule.enabled = false;  // Disabled by default until calibrated
-    defaultSchedule.schedule = DOSE_WEEKLY;
-    defaultSchedule.customIntervalDays = 0;
-    defaultSchedule.scheduleHour = 9;
-    defaultSchedule.scheduleMinute = 0;
-    defaultSchedule.doseVolume = 5.0;
-    dosingPump->setSchedule(defaultSchedule);
+    dosingPump->setSchedule(DOSE_WEEKLY, 9, 0, 5.0);  // Weekly at 9:00 AM, 5 mL
+    dosingPump->enableSchedule(false);  // Disabled by default until calibrated
     
     if (eventLogger) {
         if (dosingPump->isCalibrated()) {

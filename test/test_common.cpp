@@ -49,8 +49,10 @@ void delayMicroseconds(unsigned long us) {
     // No-op in tests, too small to matter
 }
 
-// Mock Serial
+// Mock Serial (only for native testing)
+#ifdef NATIVE
 MockSerial Serial;
+#endif
 
 // Common test utilities
 float calculateFlowRate(float volume_ml, float duration_sec, float speed_percent) {

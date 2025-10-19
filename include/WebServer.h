@@ -9,6 +9,7 @@
 #include "SystemTasks.h"
 #include "ConfigManager.h"
 #include "PHSensor.h"
+#include "WiFiManager.h"
 
 class WebServerManager {
 private:

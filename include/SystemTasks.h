@@ -59,6 +59,10 @@ extern DosingPump* dosingPump;
 extern WaterChangePredictor* wcPredictor;
 extern DisplayManager* displayMgr;
 
+// Forward declarations for components
+class WiFiManager;
+extern WiFiManager* wifiMgr;
+
 // Task functions
 void sensorTask(void* parameter);
 void controlTask(void* parameter);

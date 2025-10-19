@@ -140,6 +140,38 @@ void WebServerManager::setupRoutes() {
         request->send(200, "application/json", "{\"status\":\"ok\"}");
     });
     
+    // API: Get system logs
+    server->on("/api/logs", HTTP_GET, [](AsyncWebServerRequest* request) {
+        int count = 200; // Default
+        if (request->hasParam("count")) {
+            count = request->getParam("count")->value().toInt();
+            if (count > 500) count = 500; // Max limit
+        }
+        
+        if (!eventLogger) {
+            request->send(500, "application/json", "{\"error\":\"Event logger not initialized\"}");
+            return;
+        }
+        
+        std::vector<LogEvent> logs = eventLogger->getRecentLogs(count);
+        
+        String json = "{\"logs\":[";
+        for (size_t i = 0; i < logs.size(); i++) {
+            if (i > 0) json += ",";
+            json += "{";
+            json += "\"timestamp\":" + String(logs[i].timestamp / 1000) + ",";
+            json += "\"level\":\"" + String(logs[i].level == EVENT_INFO ? "INFO" : 
+                                           logs[i].level == EVENT_WARNING ? "WARNING" : 
+                                           logs[i].level == EVENT_ERROR ? "ERROR" : "CRITICAL") + "\",";
+            json += "\"category\":\"" + String(logs[i].category) + "\",";
+            json += "\"message\":\"" + String(logs[i].message) + "\"";
+            json += "}";
+        }
+        json += "],\"count\":" + String(logs.size()) + "}";
+        
+        request->send(200, "application/json", json);
+    });
+    
     // API: pH Calibration
     server->on("/api/calibrate/start", HTTP_POST, [](AsyncWebServerRequest* request) {
         phSensor->startCalibration();
@@ -769,7 +801,7 @@ void WebServerManager::setupRoutes() {
         json += "\"scheduleEnabled\":" + String(dosingPump->isScheduleEnabled() ? "true" : "false") + ",";
         json += "\"hoursUntilNext\":" + String(hoursUntilNext, 1) + ",";
         json += "\"dailyVolume\":" + String(dosingPump->getDailyVolumeDosed(), 2) + ",";
-        json += "\"maxDailyVolume\":" + String(dosingPump->getMaxDailyVolume(), 2) + ",";
+        json += "\"remainingDaily\":" + String(dosingPump->getRemainingDailyVolume(), 2) + ",";
         json += "\"safetyEnabled\":" + String(dosingPump->isSafetyEnabled() ? "true" : "false");
         json += "}";
         
@@ -800,12 +832,7 @@ void WebServerManager::setupRoutes() {
                 return;
             }
             
-            if (!dosingPump->start(volume, speed)) {
-                String reason = dosingPump->getLastError();
-                String json = "{\"error\":\"" + reason + "\"}";
-                request->send(400, "application/json", json);
-                return;
-            }
+            dosingPump->start(volume, speed);
             
             if (eventLogger) {
                 eventLogger->info("dosing", "Manual dose started: " + String(volume, 1) + " mL");
@@ -832,11 +859,7 @@ void WebServerManager::setupRoutes() {
             return;
         }
         
-        if (!dosingPump->pause()) {
-            request->send(400, "application/json", "{\"error\":\"Cannot pause in current state\"}");
-            return;
-        }
-        
+        dosingPump->pause();
         request->send(200, "application/json", "{\"status\":\"ok\"}");
     });
     
@@ -847,11 +870,7 @@ void WebServerManager::setupRoutes() {
             return;
         }
         
-        if (!dosingPump->resume()) {
-            request->send(400, "application/json", "{\"error\":\"Cannot resume - not paused\"}");
-            return;
-        }
-        
+        dosingPump->resume();
         request->send(200, "application/json", "{\"status\":\"ok\"}");
     });
     
@@ -874,10 +893,7 @@ void WebServerManager::setupRoutes() {
             int duration = doc["duration"] | 10;
             int speed = doc["speed"] | 50;
             
-            if (!dosingPump->prime(duration, speed)) {
-                request->send(400, "application/json", "{\"error\":\"Cannot prime in current state\"}");
-                return;
-            }
+            dosingPump->prime(duration, speed);
             
             if (eventLogger) {
                 eventLogger->info("dosing", "Priming pump for " + String(duration) + " seconds");
@@ -905,10 +921,7 @@ void WebServerManager::setupRoutes() {
             int duration = doc["duration"] | 10;
             int speed = doc["speed"] | 30;
             
-            if (!dosingPump->backflush(duration, speed)) {
-                request->send(400, "application/json", "{\"error\":\"Cannot backflush in current state\"}");
-                return;
-            }
+            dosingPump->backflush(duration, speed);
             
             if (eventLogger) {
                 eventLogger->info("dosing", "Backflushing pump for " + String(duration) + " seconds");
@@ -935,10 +948,7 @@ void WebServerManager::setupRoutes() {
             
             int cycles = doc["cycles"] | 3;
             
-            if (!dosingPump->runCleaning(cycles)) {
-                request->send(400, "application/json", "{\"error\":\"Cannot clean in current state\"}");
-                return;
-            }
+            dosingPump->runCleaning(cycles);
             
             if (eventLogger) {
                 eventLogger->info("dosing", "Running " + String(cycles) + " cleaning cycles");
@@ -965,10 +975,7 @@ void WebServerManager::setupRoutes() {
             
             int speed = doc["speed"] | 100;
             
-            if (!dosingPump->startCalibration(speed)) {
-                request->send(400, "application/json", "{\"error\":\"Cannot start calibration\"}");
-                return;
-            }
+            dosingPump->startCalibration(speed);
             
             if (eventLogger) {
                 eventLogger->info("dosing", "Calibration started at " + String(speed) + "% speed");
@@ -1001,10 +1008,7 @@ void WebServerManager::setupRoutes() {
                 return;
             }
             
-            if (!dosingPump->finishCalibration(measuredML, seconds)) {
-                request->send(400, "application/json", "{\"error\":\"Not in calibration mode\"}");
-                return;
-            }
+            dosingPump->finishCalibration(measuredML, seconds);
             
             float flowRate = dosingPump->getFlowRate();
             
@@ -1049,7 +1053,7 @@ void WebServerManager::setupRoutes() {
             json += "{";
             json += "\"timestamp\":" + String(history[i].timestamp) + ",";
             json += "\"volumeDosed\":" + String(history[i].volumeDosed, 2) + ",";
-            json += "\"duration\":" + String(history[i].durationSeconds) + ",";
+            json += "\"duration\":" + String(history[i].durationMs / 1000.0, 1) + ",";
             json += "\"success\":" + String(history[i].success ? "true" : "false") + ",";
             json += "\"type\":\"" + String(history[i].type) + "\"";
             json += "}";
@@ -1080,9 +1084,9 @@ void WebServerManager::setupRoutes() {
         String json = "{";
         json += "\"enabled\":" + String(schedule.enabled ? "true" : "false") + ",";
         json += "\"schedule\":\"" + scheduleStr + "\",";
-        json += "\"customDays\":" + String(schedule.customIntervalDays) + ",";
-        json += "\"hour\":" + String(schedule.scheduleHour) + ",";
-        json += "\"minute\":" + String(schedule.scheduleMinute) + ",";
+        json += "\"customDays\":" + String(schedule.customDays) + ",";
+        json += "\"hour\":" + String(schedule.hour) + ",";
+        json += "\"minute\":" + String(schedule.minute) + ",";
         json += "\"doseVolume\":" + String(schedule.doseVolume, 2) + ",";
         json += "\"lastDoseTime\":" + String(schedule.lastDoseTime) + ",";
         json += "\"nextDoseTime\":" + String(schedule.nextDoseTime);
@@ -1116,15 +1120,12 @@ void WebServerManager::setupRoutes() {
             else if (scheduleType == "custom") schedule.schedule = DOSE_CUSTOM;
             else schedule.schedule = DOSE_MANUAL;
             
-            schedule.customIntervalDays = doc["customDays"] | 0;
-            schedule.scheduleHour = doc["hour"] | 9;
-            schedule.scheduleMinute = doc["minute"] | 0;
+            schedule.customDays = doc["customDays"] | 0;
+            schedule.hour = doc["hour"] | 9;
+            schedule.minute = doc["minute"] | 0;
             schedule.doseVolume = doc["doseVolume"] | 5.0;
             
-            if (!dosingPump->setSchedule(schedule)) {
-                request->send(400, "application/json", "{\"error\":\"Failed to set schedule\"}");
-                return;
-            }
+            dosingPump->setSchedule(schedule.schedule, schedule.hour, schedule.minute, schedule.doseVolume);
             
             if (eventLogger) {
                 eventLogger->info("dosing", "Schedule updated: " + scheduleType);
@@ -1149,19 +1150,24 @@ void WebServerManager::setupRoutes() {
                 return;
             }
             
+            // Get current schedule config to extract limits if available
+            DosingScheduleConfig schedule = dosingPump->getScheduleConfig();
+            int maxDose = 50;  // Default 50 mL
+            int maxDaily = 500; // Default 500 mL
+            
             if (doc.containsKey("maxDose")) {
-                float maxDose = doc["maxDose"];
-                dosingPump->setMaxDoseVolume(maxDose);
+                maxDose = doc["maxDose"];
             }
             
             if (doc.containsKey("maxDaily")) {
-                float maxDaily = doc["maxDaily"];
-                dosingPump->setMaxDailyVolume(maxDaily);
+                maxDaily = doc["maxDaily"];
             }
+            
+            dosingPump->setSafetyLimits(maxDose, maxDaily);
             
             if (doc.containsKey("enabled")) {
                 bool enabled = doc["enabled"];
-                dosingPump->setSafetyLimitsEnabled(enabled);
+                dosingPump->setSafetyEnabled(enabled);
             }
             
             if (eventLogger) {
@@ -1182,20 +1188,14 @@ void WebServerManager::setupRoutes() {
         unsigned int totalDoses = dosingPump->getTotalDoses();
         float avgVolume = dosingPump->getAverageDoseVolume();
         float totalVolume = dosingPump->getTotalVolumeDosed();
-        time_t lastCalTime = dosingPump->getLastCalibrationTime();
-        unsigned long daysSinceCal = 0;
-        if (lastCalTime > 0) {
-            time_t now = time(nullptr);
-            daysSinceCal = (now - lastCalTime) / 86400;
-        }
+        int daysSinceCal = dosingPump->getDaysSinceCalibration();
         
         String json = "{";
         json += "\"totalRuntime\":" + String(totalRuntime) + ",";
         json += "\"totalDoses\":" + String(totalDoses) + ",";
         json += "\"averageVolume\":" + String(avgVolume, 2) + ",";
         json += "\"totalVolume\":" + String(totalVolume, 2) + ",";
-        json += "\"daysSinceCalibration\":" + String(daysSinceCal) + ",";
-        json += "\"lastCalibrationTime\":" + String(lastCalTime);
+        json += "\"daysSinceCalibration\":" + String(daysSinceCal);
         json += "}";
         
         request->send(200, "application/json", json);
