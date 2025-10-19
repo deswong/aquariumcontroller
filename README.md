@@ -53,8 +53,9 @@ A comprehensive aquarium automation system built for ESP32 that monitors and con
 
 **Optional:**
 - **DRV8871 Motor Driver** - For dosing pump control
-- **Peristaltic Pump** - For liquid fertilizer dosing
-- **Ender 3 Pro Display** - LCD12864 with encoder for local control
+- **Peristalric Pump** - For liquid fertilizer dosing
+- **Display Option 1: Ender 3 Pro LCD12864** - Full interactive menu with encoder (9 GPIO pins)
+- **Display Option 2: SSD1309 OLED 128x64** - Minimal monitoring display (2 GPIO pins)
 - **RCD Safety Switch** - 30mA, mandatory for Australian installations
 
 ### Pin Configuration
@@ -77,7 +78,9 @@ Dosing Pump IN1 (DRV8871):    GPIO 25 (PWM)
 Dosing Pump IN2 (DRV8871):    GPIO 33 (PWM)
 ```
 
-**Display (Optional - Ender 3 Pro):**
+**Display (Optional):**
+
+*Option 1: Ender 3 Pro LCD12864 (Interactive Menu)*
 ```
 LCD_CS (Chip Select):         GPIO 15
 LCD_A0 (Data/Command):        GPIO 2
@@ -89,9 +92,18 @@ BTN_EN1 (Encoder A):          GPIO 14
 BTN_EN2 (Encoder B):          GPIO 16
 BEEPER (Buzzer):              GPIO 17
 ```
+**Pins Used:** 9 GPIO (full menu system with rotary encoder)
 
-**Total Pins Used:** 17 of 38 available  
-**Remaining:** 21 GPIO pins for future expansion
+*Option 2: SSD1309 OLED 128x64 (Monitoring Only)*
+```
+I2C SDA:                      GPIO 21
+I2C SCL:                      GPIO 22
+```
+**Pins Used:** 2 GPIO (info display only, ~400 KB flash savings)
+
+**Without Display:** 8 GPIO pins  
+**With Ender 3:** 17 GPIO pins (21 remaining)  
+**With OLED:** 10 GPIO pins (28 remaining)
 
 ### Wiring Diagram
 
@@ -477,9 +489,13 @@ To add new sensors or features:
 - **[TIME_PROPORTIONAL.md](TIME_PROPORTIONAL.md)** - PID control details
 
 ### Display & Interface
+- **[DISPLAY_OPTIONS.md](DISPLAY_OPTIONS.md)** - ⭐ **Quick reference: Choose your display**
 - **[ENDER3_DISPLAY_COMPATIBILITY.md](ENDER3_DISPLAY_COMPATIBILITY.md)** - Display feasibility
 - **[ENDER3_DISPLAY_WIRING.md](ENDER3_DISPLAY_WIRING.md)** - Wiring guide
 - **[DISPLAY_IMPLEMENTATION_COMPLETE.md](DISPLAY_IMPLEMENTATION_COMPLETE.md)** - Implementation details
+- **[OLED_DISPLAY_GUIDE.md](OLED_DISPLAY_GUIDE.md)** - SSD1309 OLED setup and integration
+- **[DISPLAY_SIZE_COMPARISON.md](DISPLAY_SIZE_COMPARISON.md)** - Ender 3 vs OLED comparison
+- **[SSD1309_IMPLEMENTATION_SUMMARY.md](SSD1309_IMPLEMENTATION_SUMMARY.md)** - OLED implementation summary
 - **[WEB_UI_PATTERN_GUIDE.md](WEB_UI_PATTERN_GUIDE.md)** - Web UI usage
 
 ### API & Integration

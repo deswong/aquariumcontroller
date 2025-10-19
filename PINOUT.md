@@ -2,7 +2,10 @@
 
 ## Default Pin Configuration
 
-**Total Pins Used: 17 of 38 available (21 free)**
+**Total Pins Used:**
+- **Without Display:** 8 GPIO pins (30 free)
+- **With Ender 3 Display:** 17 GPIO pins (21 free)
+- **With SSD1309 OLED:** 10 GPIO pins (28 free)
 
 ### Core Sensors & Outputs (8 pins)
 | Function | GPIO Pin | Type | Notes |
@@ -16,7 +19,9 @@
 | Dosing Pump IN1 | GPIO 25 | Digital Output | L298N motor driver input |
 | Dosing Pump IN2 | GPIO 33 | Digital Output | L298N motor driver input |
 
-### Display & Interface (9 pins)
+### Display Options
+
+**Option 1: Ender 3 Pro LCD12864 (9 pins) - Interactive Menu**
 | Function | GPIO Pin | Type | Notes |
 |----------|----------|------|-------|
 | LCD CS (Chip Select) | GPIO 15 | Digital Output | ST7920 LCD12864 display |
@@ -28,6 +33,14 @@
 | Encoder DT (Data) | GPIO 13 | Digital Input | Rotary encoder with pullup |
 | Encoder CLK (Clock) | GPIO 14 | Digital Input | Rotary encoder with pullup |
 | Encoder Switch | GPIO 23 | Digital Input | Button press with pullup |
+
+**Option 2: SSD1309 OLED (2 pins) - Monitoring Only**
+| Function | GPIO Pin | Type | Notes |
+|----------|----------|------|-------|
+| I2C SDA | GPIO 21 | I2C Data | Hardware I2C, internal pullup |
+| I2C SCL | GPIO 22 | I2C Clock | Hardware I2C, internal pullup |
+
+*Trade-off: OLED saves 7 GPIO pins and ~400 KB flash but has no user input (web interface only)*
 
 ## ESP32 DevKit v1 Pin Layout
 
@@ -169,7 +182,7 @@ Note: IN1/IN2 control direction (forward/reverse/brake)
       ENA enables motor (HIGH = enabled)
 ```
 
-### Display (Ender 3 Pro LCD12864)
+### Display Option 1: Ender 3 Pro LCD12864 (Interactive Menu)
 ```
 LCD12864         ESP32
 ┌────────┐
@@ -197,6 +210,25 @@ Rotary Encoder   ESP32
 Note: ST7920 controller, 128x64 pixels
       Rotary encoder has internal pullups
       Do NOT connect SD card slot (not implemented)
+      9 GPIO pins total
+```
+
+### Display Option 2: SSD1309 OLED 128x64 (Monitoring Only)
+```
+SSD1309 OLED     ESP32
+┌────────┐
+│  VCC   │ ───── 3.3V or 5V (check your module)
+│  GND   │ ───── GND
+│  SDA   │ ───── GPIO 21 (I2C Data)
+│  SCL   │ ───── GPIO 22 (I2C Clock)
+└────────┘
+
+Note: SSD1309 controller, 128x64 OLED
+      I2C address typically 0x3C or 0x3D
+      Only 2 GPIO pins required
+      No user input (monitoring only)
+      ~400 KB flash savings vs Ender 3
+      See OLED_DISPLAY_GUIDE.md for details
 ```
 
 ## Power Considerations
@@ -279,7 +311,9 @@ SystemConfig() {
 }
 ```
 
-### Display Pins (`DisplayManager.h`)
+### Display Pins
+
+**Option 1: Ender 3 Display (`DisplayManager.h`)**
 ```cpp
 // ST7920 LCD pins
 #define LCD_CS 15      // Chip select
@@ -293,6 +327,17 @@ SystemConfig() {
 #define ENC_DT 13      // Data
 #define ENC_CLK 14     // Clock
 #define ENC_SW 23      // Switch/button
+```
+
+**Option 2: SSD1309 OLED (`DisplayManager_OLED.h`)**
+```cpp
+// Hardware I2C (default ESP32 pins)
+// SDA: GPIO 21
+// SCL: GPIO 22
+// I2C Address: 0x3C (most common)
+
+// No defines needed - uses hardware I2C
+// Switch by changing: #include "DisplayManager_OLED.h"
 ```
 
 ### Dosing Pump Pins (`main.cpp`)
