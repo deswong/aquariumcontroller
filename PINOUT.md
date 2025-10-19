@@ -4,7 +4,6 @@
 
 **Total Pins Used:**
 - **Without Display:** 8 GPIO pins (30 free)
-- **With Ender 3 Display:** 17 GPIO pins (21 free)
 - **With SSD1309 OLED:** 10 GPIO pins (28 free)
 
 ### Core Sensors & Outputs (8 pins)
@@ -19,370 +18,225 @@
 | Dosing Pump IN1 | GPIO 25 | Digital Output | L298N motor driver input |
 | Dosing Pump IN2 | GPIO 33 | Digital Output | L298N motor driver input |
 
-### Display Options
-
-**Option 1: Ender 3 Pro LCD12864 (9 pins) - Interactive Menu**
-| Function | GPIO Pin | Type | Notes |
-|----------|----------|------|-------|
-| LCD CS (Chip Select) | GPIO 15 | Digital Output | ST7920 LCD12864 display |
-| LCD A0 (Register Select) | GPIO 2 | Digital Output | ST7920 LCD12864 display |
-| LCD Reset | GPIO 0 | Digital Output | ST7920 LCD12864 display |
-| LCD E (Enable) | GPIO 16 | Digital Output | ST7920 LCD12864 display |
-| LCD R/W | GPIO 17 | Digital Output | ST7920 LCD12864 display |
-| LCD PSB | GPIO 18 | Digital Output | Parallel/Serial mode select |
-| Encoder DT (Data) | GPIO 13 | Digital Input | Rotary encoder with pullup |
-| Encoder CLK (Clock) | GPIO 14 | Digital Input | Rotary encoder with pullup |
-| Encoder Switch | GPIO 23 | Digital Input | Button press with pullup |
-
-**Option 2: SSD1309 OLED (2 pins) - Monitoring Only**
+### Display: SSD1309 OLED (2 pins) - Monitoring Only
 | Function | GPIO Pin | Type | Notes |
 |----------|----------|------|-------|
 | I2C SDA | GPIO 21 | I2C Data | Hardware I2C, internal pullup |
 | I2C SCL | GPIO 22 | I2C Clock | Hardware I2C, internal pullup |
-
-*Trade-off: OLED saves 7 GPIO pins and ~400 KB flash but has no user input (web interface only)*
 
 ## ESP32 DevKit v1 Pin Layout
 
 ```
                         ┌─────────┐
                      EN │1      38│ GND
-                  GPIO36│2      37│ GPIO23 ◄── Encoder Switch
-                  GPIO39│3      36│ GPIO22
-                  GPIO34│4      35│ GPIO1 (TX)
-                  GPIO35│5      34│ GPIO3 (RX)
-                  GPIO32│6      33│ GPIO21
+                  GPIO36│2      37│ GPIO23
+                  GPIO39│3      36│ GPIO22 ◄── I2C SCL
+                  GPIO34│4      35│ GPIO21 ◄── I2C SDA
+                  GPIO35│5      34│ GPIO19
+                  GPIO32│6      33│ GPIO18
                   GPIO33│7      32│ GND
-                  GPIO25│8      31│ GPIO19
-                  GPIO26│9      30│ GPIO18 ◄── LCD PSB
-                  GPIO27│10     29│ GPIO5  ◄── Ambient Temp
-                  GPIO14│11     28│ GPIO17 ◄── LCD R/W
-                  GPIO12│12     27│ GPIO16 ◄── LCD E
-                     GND│13     26│ GPIO4  ◄── Water Temp
-                  GPIO13│14     25│ GPIO0  ◄── LCD Reset
-                   GPIO9│15     24│ GPIO2  ◄── LCD A0
-                  GPIO10│16     23│ GPIO15 ◄── LCD CS
-                  GPIO11│17     22│ GPIO8
-                     VIN│18     21│ GPIO7
-                     GND│19     20│ GPIO6
+                  GPIO25│8      31│ GPIO5  ◄── Ambient Temp
+                  GPIO26│9      30│ GPIO17
+                  GPIO27│10     29│ GPIO16
+                  GPIO14│11     28│ GPIO4  ◄── Water Temp
+                  GPIO12│12     27│ GPIO0
+                     GND│13     26│ GPIO2
+                  GPIO13│14     25│ GPIO15
+                   GPIO9│15     24│ GPIO8
+                  GPIO10│16     23│ GPIO7
+                  GPIO11│17     22│ GPIO6
+                     VIN│18     21│ 3.3V
+                     GND│19     20│ 5V
                         └─────────┘
-
-   Core Sensors & Outputs:
-   pH Sensor ──────────────────►│4│ GPIO34
-   TDS Sensor ─────────────────►│5│ GPIO35
-   Water Temp Sensor ──────────►│26│ GPIO4
-   Ambient Temp Sensor ─────────►│29│ GPIO5
-   Heater Relay ───────────────►│9│ GPIO26
-   CO2 Relay ──────────────────►│10│ GPIO27
-   Dosing Pump IN1 ────────────►│8│ GPIO25
-   Dosing Pump IN2 ────────────►│7│ GPIO33
-
-   Display Interface:
-   LCD CS ─────────────────────►│23│ GPIO15
-   LCD A0 ─────────────────────►│24│ GPIO2
-   LCD Reset ──────────────────►│25│ GPIO0
-   LCD E ──────────────────────►│27│ GPIO16
-   LCD R/W ────────────────────►│28│ GPIO17
-   LCD PSB ────────────────────►│30│ GPIO18
-   Encoder DT ─────────────────►│14│ GPIO13
-   Encoder CLK ────────────────►│11│ GPIO14
-   Encoder Switch ─────────────►│37│ GPIO23
 ```
+
+## Communication Interfaces
+
+### I2C Configuration
+```
+Default pins:
+SDA (GPIO21) ◄── I2C Data
+SCL (GPIO22) ◄── I2C Clock
+
+Note: Use 4.7kΩ pullup resistors if not included on modules
+```
+
+### ADC Considerations
+- ADC1 (GPIO32-39): Available with WiFi
+- ADC2: Not usable when WiFi is active
+- Input voltage range: 0-3.3V
+- Resolution: 12-bit (0-4095)
 
 ## Detailed Wiring
 
-### Water Temperature Sensor (DS18B20)
+### Temperature Sensors (DS18B20)
 ```
 DS18B20          ESP32
-┌──────┐
-│  1   │ GND ──── GND
-│  2   │ DATA ─── GPIO 4 (with 4.7kΩ to 3.3V)
-│  3   │ VCC ──── 3.3V
-└──────┘
-
-Note: Place this sensor in the aquarium water
-```
-
-### Ambient Temperature Sensor (DS18B20)
-```
-DS18B20          ESP32
-┌──────┐
-│  1   │ GND ──── GND
-│  2   │ DATA ─── GPIO 5 (with 4.7kΩ to 3.3V)
-│  3   │ VCC ──── 3.3V
-└──────┘
-
-Note: Place this sensor in the air near the aquarium for ambient temperature
-      Used during pH calibration to measure calibration solution temperature
-```
-
-### pH Sensor Module
-```
-pH Module        ESP32
 ┌────────┐
-│  VCC   │ ───── 3.3V or 5V (check your module)
+│  VCC   │ ───── 3.3V
+│  DATA  │ ───── GPIO 4 (Water) / GPIO 5 (Ambient)
 │  GND   │ ───── GND
-│  PO    │ ───── GPIO 34 (analog output)
 └────────┘
+         │
+        4.7kΩ (pullup to 3.3V)
 ```
 
-### TDS Sensor Module
+### pH Sensor
 ```
-TDS Module       ESP32
+pH Sensor        ESP32
 ┌────────┐
-│  VCC   │ ───── 3.3V or 5V (check your module)
+│  VCC   │ ───── 3.3V or 5V (check sensor spec)
+│  OUT   │ ───── GPIO 34 (ADC1_CH6)
 │  GND   │ ───── GND
-│  A     │ ───── GPIO 35 (analog output)
 └────────┘
+
+Note: Add 0.1µF capacitor between OUT and GND for noise filtering
+```
+
+### TDS Sensor
+```
+TDS Sensor       ESP32
+┌────────┐
+│  VCC   │ ───── 3.3V or 5V (check sensor spec)
+│  OUT   │ ───── GPIO 35 (ADC1_CH7)
+│  GND   │ ───── GND
+└────────┘
+
+Note: Add 0.1µF capacitor between OUT and GND for noise filtering
 ```
 
 ### Relay Modules
 ```
-Relay Module     ESP32        Device
-┌──────────┐
-│  VCC     │ ─── 5V (ESP32)
-│  GND     │ ─── GND (ESP32)
-│  IN1     │ ─── GPIO 26     [Heater]
-│  IN2     │ ─── GPIO 27     [CO2 Solenoid]
-│          │
-│  COM1    │ ─┐
-│  NO1     │ ─┤──── Heater Power Control (240V AC 🇦🇺)
-│  NC1     │ ─┘
-│          │
-│  COM2    │ ─┐
-│  NO2     │ ─┤──── CO2 Solenoid Power Control
-│  NC2     │ ─┘
-└──────────┘
-
-Note: Use COM and NO (Normally Open) for safety
-      Device is OFF when ESP32 is off/crashed
-      
-⚠️ Australian Electrical Safety (AS/NZS 3000:2018):
-   - 240V AC circuits MUST have RCD protection (30mA)
-   - Use IP-rated enclosures near water
-   - Licensed electrician required for AC wiring
-```
-
-### Dosing Pump (L298N Motor Driver)
-```
-L298N Module     ESP32        Pump Motor
-┌──────────┐
-│  +12V    │ ─── 12V Supply
-│  GND     │ ─── GND (common with ESP32)
-│  +5V     │ ─── (leave disconnected or use for ESP32 5V)
-│  IN1     │ ─── GPIO 25
-│  IN2     │ ─── GPIO 33
-│  ENA     │ ─── 5V (or PWM from ESP32)
-│          │
-│  OUT1    │ ─┐
-│  OUT2    │ ─┤──── Dosing Pump Motor (12V DC)
-└──────────┘
-
-Note: IN1/IN2 control direction (forward/reverse/brake)
-      ENA enables motor (HIGH = enabled)
-```
-
-### Display Option 1: Ender 3 Pro LCD12864 (Interactive Menu)
-```
-LCD12864         ESP32
+Relay Module     ESP32
 ┌────────┐
-│  CS    │ ───── GPIO 15 (Chip Select)
-│  A0    │ ───── GPIO 2 (Register Select)
-│  RST   │ ───── GPIO 0 (Reset)
-│  E     │ ───── GPIO 16 (Enable)
-│  R/W   │ ───── GPIO 17 (Read/Write)
-│  PSB   │ ───── GPIO 18 (Mode: HIGH=parallel)
 │  VCC   │ ───── 5V
-│  GND   │ ───── GND
-│  BLA   │ ───── 5V (backlight anode)
-│  BLK   │ ───── GND (backlight cathode)
-└────────┘
-
-Rotary Encoder   ESP32
-┌────────┐
-│  DT    │ ───── GPIO 13 (Data)
-│  CLK   │ ───── GPIO 14 (Clock)
-│  SW    │ ───── GPIO 23 (Switch/Button)
-│  +     │ ───── 3.3V
+│  IN1   │ ───── GPIO 26 (Heater)
+│  IN2   │ ───── GPIO 27 (CO2)
 │  GND   │ ───── GND
 └────────┘
 
-Note: ST7920 controller, 128x64 pixels
-      Rotary encoder has internal pullups
-      Do NOT connect SD card slot (not implemented)
-      9 GPIO pins total
+Note: Use optocoupler-based relay modules for isolation
 ```
 
-### Display Option 2: SSD1309 OLED 128x64 (Monitoring Only)
+### L298N Motor Driver (Dosing Pump)
+```
+L298N            ESP32
+┌────────┐
+│  VCC   │ ───── 5V or 12V (motor voltage)
+│  GND   │ ───── GND
+│  IN1   │ ───── GPIO 25
+│  IN2   │ ───── GPIO 33
+│  ENA   │ ───── 5V (enable always on)
+│  OUT1  │ ───── Pump Motor +
+│  OUT2  │ ───── Pump Motor -
+└────────┘
+```
+
+### SSD1309 OLED Display
 ```
 SSD1309 OLED     ESP32
 ┌────────┐
-│  VCC   │ ───── 3.3V or 5V (check your module)
+│  VCC   │ ───── 3.3V
 │  GND   │ ───── GND
-│  SDA   │ ───── GPIO 21 (I2C Data)
-│  SCL   │ ───── GPIO 22 (I2C Clock)
+│  SDA   │ ───── GPIO 21
+│  SCL   │ ───── GPIO 22
 └────────┘
 
-Note: SSD1309 controller, 128x64 OLED
-      I2C address typically 0x3C or 0x3D
-      Only 2 GPIO pins required
-      No user input (monitoring only)
-      ~400 KB flash savings vs Ender 3
-      See OLED_DISPLAY_GUIDE.md for details
+Note: 4.7kΩ pullup resistors on SDA/SCL if not included on module
 ```
 
-## Power Considerations
+## Sensor Specifications
 
-### ESP32 Power
-- **Input Voltage (VIN)**: 5V via USB or external
-- **Regulated 3.3V**: From onboard regulator
-- **Max Current per GPIO**: 12mA (40mA absolute max)
+### Analog Sensors
 
-### Sensor Power Requirements
-- **DS18B20**: 3.3V, ~1.5mA (idle) to 2mA (active)
-- **pH Module**: Check datasheet (usually 3.3V or 5V, <10mA)
-- **TDS Module**: Check datasheet (usually 3.3V or 5V, <10mA)
+| Sensor | Operating Range | Typical Values |
+|--------|----------------|----------------|
+| pH Sensor | 0-3.3V | pH 7 ≈ 1.5V |
+| TDS Sensor | 0-2.5V | 0 TDS ≈ 0V |
 
-### Relay Power
-- **Relay Module VCC**: Usually 5V
-- **Current per relay coil**: ~70mA typical
-- **Don't power relays from ESP32 3.3V!** Use 5V pin or external supply
+### Digital Sensors
 
-## Analog Input Voltage Ranges
+| Sensor | Protocol | Update Rate |
+|--------|----------|------------|
+| DS18B20 | 1-Wire | 750ms per reading |
+| SSD1309 | I2C | ~60Hz refresh |
 
-ESP32 ADC characteristics:
-- **Maximum Input**: 3.3V (DO NOT EXCEED!)
-- **Resolution**: 12-bit (0-4095)
-- **Reference**: 3.3V (non-adjustable)
+## Power Management
 
-For 5V sensors, use voltage divider:
+### Deep Sleep Considerations
+- RTC GPIOs (0,2,4,12-15,25-27,32-39) remain active
+- Use RTC GPIOs for wake-up sensors
+- Other GPIOs reset on wake
+- Typical deep sleep current: <10µA
+
+### Power Budget
 ```
-5V Signal ────[10kΩ]────┬──── GPIO 34/35
-                        │
-                     [6.8kΩ]
-                        │
-                       GND
-
-Output = 5V × (6.8/(10+6.8)) = 2.02V ✓ Safe
-```
-
-## Alternative Pins (if defaults conflict)
-
-You can use these alternative GPIOs:
-
-### For Digital Output (Relays)
-- GPIO 2, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33
-
-### For 1-Wire (Temperature)
-- Any GPIO except input-only pins (34-39)
-
-### For Analog Input (pH, TDS)
-- GPIO 32, 33, 34, 35, 36, 39 (ADC1)
-- GPIO 0, 2, 4, 12, 13, 14, 15, 25, 26, 27 (ADC2, but conflicts with WiFi)
-- **Recommended**: Use ADC1 pins (32-39) to avoid WiFi conflicts
-
-## Pins to AVOID
-
-| Pin | Reason |
-|-----|--------|
-| GPIO 0 | Boot mode selection, pulls low at boot |
-| GPIO 1 (TX) | Serial communication |
-| GPIO 2 | Internal LED, boot mode |
-| GPIO 3 (RX) | Serial communication |
-| GPIO 5 | Boot mode, SPI |
-| GPIO 6-11 | Connected to flash chip (DON'T USE!) |
-| GPIO 12 | Boot mode selection |
-| GPIO 15 | Boot mode, SPI |
-
-## Modifying Pin Configuration
-
-To change pins, edit the appropriate header files:
-
-### Core System Pins (`ConfigManager.h`)
-```cpp
-SystemConfig() {
-    // ... other settings ...
-    
-    tempSensorPin = 4;      // Change to your pin
-    phSensorPin = 34;       // Must be ADC1 pin
-    tdsSensorPin = 35;      // Must be ADC1 pin
-    heaterRelayPin = 26;    // Any digital output pin
-    co2RelayPin = 27;       // Any digital output pin
-}
+Component         Current Draw
+─────────────────────────────
+ESP32 (active)    ~80mA
+ESP32 (WiFi TX)   ~160mA
+ESP32 (sleep)     ~10µA
+DS18B20           ~1.5mA
+pH Module         ~10mA
+TDS Module        ~10mA
+Relay (per coil)  ~70mA
+SSD1309 OLED      ~20mA
+L298N (idle)      ~20mA
+L298N (active)    ~100mA+
 ```
 
-### Display Pins
+## I2C Device Configuration
 
-**Option 1: Ender 3 Display (`DisplayManager.h`)**
-```cpp
-// ST7920 LCD pins
-#define LCD_CS 15      // Chip select
-#define LCD_A0 2       // Register select (RS)
-#define LCD_RESET 0    // Reset
-#define LCD_E 16       // Enable
-#define LCD_RW 17      // Read/write
-#define LCD_PSB 18     // Parallel/serial select
+Default I2C pins for ESP32:
+- **SDA**: GPIO 21
+- **SCL**: GPIO 22
 
-// Rotary encoder pins
-#define ENC_DT 13      // Data
-#define ENC_CLK 14     // Clock
-#define ENC_SW 23      // Switch/button
+Compatible with common aquarium sensors:
+- Atlas Scientific I2C circuits
+- BME280 environmental sensors
+- SSD1309/SSD1306 OLED displays
+
+### I2C Wiring Example
+```
+I2C Device       ESP32
+┌────────┐
+│  VCC   │ ───── 3.3V
+│  GND   │ ───── GND
+│  SDA   │ ───── GPIO 21
+│  SCL   │ ───── GPIO 22
+└────────┘
+
+Note: Use 4.7kΩ pullup resistors on both SDA and SCL if not included on modules
 ```
 
-**Option 2: SSD1309 OLED (`DisplayManager_OLED.h`)**
-```cpp
-// Hardware I2C (default ESP32 pins)
-// SDA: GPIO 21
-// SCL: GPIO 22
-// I2C Address: 0x3C (most common)
+## Troubleshooting Guide
 
-// No defines needed - uses hardware I2C
-// Switch by changing: #include "DisplayManager_OLED.h"
-```
+### Common Issues
 
-### Dosing Pump Pins (`main.cpp`)
-```cpp
-dosingPump = new DosingPump(25, 33, 1);  // IN1, IN2, channel
-```
+1. **Erratic readings**
+   - Check ground connections
+   - Verify power supply stability
+   - Add decoupling capacitors (0.1µF near each sensor)
 
-Then rebuild and upload firmware.
+2. **WiFi disconnections**
+   - Move ADC sensors to ADC1 pins (GPIO32-39)
+   - Check power supply capacity
+   - Reduce WiFi TX power if needed
 
-## Testing Individual Components
+3. **Sensor failures**
+   - Verify voltage levels with multimeter
+   - Check pullup resistors on I2C and 1-Wire
+   - Test cables for continuity
 
-### Test Temperature Sensor
-```cpp
-// In setup()
-tempSensor->begin();
-Serial.println(tempSensor->readTemperature());
-```
+4. **OLED display not working**
+   - Verify I2C address (usually 0x3C or 0x3D)
+   - Check SDA/SCL connections
+   - Ensure 4.7kΩ pullup resistors present
 
-### Test pH Sensor
-```cpp
-// Raw voltage reading
-int raw = analogRead(34);
-float voltage = (raw / 4095.0) * 3.3;
-Serial.printf("pH Voltage: %.3fV\n", voltage);
-```
+## Version History
 
-### Test Relays
-```cpp
-// Turn on/off
-digitalWrite(26, HIGH);  // Heater ON
-delay(1000);
-digitalWrite(26, LOW);   // Heater OFF
-```
-
-## Safety Checklist
-
-- [ ] All grounds connected together
-- [ ] No voltage exceeds 3.3V on analog inputs
-- [ ] Relays powered from 5V, not 3.3V
-- [ ] Pullup resistor on DS18B20 data line
-- [ ] Relays set to Normally Open (NO)
-- [ ] Proper electrical isolation for AC devices
-- [ ] Waterproof connections near aquarium
-- [ ] GFCI/RCD protection on AC circuits
-
----
-
-**Note**: Always verify pinout for YOUR specific ESP32 board. Different manufacturers may have different layouts.
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.2 | 2025-10-20 | Removed Ender 3 LCD, kept only SSD1309 OLED |
+| 1.1 | 2025-10-17 | Added I2C, deep sleep, and troubleshooting sections |
+| 1.0 | 2025-10-01 | Initial documentation |
