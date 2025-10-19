@@ -1,5 +1,7 @@
 #include "WebServer.h"
 #include "SystemTasks.h"
+#include "WebInterface.h"
+#include <Update.h>
 
 WebServerManager::WebServerManager(ConfigManager* configMgr) 
     : config(configMgr), lastBroadcast(0) {
@@ -13,11 +15,16 @@ WebServerManager::~WebServerManager() {
 }
 
 void WebServerManager::begin() {
-    // Initialize SPIFFS for serving web files
-    if (!SPIFFS.begin(true)) {
-        Serial.println("ERROR: Failed to mount SPIFFS");
-        return;
+    // Initialize SPIFFS only for event logs (not needed for web interface anymore)
+    // Web interface is now embedded in firmware as PROGMEM
+    if (!SPIFFS.begin(false)) {
+        Serial.println("WARNING: Failed to mount SPIFFS - event logs will not be available");
+    } else {
+        Serial.println("SPIFFS mounted successfully for event logging");
     }
+    
+    Serial.println("Web interface embedded in firmware (PROGMEM) - always available!");
+    Serial.printf("Compressed HTML size: %u bytes\n", index_html_gz_len);
     
     // Setup WebSocket
     ws->onEvent([this](AsyncWebSocket* server, AsyncWebSocketClient* client, 
@@ -40,9 +47,18 @@ void WebServerManager::begin() {
 }
 
 void WebServerManager::setupRoutes() {
-    // Serve index.html from SPIFFS
+    // Serve embedded gzip-compressed HTML from PROGMEM
+    // This persists across reboots and firmware updates!
     server->on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
-        request->send(SPIFFS, "/index.html", "text/html");
+        AsyncWebServerResponse *response = request->beginResponse(
+            200, 
+            "text/html", 
+            index_html_gz, 
+            index_html_gz_len
+        );
+        response->addHeader("Content-Encoding", "gzip");
+        response->addHeader("Cache-Control", "max-age=86400"); // Cache for 24 hours
+        request->send(response);
     });
     
     // API: Get current sensor data
@@ -1256,6 +1272,60 @@ void WebServerManager::setupRoutes() {
             
             request->send(200, "application/json", "{\"status\":\"ok\"}");
         });
+    
+    // API: OTA Firmware Update
+    server->on("/api/update", HTTP_POST, 
+        [](AsyncWebServerRequest* request) {
+            bool success = !Update.hasError();
+            AsyncWebServerResponse* response = request->beginResponse(200, "application/json", 
+                success ? "{\"status\":\"ok\",\"message\":\"Update successful, restarting...\"}" 
+                        : "{\"status\":\"error\",\"message\":\"Update failed\"}");
+            response->addHeader("Connection", "close");
+            request->send(response);
+            
+            if (success) {
+                delay(1000);
+                ESP.restart();
+            }
+        },
+        [](AsyncWebServerRequest* request, String filename, size_t index, uint8_t* data, size_t len, bool final) {
+            if (!index) {
+                Serial.printf("OTA Update Start: %s\n", filename.c_str());
+                if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+                    Update.printError(Serial);
+                }
+            }
+            
+            if (Update.write(data, len) != len) {
+                Update.printError(Serial);
+            }
+            
+            if (final) {
+                if (Update.end(true)) {
+                    Serial.printf("OTA Update Success: %u bytes\n", index + len);
+                } else {
+                    Update.printError(Serial);
+                }
+            }
+        }
+    );
+    
+    // API: Get firmware info
+    server->on("/api/firmware/info", HTTP_GET, [](AsyncWebServerRequest* request) {
+        StaticJsonDocument<256> doc;
+        doc["version"] = "1.0.0";  // You can add a version define later
+        doc["chipModel"] = ESP.getChipModel();
+        doc["chipRevision"] = ESP.getChipRevision();
+        doc["cpuFreq"] = ESP.getCpuFreqMHz();
+        doc["flashSize"] = ESP.getFlashChipSize();
+        doc["freeHeap"] = ESP.getFreeHeap();
+        doc["sketchSize"] = ESP.getSketchSize();
+        doc["freeSketchSpace"] = ESP.getFreeSketchSpace();
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
     
     // API: Restart device
     server->on("/api/restart", HTTP_POST, [this](AsyncWebServerRequest* request) {

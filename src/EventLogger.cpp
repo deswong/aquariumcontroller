@@ -9,8 +9,10 @@ EventLogger::~EventLogger() {
 }
 
 bool EventLogger::begin() {
-    if (!SPIFFS.begin(true)) {
-        Serial.println("ERROR: Failed to mount SPIFFS");
+    // IMPORTANT: Use false to prevent formatting SPIFFS on mount failure
+    // This prevents wiping the filesystem (including index.html) on reboot
+    if (!SPIFFS.begin(false)) {
+        Serial.println("ERROR: Failed to mount SPIFFS for event logging");
         return false;
     }
     

@@ -619,6 +619,7 @@
                 <button class="tab" onclick="showTab('dosing')">💊 Dosing Pump</button>
                 <button class="tab" onclick="showTab('calibration')">🔬 pH Calibration</button>
                 <button class="tab" onclick="showTab('logs')">📜 Logs</button>
+                <button class="tab" onclick="showTab('firmware')">🔄 Firmware</button>
                 <button class="tab" onclick="showTab('settings')">🔧 Settings</button>
             </div>
             
@@ -1264,6 +1265,83 @@
                 </div>
             </div>
             
+            <!-- Firmware Update Tab -->
+            <div id="firmware-tab" class="tab-content">
+                <h2>🔄 Firmware Update</h2>
+                
+                <div class="card">
+                    <h3>Current Firmware Info</h3>
+                    <div class="info-grid">
+                        <div>
+                            <strong>Version:</strong>
+                            <span id="fw-version">Loading...</span>
+                        </div>
+                        <div>
+                            <strong>Chip Model:</strong>
+                            <span id="fw-chip-model">Loading...</span>
+                        </div>
+                        <div>
+                            <strong>CPU Frequency:</strong>
+                            <span id="fw-cpu-freq">Loading...</span>
+                        </div>
+                        <div>
+                            <strong>Flash Size:</strong>
+                            <span id="fw-flash-size">Loading...</span>
+                        </div>
+                        <div>
+                            <strong>Sketch Size:</strong>
+                            <span id="fw-sketch-size">Loading...</span>
+                        </div>
+                        <div>
+                            <strong>Free Space:</strong>
+                            <span id="fw-free-space">Loading...</span>
+                        </div>
+                        <div>
+                            <strong>Free Heap:</strong>
+                            <span id="fw-free-heap">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3>Upload New Firmware</h3>
+                    <p style="color: #f59e0b; margin-bottom: 1rem;">
+                        ⚠️ <strong>Warning:</strong> Uploading firmware will restart the device. 
+                        Make sure you have a valid firmware.bin file compiled for ESP32.
+                    </p>
+                    
+                    <div class="control-group">
+                        <label for="firmware-file">Select Firmware File (.bin)</label>
+                        <input type="file" id="firmware-file" accept=".bin" style="margin-bottom: 1rem;">
+                    </div>
+                    
+                    <div id="upload-progress" style="display: none; margin-bottom: 1rem;">
+                        <div style="background: #1f2937; border-radius: 0.5rem; overflow: hidden; height: 2rem;">
+                            <div id="upload-progress-bar" style="background: linear-gradient(90deg, #3b82f6, #10b981); height: 100%; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                                0%
+                            </div>
+                        </div>
+                        <p id="upload-status" style="margin-top: 0.5rem; color: #9ca3af;">Preparing upload...</p>
+                    </div>
+                    
+                    <button onclick="uploadFirmware()" class="button" style="width: 100%;">
+                        📤 Upload Firmware
+                    </button>
+                </div>
+                
+                <div class="card">
+                    <h3>Instructions</h3>
+                    <ol style="color: #9ca3af; line-height: 1.8;">
+                        <li>Compile your firmware using PlatformIO: <code>pio run -e esp32dev</code></li>
+                        <li>Find the firmware.bin file in: <code>.pio/build/esp32dev/firmware.bin</code></li>
+                        <li>Click "Choose File" and select the firmware.bin file</li>
+                        <li>Click "Upload Firmware" and wait for the process to complete</li>
+                        <li>The device will automatically restart with the new firmware</li>
+                        <li>Reconnect to the web interface after restart (may take 30-60 seconds)</li>
+                    </ol>
+                </div>
+            </div>
+            
             <!-- Settings Tab -->
             <div id="settings-tab" class="tab-content">
                 <h2>WiFi & MQTT Settings</h2>
@@ -1559,6 +1637,8 @@
                 loadMLConfig();
             } else if (tabName === 'logs') {
                 refreshLogs();
+            } else if (tabName === 'firmware') {
+                updateFirmwareInfo();
             }
         }
         
@@ -2869,6 +2949,116 @@
                 refreshLogs();
             }
         }, 5000);
+        
+        // ============================================================
+        // FIRMWARE UPDATE FUNCTIONS
+        // ============================================================
+        
+        async function updateFirmwareInfo() {
+            try {
+                const response = await fetch('/api/firmware/info');
+                if (response.ok) {
+                    const info = await response.json();
+                    
+                    document.getElementById('fw-version').textContent = info.version || 'N/A';
+                    document.getElementById('fw-chip-model').textContent = info.chipModel || 'N/A';
+                    document.getElementById('fw-cpu-freq').textContent = (info.cpuFreq || 0) + ' MHz';
+                    document.getElementById('fw-flash-size').textContent = formatBytes(info.flashSize || 0);
+                    document.getElementById('fw-sketch-size').textContent = formatBytes(info.sketchSize || 0);
+                    document.getElementById('fw-free-space').textContent = formatBytes(info.freeSketchSpace || 0);
+                    document.getElementById('fw-free-heap').textContent = formatBytes(info.freeHeap || 0);
+                }
+            } catch (error) {
+                console.error('Failed to fetch firmware info:', error);
+            }
+        }
+        
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+        
+        async function uploadFirmware() {
+            const fileInput = document.getElementById('firmware-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a firmware file first');
+                return;
+            }
+            
+            if (!file.name.endsWith('.bin')) {
+                alert('Please select a valid .bin firmware file');
+                return;
+            }
+            
+            if (!confirm('Are you sure you want to upload new firmware? The device will restart.')) {
+                return;
+            }
+            
+            const progressDiv = document.getElementById('upload-progress');
+            const progressBar = document.getElementById('upload-progress-bar');
+            const statusText = document.getElementById('upload-status');
+            
+            progressDiv.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            statusText.textContent = 'Uploading firmware...';
+            statusText.style.color = '#3b82f6';
+            
+            const formData = new FormData();
+            formData.append('firmware', file);
+            
+            try {
+                const xhr = new XMLHttpRequest();
+                
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.width = percentComplete + '%';
+                        progressBar.textContent = percentComplete + '%';
+                        statusText.textContent = `Uploading: ${formatBytes(e.loaded)} / ${formatBytes(e.total)}`;
+                    }
+                });
+                
+                xhr.addEventListener('load', () => {
+                    if (xhr.status === 200) {
+                        progressBar.style.width = '100%';
+                        progressBar.textContent = '100%';
+                        progressBar.style.background = '#10b981';
+                        statusText.textContent = '✓ Upload successful! Device is restarting...';
+                        statusText.style.color = '#10b981';
+                        
+                        setTimeout(() => {
+                            statusText.textContent = 'Please wait 30-60 seconds, then refresh the page to reconnect.';
+                        }, 2000);
+                        
+                        // Clear file input
+                        fileInput.value = '';
+                    } else {
+                        throw new Error('Upload failed with status: ' + xhr.status);
+                    }
+                });
+                
+                xhr.addEventListener('error', () => {
+                    progressBar.style.background = '#ef4444';
+                    statusText.textContent = '✗ Upload failed. Please try again.';
+                    statusText.style.color = '#ef4444';
+                });
+                
+                xhr.open('POST', '/api/update');
+                xhr.send(formData);
+                
+            } catch (error) {
+                progressBar.style.background = '#ef4444';
+                statusText.textContent = '✗ Upload failed: ' + error.message;
+                statusText.style.color = '#ef4444';
+                console.error('Firmware upload error:', error);
+            }
+        }
     </script>
 </body>
 </html>
