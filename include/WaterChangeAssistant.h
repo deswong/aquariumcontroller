@@ -99,6 +99,7 @@ public:
     // Schedule management
     void setSchedule(WaterChangeSchedule sched, float volumePercent);
     WaterChangeSchedule getSchedule() { return schedule; }
+    float getScheduledVolumePercent() { return scheduledVolumePercent; }
     int getDaysUntilNextChange();
     int getDaysSinceLastChange();
     bool isChangeOverdue();
@@ -113,6 +114,7 @@ public:
     bool advancePhase();
     bool cancelWaterChange();
     bool completeWaterChange();
+    void setActualVolume(float volumeLitres); // Set actual volume changed (for completion dialog)
     
     // Deferred save management
     void forceSave(); // Immediate save for critical operations

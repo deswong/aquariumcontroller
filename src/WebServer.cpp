@@ -451,6 +451,8 @@ void WebServerManager::setupRoutes() {
         doc["currentVolume"] = waterChangeAssistant->getCurrentChangeVolume();
         doc["tankVolume"] = waterChangeAssistant->getTankVolume();
         doc["schedule"] = (int)waterChangeAssistant->getSchedule();
+        doc["scheduledVolumePercent"] = waterChangeAssistant->getScheduledVolumePercent();
+        doc["scheduledVolume"] = waterChangeAssistant->getScheduledChangeVolume();
         doc["daysSinceLastChange"] = waterChangeAssistant->getDaysSinceLastChange();
         doc["daysUntilNextChange"] = waterChangeAssistant->getDaysUntilNextChange();
         doc["isOverdue"] = waterChangeAssistant->isChangeOverdue();
@@ -485,10 +487,38 @@ void WebServerManager::setupRoutes() {
     });
     
     // API: Water Change - Advance Phase
-    server->on("/api/waterchange/advance", HTTP_POST, [](AsyncWebServerRequest* request) {
+    server->on("/api/waterchange/advance", HTTP_POST, 
+    [](AsyncWebServerRequest* request) {
+        // Handle requests without body (normal phase advancement)
         if (!waterChangeAssistant) {
             request->send(500, "application/json", "{\"error\":\"Water change assistant not initialized\"}");
             return;
+        }
+        
+        if (waterChangeAssistant->advancePhase()) {
+            request->send(200, "application/json", "{\"status\":\"ok\"}");
+        } else {
+            request->send(400, "application/json", "{\"error\":\"Failed to advance phase\"}");
+        }
+    }, NULL, 
+    [](AsyncWebServerRequest* request, uint8_t *data, size_t len, size_t index, size_t total) {
+        // Handle requests with body (phase advancement with volume)
+        if (!waterChangeAssistant) {
+            request->send(500, "application/json", "{\"error\":\"Water change assistant not initialized\"}");
+            return;
+        }
+        
+        // Check if volume data was provided (for completion with actual volume)
+        if (len > 0) {
+            StaticJsonDocument<128> doc;
+            DeserializationError error = deserializeJson(doc, data, len);
+            
+            if (!error && doc.containsKey("actualVolume")) {
+                float actualVolume = doc["actualVolume"];
+                // Store actual volume in the water change assistant
+                waterChangeAssistant->setActualVolume(actualVolume);
+                Serial.printf("Water change actual volume set to: %.1f litres\n", actualVolume);
+            }
         }
         
         if (waterChangeAssistant->advancePhase()) {

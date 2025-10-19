@@ -2267,8 +2267,7 @@
                     
                     // Update schedule info
                     document.getElementById('wc-tank-volume').textContent = status.tankVolume.toFixed(1);
-                    const scheduledVol = (status.tankVolume * 0.25).toFixed(1); // Approximate
-                    document.getElementById('wc-scheduled-volume').textContent = scheduledVol;
+                    document.getElementById('wc-scheduled-volume').textContent = status.scheduledVolume.toFixed(1);
                     document.getElementById('wc-days-since').textContent = status.daysSinceLastChange;
                     document.getElementById('wc-days-until').textContent = status.daysUntilNextChange >= 0 ? status.daysUntilNextChange : '--';
                     
@@ -2279,8 +2278,9 @@
                         document.getElementById('wc-days-until').classList.remove('overdue');
                     }
                     
-                    // Update schedule select
+                    // Update schedule select and volume percent
                     document.getElementById('wc-schedule').value = status.schedule;
+                    document.getElementById('wc-volume-percent').value = status.scheduledVolumePercent;
                 }
             } catch (error) {
                 console.error('Failed to fetch water change status:', error);
@@ -2359,14 +2359,102 @@
         }
         
         async function advancePhase() {
-            const response = await fetch('/api/waterchange/advance', {method: 'POST'});
+            // Check if we're in the stabilizing phase (phase 5)
+            if (lastWaterChangePhase === 5) {
+                // Show dialog to ask for actual volume
+                await showVolumeCompletionDialog();
+            } else {
+                // Normal phase advancement
+                const response = await fetch('/api/waterchange/advance', {method: 'POST'});
+                
+                if (response.ok) {
+                    showAlert('✓ Advanced to next phase', 'success');
+                    updateWaterChangeStatus();
+                } else {
+                    const error = await response.json();
+                    showAlert('Failed to advance: ' + (error.error || 'Unknown error'), 'error');
+                }
+            }
+        }
+        
+        async function showVolumeCompletionDialog() {
+            // Get the scheduled volume from the display
+            const scheduledVolText = document.getElementById('wc-scheduled-volume').textContent;
+            const scheduledVol = parseFloat(scheduledVolText) || 25.0;
+            
+            // Create custom dialog
+            const dialog = document.createElement('div');
+            dialog.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+            
+            const dialogBox = document.createElement('div');
+            dialogBox.style.cssText = 'background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); padding: 30px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-width: 400px; width: 90%;';
+            
+            dialogBox.innerHTML = `
+                <h3 style="margin: 0 0 20px 0; color: #fff; font-size: 24px;">💧 Complete Water Change</h3>
+                <p style="color: #e0e0e0; margin-bottom: 20px; line-height: 1.6;">
+                    Please enter the approximate volume of water changed:
+                </p>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; color: #fff; margin-bottom: 8px; font-weight: 500;">Volume (litres)</label>
+                    <input type="number" id="actual-volume-input" step="0.5" min="0" 
+                           value="${scheduledVol.toFixed(1)}" 
+                           style="width: 100%; padding: 12px; border: 2px solid #4a90e2; border-radius: 8px; font-size: 18px; background: #fff; box-sizing: border-box;">
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button onclick="cancelVolumeDialog()" 
+                            style="padding: 12px 24px; background: #666; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 500;">
+                        Cancel
+                    </button>
+                    <button onclick="confirmVolumeAndComplete()" 
+                            style="padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 500; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
+                        ✓ Complete
+                    </button>
+                </div>
+            `;
+            
+            dialog.appendChild(dialogBox);
+            document.body.appendChild(dialog);
+            
+            // Focus the input
+            setTimeout(() => document.getElementById('actual-volume-input').focus(), 100);
+            
+            // Allow Enter key to submit
+            document.getElementById('actual-volume-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    confirmVolumeAndComplete();
+                }
+            });
+        }
+        
+        window.cancelVolumeDialog = function() {
+            const dialog = document.querySelector('div[style*="position: fixed"]');
+            if (dialog) dialog.remove();
+        }
+        
+        window.confirmVolumeAndComplete = async function() {
+            const actualVolume = parseFloat(document.getElementById('actual-volume-input').value);
+            
+            if (isNaN(actualVolume) || actualVolume <= 0) {
+                showAlert('Please enter a valid volume', 'error');
+                return;
+            }
+            
+            // Remove dialog
+            cancelVolumeDialog();
+            
+            // Send completion request with actual volume
+            const response = await fetch('/api/waterchange/advance', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({actualVolume: actualVolume})
+            });
             
             if (response.ok) {
-                showAlert('✓ Advanced to next phase', 'success');
+                showAlert(`✓ Water change completed with ${actualVolume.toFixed(1)}L changed`, 'success');
                 updateWaterChangeStatus();
             } else {
                 const error = await response.json();
-                showAlert('Failed to advance: ' + (error.error || 'Unknown error'), 'error');
+                showAlert('Failed to complete: ' + (error.error || 'Unknown error'), 'error');
             }
         }
         

@@ -501,6 +501,15 @@ bool WaterChangeAssistant::cancelWaterChange() {
     return true;
 }
 
+void WaterChangeAssistant::setActualVolume(float volumeLitres) {
+    if (currentPhase != PHASE_IDLE && currentPhase != PHASE_COMPLETE) {
+        currentChangeVolume = volumeLitres;
+        Serial.printf("Actual water change volume updated to: %.1f litres\n", volumeLitres);
+    } else {
+        Serial.println("WARNING: Cannot set volume - no water change in progress");
+    }
+}
+
 bool WaterChangeAssistant::completeWaterChange() {
     if (currentPhase == PHASE_IDLE) {
         return false;
