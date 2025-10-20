@@ -19,11 +19,18 @@ private:
     bool needsRedraw;
     bool dataChanged;
     
-    // Timing constants - Optimized for performance
+    // Timing constants - Optimized for ESP32-S3 performance
+#ifdef ARDUINO_ESP32S3_DEV
+    static const unsigned long FAST_UPDATE_INTERVAL = 50;    // 20 Hz on S3 (faster CPU)
+    static const unsigned long DATA_UPDATE_INTERVAL = 250;   // 4 Hz for data validation
+    static const unsigned long SCREEN_SWITCH_INTERVAL = 5000; // 5 seconds
+    static const unsigned long ANIMATION_INTERVAL = 83;      // 12 FPS (smoother on S3)
+#else
     static const unsigned long FAST_UPDATE_INTERVAL = 100;   // 10 Hz for animations
     static const unsigned long DATA_UPDATE_INTERVAL = 500;   // 2 Hz for data
     static const unsigned long SCREEN_SWITCH_INTERVAL = 5000; // 5 seconds
-    static const unsigned long ANIMATION_INTERVAL = 125;     // 8 FPS (smoother)
+    static const unsigned long ANIMATION_INTERVAL = 125;     // 8 FPS
+#endif
     static const uint8_t NUM_SCREENS = 3;
     
     // Sensor data
@@ -41,8 +48,12 @@ private:
     char ipAddress[16];        // "255.255.255.255" + null terminator
     char currentTime[9];       // "23:59:59" + null terminator
     
-    // Trends (for graphing) - Reduced size for memory efficiency
-    static const uint8_t TREND_SIZE = 24;  // Reduced from 32 to save ~96 bytes
+    // Trends (for graphing) - Optimized for ESP32-S3 with PSRAM
+#ifdef BOARD_HAS_PSRAM
+    static const uint8_t TREND_SIZE = 128;  // Larger history with PSRAM
+#else
+    static const uint8_t TREND_SIZE = 24;   // Reduced size for standard ESP32
+#endif
     float tempTrend[TREND_SIZE];
     float phTrend[TREND_SIZE];
     float tdsTrend[TREND_SIZE];

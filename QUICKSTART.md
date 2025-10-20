@@ -1,8 +1,24 @@
-# Quick Start Guide - ESP32 Aquarium Controller
+# Quick Start Guide - ESP32-S3 Aquarium Controller
+
+⚡ **Hardware Requirement**: This project requires **ESP32-S3 with PSRAM** (ESP32-S3-DevKitC-1 recommended)
 
 🇦🇺 **Australian Users**: See [AUSTRALIAN_CONFIGURATION.md](AUSTRALIAN_CONFIGURATION.md) for Australian-specific setup (240V AC, AEST timezone, au.pool.ntp.org)
 
 ## 🚀 Getting Started in 6 Steps
+
+### Step 0: Verify Your Hardware
+
+**Required:**
+- ESP32-S3-DevKitC-1 (or compatible with PSRAM)
+- 8MB Flash + 8MB PSRAM
+- USB-C cable for programming
+
+**To check if you have the right board:**
+```bash
+# After connecting via USB
+pio device list
+# Should show: ESP32-S3
+```
 
 ### Step 1: Hardware Assembly
 
@@ -17,10 +33,12 @@
 8. Connect all grounds together
 9. Power sensors from 3.3V, relays from 5V
 
-**Display (Optional - 9 pins):**
-10. Connect Ender 3 Pro LCD12864 display (see [ENDER3_DISPLAY_WIRING.md](ENDER3_DISPLAY_WIRING.md))
-    - LCD: CS→15, A0→2, Reset→0, E→16, R/W→17, PSB→18
-    - Encoder: DT→13, CLK→14, SW→23
+**Display (Optional - 2 pins with ESP32-S3):**
+10. Connect SSD1309 OLED Display (I2C):
+    - SDA → GPIO 21
+    - SCL → GPIO 22
+    - VCC → 3.3V
+    - GND → GND
 
 ⚠️ **Australian Electrical Safety (AS/NZS 3000:2018)**:
 - 240V AC circuits MUST use RCD protection (30mA)
@@ -37,19 +55,23 @@ pip install platformio
 # Clone and navigate to project
 cd aquariumcontroller
 
-# Build and upload firmware
-pio run --target upload
+# Build and upload firmware for ESP32-S3
+pio run -e esp32s3dev --target upload
 
 # Upload web interface files
-pio run --target uploadfs
+pio run -e esp32s3dev --target uploadfs
 ```
 
+**Note:** The default environment is now `esp32s3dev`. Legacy ESP32 support is available but deprecated.
+
 ### Step 3: Initial WiFi Setup
-1. Power on the ESP32
+1. Power on the ESP32-S3 (via USB-C or 5V power)
 2. Look for WiFi network: `AquariumController` (password: `12345678`)
 3. Connect and open browser to `http://192.168.4.1`
 4. Go to Settings tab and enter your WiFi credentials
 5. Save and restart
+
+**ESP32-S3 USB Note:** The board has native USB support, so no external USB-to-Serial chip is needed!
 
 ### Step 4: Configure Australian Settings 🇦🇺 (if applicable)
 1. Go to Settings tab
