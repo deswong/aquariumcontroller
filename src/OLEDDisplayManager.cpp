@@ -117,7 +117,12 @@ OLEDDisplayManager::OLEDDisplayManager()
     : display(nullptr),
       lastUpdate(0),
       lastScreenSwitch(0),
+      lastAnimation(0),
+      lastDataUpdate(0),
       currentScreen(0),
+      animationFrame(0),
+      needsRedraw(true),
+      dataChanged(true),
       currentTemp(0),
       targetTemp(0),
       currentPH(0),
@@ -127,14 +132,17 @@ OLEDDisplayManager::OLEDDisplayManager()
       heaterActive(false),
       co2Active(false),
       dosingActive(false),
-      waterChangeDate("Never"),
       wifiConnected(false),
-      ipAddress("0.0.0.0"),
-      currentTime("--:--:--"),
       trendIndex(0),
-      animationFrame(0),
-      lastAnimation(0)
+      performanceMonitoring(false),
+      updateCount(0),
+      totalUpdateTime(0)
 {
+    // Initialize char arrays
+    strcpy(waterChangeDate, "Never");
+    strcpy(ipAddress, "0.0.0.0");
+    strcpy(currentTime, "--:--:--");
+    
     // Initialize trends
     for (uint8_t i = 0; i < TREND_SIZE; i++) {
         tempTrend[i] = 0;
@@ -182,88 +190,155 @@ bool OLEDDisplayManager::begin() {
 
 void OLEDDisplayManager::update() {
     unsigned long now = millis();
+    unsigned long updateStart = performanceMonitoring ? micros() : 0;
+    bool shouldAnimate = false;
+    bool shouldRedraw = false;
     
-    // Handle animation
+    // Handle animation timing (8 FPS - smoother)
     if (now - lastAnimation >= ANIMATION_INTERVAL) {
         lastAnimation = now;
         animationFrame = (animationFrame + 1) % 8;
+        shouldAnimate = true;
     }
     
     // Auto-switch screens
     if (now - lastScreenSwitch >= SCREEN_SWITCH_INTERVAL) {
         lastScreenSwitch = now;
         currentScreen = (currentScreen + 1) % NUM_SCREENS;
+        needsRedraw = true;
     }
     
-    // Update display
-    if (now - lastUpdate >= UPDATE_INTERVAL) {
-        lastUpdate = now;
-        
-        display->clearBuffer();
-        
-        switch (currentScreen) {
-            case 0:
-                drawScreen0();
-                break;
-            case 1:
-                drawScreen1();
-                break;
-            case 2:
-                drawScreen2();
-                break;
+    // Check if we need to update display
+    if (now - lastUpdate >= FAST_UPDATE_INTERVAL) {
+        // Only redraw if something changed or animation needs update
+        if (needsRedraw || dataChanged || shouldAnimate) {
+            lastUpdate = now;
+            
+            display->clearBuffer();
+            
+            switch (currentScreen) {
+                case 0:
+                    drawScreen0();
+                    break;
+                case 1:
+                    drawScreen1();
+                    break;
+                case 2:
+                    drawScreen2();
+                    break;
+            }
+            
+            drawStatusBar();
+            display->sendBuffer();
+            
+            // Reset flags
+            needsRedraw = false;
+            dataChanged = false;
+            
+            // Performance monitoring
+            if (performanceMonitoring) {
+                updateCount++;
+                totalUpdateTime += (micros() - updateStart);
+                
+                // Print stats every 100 updates
+                if (updateCount % 100 == 0) {
+                    Serial.printf("[Display] Avg update time: %lu μs\n", 
+                                totalUpdateTime / updateCount);
+                }
+            }
         }
-        
-        drawStatusBar();
-        display->sendBuffer();
     }
 }
 
 
 
 void OLEDDisplayManager::updateTemperature(float current, float target) {
-    currentTemp = current;
-    targetTemp = target;
-    addToTrend(tempTrend, current);
+    if (currentTemp != current || targetTemp != target) {
+        currentTemp = current;
+        targetTemp = target;
+        addToTrend(tempTrend, current);
+        dataChanged = true;
+    }
 }
 
 void OLEDDisplayManager::updatePH(float current, float target) {
-    currentPH = current;
-    targetPH = target;
-    addToTrend(phTrend, current);
+    if (currentPH != current || targetPH != target) {
+        currentPH = current;
+        targetPH = target;
+        addToTrend(phTrend, current);
+        dataChanged = true;
+    }
 }
 
 void OLEDDisplayManager::updateTDS(float tds) {
-    currentTDS = tds;
-    addToTrend(tdsTrend, tds);
+    if (currentTDS != tds) {
+        currentTDS = tds;
+        addToTrend(tdsTrend, tds);
+        dataChanged = true;
+    }
 }
 
 void OLEDDisplayManager::updateAmbientTemperature(float temp) {
-    ambientTemp = temp;
+    if (ambientTemp != temp) {
+        ambientTemp = temp;
+        dataChanged = true;
+    }
 }
 
 void OLEDDisplayManager::updateHeaterState(bool active) {
-    heaterActive = active;
+    if (heaterActive != active) {
+        heaterActive = active;
+        dataChanged = true;
+    }
 }
 
 void OLEDDisplayManager::updateCO2State(bool active) {
-    co2Active = active;
+    if (co2Active != active) {
+        co2Active = active;
+        dataChanged = true;
+    }
 }
 
 void OLEDDisplayManager::updateDosingState(bool active) {
-    dosingActive = active;
+    if (dosingActive != active) {
+        dosingActive = active;
+        dataChanged = true;
+    }
 }
 
 void OLEDDisplayManager::updateWaterChangeDate(const char* date) {
-    waterChangeDate = String(date);
+    if (strcmp(waterChangeDate, date) != 0) {
+        strncpy(waterChangeDate, date, sizeof(waterChangeDate) - 1);
+        waterChangeDate[sizeof(waterChangeDate) - 1] = '\0';
+        dataChanged = true;
+    }
 }
 
 void OLEDDisplayManager::updateNetworkStatus(bool connected, const char* ip) {
-    wifiConnected = connected;
-    ipAddress = String(ip);
+    bool statusChanged = false;
+    
+    if (wifiConnected != connected) {
+        wifiConnected = connected;
+        statusChanged = true;
+    }
+    
+    if (strcmp(ipAddress, ip) != 0) {
+        strncpy(ipAddress, ip, sizeof(ipAddress) - 1);
+        ipAddress[sizeof(ipAddress) - 1] = '\0';
+        statusChanged = true;
+    }
+    
+    if (statusChanged) {
+        dataChanged = true;
+    }
 }
 
 void OLEDDisplayManager::updateTime(const char* time) {
-    currentTime = String(time);
+    if (strcmp(currentTime, time) != 0) {
+        strncpy(currentTime, time, sizeof(currentTime) - 1);
+        currentTime[sizeof(currentTime) - 1] = '\0';
+        dataChanged = true;
+    }
 }
 
 void OLEDDisplayManager::clear() {
@@ -300,12 +375,14 @@ void OLEDDisplayManager::test() {
 void OLEDDisplayManager::nextScreen() {
     currentScreen = (currentScreen + 1) % NUM_SCREENS;
     lastScreenSwitch = millis();
+    needsRedraw = true;
 }
 
 void OLEDDisplayManager::setScreen(uint8_t screen) {
-    if (screen < NUM_SCREENS) {
+    if (screen < NUM_SCREENS && screen != currentScreen) {
         currentScreen = screen;
         lastScreenSwitch = millis();
+        needsRedraw = true;
     }
 }
 
@@ -327,7 +404,7 @@ void OLEDDisplayManager::drawStatusBar() {
     
     // Time (right aligned)
     display->setFont(u8g2_font_5x7_tf);
-    display->drawStr(88, 9, currentTime.c_str());
+    display->drawStr(88, 9, currentTime);
     
     // Screen indicator dots
     for (uint8_t i = 0; i < NUM_SCREENS; i++) {
@@ -391,7 +468,7 @@ void OLEDDisplayManager::drawScreen0() {
     drawIcon(2, 50, ICON_CALENDAR);
     display->setFont(u8g2_font_5x7_tf);
     display->drawStr(12, 56, "WC:");
-    display->drawStr(28, 56, waterChangeDate.c_str());
+    display->drawStr(28, 56, waterChangeDate);
     
     // Wave animation at bottom
     drawWaveAnimation(0, 58, 128, 6);
@@ -441,7 +518,7 @@ void OLEDDisplayManager::drawScreen2() {
     display->setFont(u8g2_font_5x7_tf);
     if (wifiConnected) {
         display->drawStr(2, 30, "Connected");
-        display->drawStr(2, 38, ipAddress.c_str());
+        display->drawStr(2, 38, ipAddress);
     } else {
         display->drawStr(2, 30, "Disconnected");
     }
@@ -464,12 +541,13 @@ void OLEDDisplayManager::drawProgressBar(uint8_t x, uint8_t y, uint8_t w, uint8_
     display->drawFrame(x, y, w, h);
     
     // Calculate fill width based on value within min/max range
-    float percent = (value - min) / (max - min);
-    percent = constrain(percent, 0.0, 1.0);
-    
-    int fillWidth = (int)(percent * (w - 2));
-    if (fillWidth > 0) {
-        display->drawBox(x + 1, y + 1, fillWidth, h - 2);
+    if (max > min) { // Avoid division by zero
+        float percent = constrain((value - min) / (max - min), 0.0, 1.0);
+        uint8_t fillWidth = (uint8_t)(percent * (w - 2));
+        
+        if (fillWidth > 0) {
+            display->drawBox(x + 1, y + 1, fillWidth, h - 2);
+        }
     }
 }
 
@@ -477,15 +555,27 @@ void OLEDDisplayManager::drawGraph(uint8_t x, uint8_t y, uint8_t w, uint8_t h, f
     // Draw frame
     display->drawFrame(x, y, w, h);
     
-    // Draw data points
-    for (uint8_t i = 1; i < len && i < w - 2; i++) {
-        float val1 = constrain(data[i - 1], min, max);
-        float val2 = constrain(data[i], min, max);
-        
-        uint8_t y1 = y + h - 1 - ((val1 - min) / (max - min)) * (h - 2);
-        uint8_t y2 = y + h - 1 - ((val2 - min) / (max - min)) * (h - 2);
-        
-        display->drawLine(x + i, y1, x + i + 1, y2);
+    if (max <= min) return; // Avoid division by zero
+    
+    // Pre-calculate scale factor
+    float scale = (h - 2) / (max - min);
+    uint8_t baseY = y + h - 1;
+    
+    // Draw data points with optimized calculations
+    uint8_t step = (len > w - 2) ? len / (w - 2) : 1; // Skip points if too many
+    
+    for (uint8_t i = 1; i < len && i < w - 2; i += step) {
+        if (i > 0) {
+            // Constrain values once
+            float val1 = constrain(data[i - 1], min, max);
+            float val2 = constrain(data[i], min, max);
+            
+            // Pre-calculated Y positions
+            uint8_t y1 = baseY - (uint8_t)((val1 - min) * scale);
+            uint8_t y2 = baseY - (uint8_t)((val2 - min) * scale);
+            
+            display->drawLine(x + i, y1, x + i + step, y2);
+        }
     }
 }
 
@@ -505,5 +595,21 @@ void OLEDDisplayManager::drawWaveAnimation(uint8_t x, uint8_t y, uint8_t w, uint
         float wave = sin((i + animationFrame * 4) * 0.2) * (h / 4) + (h / 2);
         uint8_t waveY = y + (uint8_t)wave;
         display->drawPixel(x + i, waveY);
+    }
+}
+
+void OLEDDisplayManager::forceRedraw() {
+    needsRedraw = true;
+    dataChanged = true;
+}
+
+void OLEDDisplayManager::enablePerformanceMonitoring(bool enable) {
+    performanceMonitoring = enable;
+    if (enable) {
+        updateCount = 0;
+        totalUpdateTime = 0;
+        Serial.println("[Display] Performance monitoring enabled");
+    } else {
+        Serial.println("[Display] Performance monitoring disabled");
     }
 }

@@ -12,14 +12,18 @@ private:
     // Display state
     unsigned long lastUpdate;
     unsigned long lastScreenSwitch;
+    unsigned long lastAnimation;
+    unsigned long lastDataUpdate;
     uint8_t currentScreen;
     uint8_t animationFrame;
-    unsigned long lastAnimation;
+    bool needsRedraw;
+    bool dataChanged;
     
-    // Timing constants
-    static const unsigned long UPDATE_INTERVAL = 1000;       // 1 Hz
+    // Timing constants - Optimized for performance
+    static const unsigned long FAST_UPDATE_INTERVAL = 100;   // 10 Hz for animations
+    static const unsigned long DATA_UPDATE_INTERVAL = 500;   // 2 Hz for data
     static const unsigned long SCREEN_SWITCH_INTERVAL = 5000; // 5 seconds
-    static const unsigned long ANIMATION_INTERVAL = 200;     // 5 FPS
+    static const unsigned long ANIMATION_INTERVAL = 125;     // 8 FPS (smoother)
     static const uint8_t NUM_SCREENS = 3;
     
     // Sensor data
@@ -32,17 +36,22 @@ private:
     bool heaterActive;
     bool co2Active;
     bool dosingActive;
-    String waterChangeDate;
+    char waterChangeDate[16];  // "2024-12-31" + null terminator
     bool wifiConnected;
-    String ipAddress;
-    String currentTime;
+    char ipAddress[16];        // "255.255.255.255" + null terminator
+    char currentTime[9];       // "23:59:59" + null terminator
     
-    // Trends (for graphing)
-    static const uint8_t TREND_SIZE = 32;
+    // Trends (for graphing) - Reduced size for memory efficiency
+    static const uint8_t TREND_SIZE = 24;  // Reduced from 32 to save ~96 bytes
     float tempTrend[TREND_SIZE];
     float phTrend[TREND_SIZE];
     float tdsTrend[TREND_SIZE];
     uint8_t trendIndex;
+    
+    // Performance monitoring
+    bool performanceMonitoring;
+    unsigned long updateCount;
+    unsigned long totalUpdateTime;
     
     // Private methods
     void drawScreen0(); // Main status screen
@@ -94,6 +103,11 @@ public:
     // Screen control
     void nextScreen();
     void setScreen(uint8_t screen);
+    
+    // Performance optimization
+    void forceRedraw();              // Force immediate redraw
+    void enablePerformanceMonitoring(bool enable);
+    unsigned long getLastUpdateTime() const { return lastUpdate; }
 };
 
 #endif // OLED_DISPLAY_MANAGER_H
