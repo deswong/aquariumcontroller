@@ -150,7 +150,6 @@ OLEDDisplayManager::OLEDDisplayManager()
         tdsTrend[i] = 0;
     }
 }
-}
 
 OLEDDisplayManager::~OLEDDisplayManager() {
     if (display) {

@@ -27,7 +27,7 @@ WaterChangeAssistant* waterChangeAssistant = NULL;
 PatternLearner* patternLearner = NULL;
 DosingPump* dosingPump = NULL;
 WaterChangePredictor* wcPredictor = NULL;
-DisplayManager* displayMgr = NULL;
+OLEDDisplayManager* displayMgr = NULL;
 
 // Forward declarations
 class WiFiManager;
@@ -351,12 +351,18 @@ void displayTask(void* parameter) {
             displayMgr->updateHeaterState(data.heaterState);
             displayMgr->updateCO2State(data.co2State);
             
-            // Update water change prediction if available
+            // Update water change date if available
             if (wcPredictor != nullptr) {
                 float daysUntil = wcPredictor->getPredictedDaysUntilChange();
-                int confidence = wcPredictor->getConfidenceLevel();
-                if (daysUntil > 0) {
-                    displayMgr->updateWaterChangePrediction(daysUntil, confidence);
+                if (daysUntil > 0 && daysUntil < 999) {
+                    // Format the predicted date
+                    char dateStr[16];
+                    unsigned long futureDays = (unsigned long)daysUntil;
+                    unsigned long futureMillis = millis() + (futureDays * 86400000UL);
+                    snprintf(dateStr, sizeof(dateStr), "~%lu days", futureDays);
+                    displayMgr->updateWaterChangeDate(dateStr);
+                } else {
+                    displayMgr->updateWaterChangeDate("TBD");
                 }
             }
         }

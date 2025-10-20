@@ -14,7 +14,7 @@
 #include "WaterChangeAssistant.h"
 #include "PatternLearner.h"
 #include "DosingPump.h"
-#include "DisplayManager.h"
+#include "OLEDDisplayManager.h"
 #include <PubSubClient.h>
 
 // Shared data structure with mutex protection
@@ -57,7 +57,7 @@ extern WaterChangeAssistant* waterChangeAssistant;
 extern PatternLearner* patternLearner;
 extern DosingPump* dosingPump;
 extern WaterChangePredictor* wcPredictor;
-extern DisplayManager* displayMgr;
+extern OLEDDisplayManager* displayMgr;
 
 // Forward declarations for components
 class WiFiManager;

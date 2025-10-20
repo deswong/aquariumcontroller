@@ -284,7 +284,7 @@ void setup() {
     
     // Initialize Display Manager
     Serial.println("\nInitializing display...");
-    displayMgr = new DisplayManager();
+    displayMgr = new OLEDDisplayManager();
     if (!displayMgr->begin()) {
         Serial.println("WARNING: Display initialization failed!");
         if (eventLogger) {
