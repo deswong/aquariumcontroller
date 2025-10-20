@@ -69,54 +69,38 @@ pio test -e native -f test_ph_sensor
 
 ## Test Categories
 
-### 1. Display Tests (`test_display.cpp`) ✨ **NEW** - 31 Tests
+### 1. OLED Display Tests (`test_oled_display.cpp`) - 18 Tests
 
-Tests for Ender 3 Pro LCD12864 display and rotary encoder interface.
+Tests for SSD1309 OLED display monitoring functionality.
 
 #### Display Initialization Tests
-- ✓ Display begins successfully
-- ✓ Encoder pins configured correctly
-- ✓ Buzzer pin configured
+- ✓ OLED display begins successfully
+- ✓ I2C communication established
 - ✓ Initial screen state
+- ✓ Contrast setting
 
-#### Display Drawing Tests
-- ✓ Main screen renders correctly
-- ✓ Settings screen navigation
-- ✓ Calibration screen display
-- ✓ Dosing screen display
-- ✓ Statistics screen rendering
-- ✓ About screen information
-- ✓ All 8 menu screens functional
-
-#### Encoder Tests
-- ✓ Clockwise rotation detection
-- ✓ Counter-clockwise rotation detection
-- ✓ Button press detection
-- ✓ Button long-press detection
-- ✓ Debouncing works correctly
+#### Display Rendering Tests
+- ✓ Main status screen (Screen 0)
+- ✓ Trend graphs screen (Screen 1) 
+- ✓ System info screen (Screen 2)
+- ✓ Status bar rendering
+- ✓ Auto-screen cycling
+- ✓ Animation frame updates
 
 #### Data Update Tests
-- ✓ Temperature update display
-- ✓ pH value update display
-- ✓ TDS value update display
-- ✓ Heater state update
-- ✓ CO2 state update
-- ✓ WiFi status update
+- ✓ Temperature data display
+- ✓ pH value display
+- ✓ TDS value display
+- ✓ Network status display
 - ✓ Time display update
-
-#### Power Management Tests
-- ✓ Sleep mode after timeout
-- ✓ Wake on button press
-- ✓ Wake on encoder rotation
-- ✓ Backlight control
+- ✓ Trend graph updates
 
 #### Edge Cases
 - ✓ Null pointer handling
 - ✓ Invalid screen index
-- ✓ Rapid encoder rotation
-- ✓ Display buffer overflow protection
+- ✓ Display buffer management
 
-**Documentation:** See [DISPLAY_TESTS.md](DISPLAY_TESTS.md) for detailed results.
+**Documentation:** See [OLED_DISPLAY_MANAGER.md](OLED_DISPLAY_MANAGER.md) for implementation details.
 
 ### 2. Dosing Pump Tests (`test_dosing_pump.cpp`) ✨ **NEW**
 

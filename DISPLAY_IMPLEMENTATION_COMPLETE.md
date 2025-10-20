@@ -1,8 +1,14 @@
-# Ender 3 Pro Display Implementation - Complete
+# ⚠️ DEPRECATED: Ender 3 Pro Display Implementation
 
-## ✅ Implementation Summary
+> **Notice:** Ender 3 Pro display support has been **removed** from the aquarium controller project. This documentation is kept for historical reference only.
+>
+> **Current Display:** The project now uses an **SSD1309 OLED display** exclusively. See [OLED_DISPLAY_MANAGER.md](OLED_DISPLAY_MANAGER.md) for current implementation.
 
-The Ender 3 Pro display has been successfully integrated into the aquarium controller! All code is complete and ready to compile.
+---
+
+## Historical Implementation Summary
+
+The Ender 3 Pro display was successfully integrated into the aquarium controller but has since been replaced by a simpler OLED solution.
 
 ---
 

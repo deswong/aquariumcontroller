@@ -58,7 +58,15 @@
 
 ---
 
-## Ender 3 Pro Display Requirements
+## ⚠️ DEPRECATED: Ender 3 Pro Display Compatibility Analysis
+
+> **Notice:** Ender 3 Pro display support has been **removed** from the aquarium controller project. This document is kept for historical reference only.
+>
+> **Current Display:** The project now uses an **SSD1309 OLED display** exclusively. See [OLED_DISPLAY_MANAGER.md](OLED_DISPLAY_MANAGER.md) for current implementation.
+
+---
+
+## Historical Compatibility Analysis
 
 ### Standard Ender 3 Pro Display (RepRapDiscount Full Graphic Smart Controller)
 

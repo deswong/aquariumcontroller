@@ -295,7 +295,7 @@ void setup() {
     } else {
         Serial.println("Display initialized successfully");
         if (eventLogger) {
-            eventLogger->info("display", "Ender 3 Pro display initialized");
+            eventLogger->info("display", "SSD1309 OLED display initialized");
         }
     }
     

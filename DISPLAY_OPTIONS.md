@@ -1,51 +1,44 @@
-# Display Options - Quick Reference
+# Display Configuration
 
-This document helps you choose between the two display options for your aquarium controller.
+The aquarium controller uses an **SSD1309 OLED display** for real-time monitoring and status visualization.
 
-## Option 1: Ender 3 Pro LCD12864 ✨ Interactive
+## SSD1309 OLED 128x64 📊 Monitoring Display
 
 ### Overview
-Full-featured interactive display with menu system and rotary encoder for on-device control.
+High-contrast OLED display with automatic screen cycling and trend visualization.
 
 ### Specifications
-- **Display:** 128x64 LCD with ST7920 controller
-- **Interface:** Parallel/SPI
-- **User Input:** Rotary encoder + button
-- **GPIO Pins:** 9 (0, 2, 13, 14, 15, 16, 17, 18, 23)
-- **Code Size:** 722 lines
-- **Flash Usage:** ~475 KB
-- **Update Rate:** 5 Hz (200ms)
-- **Cost:** $15-25
-- **Power:** 5V, ~100mA with backlight
+- **Display:** 128x64 OLED with SSD1309 controller
+- **Interface:** I2C (Hardware I2C)
+- **GPIO Pins:** 2 (21-SDA, 22-SCL)
+- **Code Size:** ~400 lines
+- **Flash Usage:** ~200 KB
+- **Update Rate:** 1 Hz (1000ms)
+- **Cost:** $8-15
+- **Power:** 3.3V, ~20mA typical
 
 ### Features
-- ✅ 8 interactive menu screens
-- ✅ Rotary encoder navigation
-- ✅ Button press to select/confirm
-- ✅ On-device settings adjustment
-- ✅ Audio feedback (buzzer)
-- ✅ Auto-sleep after 5 minutes
-- ✅ Local pH calibration interface
-- ✅ Real-time sensor monitoring
-- ✅ System status indicators
+- ✅ 3 auto-cycling screens (5-second intervals)
+- ✅ High contrast OLED display (160° viewing angle)
+- ✅ Real-time trend graphs for all sensors
+- ✅ Animated status indicators
+- ✅ Network connectivity status
+- ✅ System information display
+- ✅ Low power consumption
+- ✅ Compact 2-pin interface
 
-### Menu Screens
-1. **Main Screen** - Temperature, pH, TDS at a glance
-2. **Temperature Detail** - Current, target, heater status
-3. **pH Detail** - Current, target, CO2 status
-4. **Settings** - Adjust targets and parameters
-5. **Calibration** - pH sensor calibration wizard
-6. **Status** - WiFi, MQTT, system info
-7. **Dosing** - Pump control and scheduling
-8. **About** - Firmware version, uptime
+### Screen Layout
+1. **Main Status** - Real-time values with progress bars and icons
+2. **Trend Graphs** - Historical data visualization for temperature, pH, TDS
+3. **System Info** - Network status, uptime, memory usage
 
-### When to Choose This
-- ✅ Want on-device control without web interface
-- ✅ Need local settings adjustment
-- ✅ Want to calibrate pH at the aquarium
-- ✅ Prefer tactile interface
-- ✅ Have 9 available GPIO pins
-- ✅ Flash space not a concern
+### Benefits
+- ✅ Minimal GPIO usage (only 2 pins)
+- ✅ High contrast and readability
+- ✅ No user input complexity
+- ✅ Automatic operation
+- ✅ Small flash footprint
+- ✅ Low power consumption
 
 ### Implementation
 **Files:** `DisplayManager.h`, `DisplayManager.cpp`
@@ -55,11 +48,80 @@ Full-featured interactive display with menu system and rotary encoder for on-dev
 #include "DisplayManager.h"
 ```
 
+### Implementation
+
+**Files:** `OLEDDisplayManager.h`, `OLEDDisplayManager.cpp`
+
+**Include:**
+```cpp
+#include "OLEDDisplayManager.h"
+```
+
+**Usage:**
+```cpp
+OLEDDisplayManager* displayMgr = new OLEDDisplayManager();
+if (displayMgr->begin()) {
+    displayMgr->updateTemperature(25.5, 26.0);
+    displayMgr->updatePH(7.2, 7.0);
+    displayMgr->update();  // Call in main loop
+}
+```
+
 **Wiring:**
 ```
-LCD: GPIO 15, 2, 0, 16, 17, 18
-Encoder: GPIO 13, 14, 23
-Power: 5V, GND
+ESP32     SSD1309
+------    -------
+3.3V  →   VCC
+GND   →   GND
+21    →   SDA
+22    →   SCL
+```
+
+### Screen Layouts
+
+**Screen 0: Main Status** (Auto-cycles every 5 seconds)
+```
+┌─────────────────────────────────────────┐
+│ [WiFi] ●●○              12:34:56        │
+├─────────────────────────────────────────┤
+│ 🌡️ 25.5C    [🔥]  ████████▒▒▒▒ 26.0    │
+│ 📊 7.20     [💨]  ██████▒▒▒▒▒▒ 7.0      │
+│ 💧 450 ppm         [💉] DOSING          │
+│ 📅 WC: 2025-10-15                       │
+│ ～～～～～～～～～～～～～～～～～～～～～～  │
+└─────────────────────────────────────────┘
+```
+
+**Screen 1: Trend Graphs**
+```
+┌─────────────────────────────────────────┐
+│ [WiFi] ○●○              12:34:56        │
+├─────────────────────────────────────────┤
+│ Temp    pH      TDS                     │
+│ ┌─────┐ ┌─────┐ ┌─────┐                 │
+│ │  /\ │ │ \_/ │ │ /‾\ │                 │
+│ │ /  \│ │/   \│ │/   \│                 │
+│ │/    │ │     │ │     │                 │
+│ └─────┘ └─────┘ └─────┘                 │
+│ 25.5    7.20    450                     │
+│ H       C       D                       │
+└─────────────────────────────────────────┘
+```
+
+**Screen 2: System Information**
+```
+┌─────────────────────────────────────────┐
+│ [WiFi] ○○●              12:34:56        │
+├─────────────────────────────────────────┤
+│ Network:                                │
+│ Connected                               │
+│ 192.168.1.100                          │
+│                                         │
+│ System:                                 │
+│ Uptime: 1440m          Heap: 156K      │
+│                                         │
+│                                         │
+└─────────────────────────────────────────┘
 ```
 
 **Documentation:**
@@ -133,149 +195,72 @@ Power: 3.3V or 5V, GND
 ```
 
 **Documentation:**
-- [OLED_DISPLAY_GUIDE.md](OLED_DISPLAY_GUIDE.md)
-- [SSD1309_IMPLEMENTATION_SUMMARY.md](SSD1309_IMPLEMENTATION_SUMMARY.md)
-- [DISPLAY_SIZE_COMPARISON.md](DISPLAY_SIZE_COMPARISON.md)
+- [OLED_DISPLAY_MANAGER.md](OLED_DISPLAY_MANAGER.md) - Complete implementation guide
+- [SSD1309_IMPLEMENTATION_SUMMARY.md](SSD1309_IMPLEMENTATION_SUMMARY.md) - Technical details
 
----
+## Alternative: No Display Setup
 
-## Side-by-Side Comparison
+For maximum GPIO availability and minimal components, you can run without any display:
 
-| Feature | Ender 3 LCD | SSD1309 OLED |
-|---------|-------------|--------------|
-| **Display Type** | LCD (backlight) | OLED (self-lit) |
-| **Resolution** | 128x64 | 128x64 |
-| **User Input** | ✅ Yes (encoder) | ❌ No |
-| **GPIO Pins** | 9 | 2 |
-| **Code Lines** | 722 | 287 |
-| **Flash Size** | ~475 KB | ~80 KB |
-| **Update Rate** | 5 Hz | 1 Hz |
-| **Contrast** | Good | Excellent |
-| **Viewing Angle** | 90° | 160° |
-| **Cost** | $15-25 | $5-12 |
-| **Wiring Complexity** | Complex (9 wires) | Simple (4 wires) |
-| **Menu System** | ✅ Yes (8 screens) | ❌ No |
-| **On-device Settings** | ✅ Yes | ❌ No |
-| **pH Calibration** | ✅ On-device | 🌐 Web only |
-| **Auto-sleep** | ✅ Yes | ❌ Always on |
-| **Audio Feedback** | ✅ Yes (buzzer) | ❌ No |
-| **Power Usage** | ~100mA | ~20mA |
-
-## Decision Matrix
-
-### Choose Ender 3 LCD if you:
-- ✅ Need full interactive control at the aquarium
-- ✅ Want to adjust settings without phone/computer
-- ✅ Need on-device pH calibration
-- ✅ Have 9 available GPIO pins
-- ✅ Like tactile rotary encoder interface
-- ✅ Want audio feedback
-- ✅ Flash space is not a concern (>1.5 MB available)
-
-### Choose SSD1309 OLED if you:
-- ✅ Primarily control via web interface
-- ✅ Just need monitoring display
-- ✅ Want to save GPIO pins (need pins for other features)
-- ✅ Want to save flash space (~400 KB)
-- ✅ Prefer simpler wiring (2 wires vs 9)
-- ✅ Want lower cost option
-- ✅ Want lower power consumption
-- ✅ Like high-contrast OLED display
-
-## Can I Switch Between Them?
-
-**Yes!** Both implementations are available in the codebase. You can switch by:
-
-1. Change the include in `main.cpp`:
-   ```cpp
-   // For Ender 3:
-   #include "DisplayManager.h"
-   
-   // For OLED:
-   #include "DisplayManager_OLED.h"
-   ```
-
-2. Update a few API calls (see integration guides)
-
-3. Recompile and upload
-
-4. Swap the hardware
-
-The rest of the code remains unchanged.
-
-## Recommendations
-
-### For Most Users: SSD1309 OLED
-The OLED display is recommended for most users because:
-- Web interface is more convenient than on-device menu
-- Saves significant flash space for future features
-- Simpler wiring reduces errors
-- Cheaper and lower power
-- Still shows all critical information
-
-### For Standalone Operation: Ender 3 LCD
-Choose the Ender 3 if you:
-- Don't always have phone/computer available
-- Want complete control at the aquarium
-- Need to calibrate sensors on-site
-- Already have the Ender 3 display
-
-### For No Display: Web Interface Only
-You can also run without any display:
+### Web Interface Only
 - Comment out display initialization in `main.cpp`
-- Saves all GPIO pins
-- Saves all flash space
-- Use web interface exclusively
-- Most flexible option
+- Saves all GPIO pins for other features  
+- Saves flash space
+- Use web interface exclusively for monitoring and control
+- Access via: `http://[ESP32_IP_ADDRESS]`
 
-## Migration Guide
+### Benefits of No Display
+- **Maximum GPIO availability** - 2 additional pins freed
+- **Minimal components** - Reduces cost and complexity
+- **Web-first approach** - Modern interface with full features
+- **Remote monitoring** - Access from anywhere on network
+- **Mobile friendly** - Responsive design works on phones/tablets
 
-### From No Display → OLED
-1. Connect OLED to GPIO 21 (SDA) and 22 (SCL)
-2. Add `#include "DisplayManager_OLED.h"` to main.cpp
-3. Initialize display in setup()
-4. Add update calls to sensor tasks
-5. Compile and upload
+### Setup
+```cpp
+// In main.cpp, comment out display initialization:
+// displayMgr = new OLEDDisplayManager();
+// displayMgr->begin();
+```
 
-### From No Display → Ender 3
-1. Wire Ender 3 display (9 connections)
-2. Add `#include "DisplayManager.h"` to main.cpp
-3. Initialize display in setup()
-4. Create display task
-5. Add update calls throughout code
-6. Compile and upload
+## Migration from Previous Display Configurations
 
-### From Ender 3 → OLED
-1. Replace `DisplayManager.h` with `DisplayManager_OLED.h`
-2. Simplify API calls (see OLED_DISPLAY_GUIDE.md)
-3. Remove encoder/button handling code
-4. Recompile and upload
-5. Swap hardware (9 wires → 2 wires)
-6. Enjoy ~400 KB freed flash space
+If migrating from older code that used different display managers:
 
-### From OLED → Ender 3
-1. Replace `DisplayManager_OLED.h` with `DisplayManager.h`
-2. Add encoder/button handling (see DISPLAY_IMPLEMENTATION_COMPLETE.md)
-3. Add display task and update calls
-4. Recompile and upload
-5. Swap hardware (2 wires → 9 wires)
-6. Gain interactive menu system
+```cpp
+// Replace any of these:
+// #include "DisplayManager.h"           // Old Ender 3 LCD (removed)
+// #include "DisplayManager_OLED.h"      // Old OLED implementation  
+// #include "UnifiedDisplayManager.h"    // Unified version
+
+// With this:
+#include "OLEDDisplayManager.h"
+
+// Replace initialization:
+// DisplayManager* displayMgr = new DisplayManager();
+// UnifiedDisplayManager* displayMgr = new UnifiedDisplayManager(DISPLAY_SSD1309_OLED);
+
+// With:
+OLEDDisplayManager* displayMgr = new OLEDDisplayManager();
+```
+
+All data update method calls remain the same!
 
 ## Testing
-
-### Test Ender 3 Display
-```cpp
-displayMgr->begin();
-displayMgr->test();  // Shows test pattern
-displayMgr->updateTemperature(25.5, 26.0);
-displayMgr->updatePH(7.2, 7.0);
-displayMgr->updateTDS(245);
-```
 
 ### Test OLED Display
 ```cpp
 displayMgr->begin();
 displayMgr->test();  // Shows "Aquarium Controller"
+displayMgr->updateTemperature(25.5, 26.0);
+displayMgr->updatePH(7.2, 7.0);
+displayMgr->updateTDS(245);
+displayMgr->update(); // Call in main loop
+```
+
+## Complete Setup Guide
+
+See [OLED_DISPLAY_MANAGER.md](OLED_DISPLAY_MANAGER.md) for detailed setup instructions, API reference, and troubleshooting guide.
 displayMgr->updateTemperature(25.5, 26.0);
 displayMgr->updatePH(7.2, 7.0);
 displayMgr->updateTDS(245);

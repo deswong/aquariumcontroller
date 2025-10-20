@@ -1,10 +1,11 @@
-#ifndef DISPLAY_MANAGER_OLED_H
-#define DISPLAY_MANAGER_OLED_H
+#ifndef OLED_DISPLAY_MANAGER_H
+#define OLED_DISPLAY_MANAGER_H
 
+#include <Arduino.h>
 #include <U8g2lib.h>
 #include <Wire.h>
 
-class DisplayManager {
+class OLEDDisplayManager {
 private:
     U8G2_SSD1309_128X64_NONAME0_F_HW_I2C* display;
     
@@ -12,9 +13,14 @@ private:
     unsigned long lastUpdate;
     unsigned long lastScreenSwitch;
     uint8_t currentScreen;
-    static const uint8_t NUM_SCREENS = 3;
-    static const unsigned long UPDATE_INTERVAL = 1000;      // 1 Hz
+    uint8_t animationFrame;
+    unsigned long lastAnimation;
+    
+    // Timing constants
+    static const unsigned long UPDATE_INTERVAL = 1000;       // 1 Hz
     static const unsigned long SCREEN_SWITCH_INTERVAL = 5000; // 5 seconds
+    static const unsigned long ANIMATION_INTERVAL = 200;     // 5 FPS
+    static const uint8_t NUM_SCREENS = 3;
     
     // Sensor data
     float currentTemp;
@@ -37,11 +43,6 @@ private:
     float phTrend[TREND_SIZE];
     float tdsTrend[TREND_SIZE];
     uint8_t trendIndex;
-    
-    // Animation
-    uint8_t animationFrame;
-    unsigned long lastAnimation;
-    static const unsigned long ANIMATION_INTERVAL = 200; // 5 FPS
     
     // Private methods
     void drawScreen0(); // Main status screen
@@ -68,8 +69,8 @@ private:
     static const uint8_t ICON_DOSING[];
 
 public:
-    DisplayManager();
-    ~DisplayManager();
+    OLEDDisplayManager();
+    ~OLEDDisplayManager();
     
     bool begin();
     void update();
@@ -95,4 +96,4 @@ public:
     void setScreen(uint8_t screen);
 };
 
-#endif // DISPLAY_MANAGER_OLED_H
+#endif // OLED_DISPLAY_MANAGER_H

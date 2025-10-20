@@ -1,8 +1,9 @@
-#include "DisplayManager_OLED.h"
+#include "OLEDDisplayManager.h"
 #include <Arduino.h>
+#include <WiFi.h>
 
 // Icon definitions (8x8 bitmaps)
-const uint8_t DisplayManager::ICON_TEMP[] = {
+const uint8_t OLEDDisplayManager::ICON_TEMP[] = {
     0b00011000,
     0b00100100,
     0b00100100,
@@ -13,7 +14,7 @@ const uint8_t DisplayManager::ICON_TEMP[] = {
     0b01111110
 };
 
-const uint8_t DisplayManager::ICON_PH[] = {
+const uint8_t OLEDDisplayManager::ICON_PH[] = {
     0b11111110,
     0b10000010,
     0b10111010,
@@ -24,7 +25,7 @@ const uint8_t DisplayManager::ICON_PH[] = {
     0b11111110
 };
 
-const uint8_t DisplayManager::ICON_TDS[] = {
+const uint8_t OLEDDisplayManager::ICON_TDS[] = {
     0b01000010,
     0b10100101,
     0b01000010,
@@ -35,7 +36,7 @@ const uint8_t DisplayManager::ICON_TDS[] = {
     0b00000000
 };
 
-const uint8_t DisplayManager::ICON_HEATER[] = {
+const uint8_t OLEDDisplayManager::ICON_HEATER[] = {
     0b00100100,
     0b01001001,
     0b10010010,
@@ -46,7 +47,7 @@ const uint8_t DisplayManager::ICON_HEATER[] = {
     0b01000010
 };
 
-const uint8_t DisplayManager::ICON_CO2[] = {
+const uint8_t OLEDDisplayManager::ICON_CO2[] = {
     0b01111110,
     0b10000001,
     0b10011001,
@@ -57,7 +58,7 @@ const uint8_t DisplayManager::ICON_CO2[] = {
     0b01111110
 };
 
-const uint8_t DisplayManager::ICON_WIFI[] = {
+const uint8_t OLEDDisplayManager::ICON_WIFI[] = {
     0b00111100,
     0b01000010,
     0b10011001,
@@ -68,7 +69,7 @@ const uint8_t DisplayManager::ICON_WIFI[] = {
     0b00011000
 };
 
-const uint8_t DisplayManager::ICON_WIFI_OFF[] = {
+const uint8_t OLEDDisplayManager::ICON_WIFI_OFF[] = {
     0b10111101,
     0b01000011,
     0b10011000,
@@ -79,7 +80,7 @@ const uint8_t DisplayManager::ICON_WIFI_OFF[] = {
     0b00011000
 };
 
-const uint8_t DisplayManager::ICON_DROPLET[] = {
+const uint8_t OLEDDisplayManager::ICON_DROPLET[] = {
     0b00011000,
     0b00111100,
     0b01111110,
@@ -90,7 +91,7 @@ const uint8_t DisplayManager::ICON_DROPLET[] = {
     0b00111100
 };
 
-const uint8_t DisplayManager::ICON_CALENDAR[] = {
+const uint8_t OLEDDisplayManager::ICON_CALENDAR[] = {
     0b11111111,
     0b10000001,
     0b11111111,
@@ -101,7 +102,7 @@ const uint8_t DisplayManager::ICON_CALENDAR[] = {
     0b11111111
 };
 
-const uint8_t DisplayManager::ICON_DOSING[] = {
+const uint8_t OLEDDisplayManager::ICON_DOSING[] = {
     0b00111100,
     0b01000010,
     0b01111110,
@@ -112,7 +113,7 @@ const uint8_t DisplayManager::ICON_DOSING[] = {
     0b00011000
 };
 
-DisplayManager::DisplayManager() 
+OLEDDisplayManager::OLEDDisplayManager() 
     : display(nullptr),
       lastUpdate(0),
       lastScreenSwitch(0),
@@ -141,14 +142,15 @@ DisplayManager::DisplayManager()
         tdsTrend[i] = 0;
     }
 }
+}
 
-DisplayManager::~DisplayManager() {
+OLEDDisplayManager::~OLEDDisplayManager() {
     if (display) {
         delete display;
     }
 }
 
-bool DisplayManager::begin() {
+bool OLEDDisplayManager::begin() {
     display = new U8G2_SSD1309_128X64_NONAME0_F_HW_I2C(U8G2_R0, U8X8_PIN_NONE);
     
     if (!display) {
@@ -178,7 +180,7 @@ bool DisplayManager::begin() {
     return true;
 }
 
-void DisplayManager::update() {
+void OLEDDisplayManager::update() {
     unsigned long now = millis();
     
     // Handle animation
@@ -216,7 +218,103 @@ void DisplayManager::update() {
     }
 }
 
-void DisplayManager::drawStatusBar() {
+
+
+void OLEDDisplayManager::updateTemperature(float current, float target) {
+    currentTemp = current;
+    targetTemp = target;
+    addToTrend(tempTrend, current);
+}
+
+void OLEDDisplayManager::updatePH(float current, float target) {
+    currentPH = current;
+    targetPH = target;
+    addToTrend(phTrend, current);
+}
+
+void OLEDDisplayManager::updateTDS(float tds) {
+    currentTDS = tds;
+    addToTrend(tdsTrend, tds);
+}
+
+void OLEDDisplayManager::updateAmbientTemperature(float temp) {
+    ambientTemp = temp;
+}
+
+void OLEDDisplayManager::updateHeaterState(bool active) {
+    heaterActive = active;
+}
+
+void OLEDDisplayManager::updateCO2State(bool active) {
+    co2Active = active;
+}
+
+void OLEDDisplayManager::updateDosingState(bool active) {
+    dosingActive = active;
+}
+
+void OLEDDisplayManager::updateWaterChangeDate(const char* date) {
+    waterChangeDate = String(date);
+}
+
+void OLEDDisplayManager::updateNetworkStatus(bool connected, const char* ip) {
+    wifiConnected = connected;
+    ipAddress = String(ip);
+}
+
+void OLEDDisplayManager::updateTime(const char* time) {
+    currentTime = String(time);
+}
+
+void OLEDDisplayManager::clear() {
+    if (display) {
+        display->clearBuffer();
+        display->sendBuffer();
+    }
+}
+
+void OLEDDisplayManager::setBrightness(uint8_t brightness) {
+    if (display) {
+        display->setContrast(brightness);
+    }
+}
+
+void OLEDDisplayManager::setContrast(uint8_t contrast) {
+    if (display) {
+        display->setContrast(contrast);
+    }
+}
+
+void OLEDDisplayManager::test() {
+    if (!display) return;
+    
+    display->clearBuffer();
+    display->setFont(u8g2_font_ncenB10_tr);
+    display->drawStr(10, 20, "Display Test");
+    display->setFont(u8g2_font_6x10_tr);
+    display->drawStr(10, 35, "SSD1309 OLED");
+    display->drawStr(10, 50, "All systems OK");
+    display->sendBuffer();
+}
+
+void OLEDDisplayManager::nextScreen() {
+    currentScreen = (currentScreen + 1) % NUM_SCREENS;
+    lastScreenSwitch = millis();
+}
+
+void OLEDDisplayManager::setScreen(uint8_t screen) {
+    if (screen < NUM_SCREENS) {
+        currentScreen = screen;
+        lastScreenSwitch = millis();
+    }
+}
+
+void OLEDDisplayManager::addToTrend(float* trend, float value) {
+    trend[trendIndex] = value;
+    trendIndex = (trendIndex + 1) % TREND_SIZE;
+}
+
+void OLEDDisplayManager::drawStatusBar() {
     // Top status bar
     display->drawLine(0, 10, 127, 10);
     
@@ -241,7 +339,7 @@ void DisplayManager::drawStatusBar() {
     }
 }
 
-void DisplayManager::drawScreen0() {
+void OLEDDisplayManager::drawScreen0() {
     // Main status screen with icons and progress bars
     display->setFont(u8g2_font_6x10_tf);
     
@@ -299,174 +397,113 @@ void DisplayManager::drawScreen0() {
     drawWaveAnimation(0, 58, 128, 6);
 }
 
-void DisplayManager::drawScreen1() {
-    // Graph screen
+void OLEDDisplayManager::drawScreen1() {
+    // Graph screen showing trends
     display->setFont(u8g2_font_5x7_tf);
     
     // Temperature graph
-    display->drawStr(2, 18, "Temp");
-    drawGraph(2, 20, 124, 12, tempTrend, TREND_SIZE, 20.0, 30.0);
+    display->drawStr(2, 20, "Temp");
+    drawGraph(2, 22, 40, 15, tempTrend, TREND_SIZE, 20.0, 30.0);
     
     // pH graph
-    display->drawStr(2, 38, "pH");
-    drawGraph(2, 40, 124, 12, phTrend, TREND_SIZE, 6.0, 8.0);
+    display->drawStr(45, 20, "pH");
+    drawGraph(45, 22, 40, 15, phTrend, TREND_SIZE, 6.0, 8.0);
     
     // TDS graph
-    display->drawStr(2, 58, "TDS");
-    drawGraph(2, 60, 124, 4, tdsTrend, TREND_SIZE, 0, 500);
+    display->drawStr(88, 20, "TDS");
+    drawGraph(88, 22, 38, 15, tdsTrend, TREND_SIZE, 0, 1000);
+    
+    // Current values
+    display->setFont(u8g2_font_6x10_tf);
+    char buffer[16];
+    
+    snprintf(buffer, sizeof(buffer), "%.1f", currentTemp);
+    display->drawStr(2, 52, buffer);
+    
+    snprintf(buffer, sizeof(buffer), "%.2f", currentPH);
+    display->drawStr(45, 52, buffer);
+    
+    snprintf(buffer, sizeof(buffer), "%.0f", currentTDS);
+    display->drawStr(88, 52, buffer);
+    
+    // Status indicators
+    if (heaterActive) display->drawStr(2, 62, "H");
+    if (co2Active) display->drawStr(45, 62, "C");
+    if (dosingActive) display->drawStr(88, 62, "D");
 }
 
-void DisplayManager::drawScreen2() {
-    // Network & system info
+void OLEDDisplayManager::drawScreen2() {
+    // Network & system info screen
     display->setFont(u8g2_font_6x10_tf);
     
-    // WiFi status
-    drawIcon(2, 14, wifiConnected ? ICON_WIFI : ICON_WIFI_OFF);
-    display->drawStr(14, 21, wifiConnected ? "Connected" : "Disconnected");
-    
-    // IP address
+    // Network status
+    display->drawStr(2, 20, "Network:");
     display->setFont(u8g2_font_5x7_tf);
-    display->drawStr(14, 29, ipAddress.c_str());
-    
-    // Ambient temperature
-    display->setFont(u8g2_font_6x10_tf);
-    drawIcon(2, 38, ICON_TEMP);
-    char ambStr[16];
-    snprintf(ambStr, sizeof(ambStr), "Room: %.1fC", ambientTemp);
-    display->drawStr(14, 45, ambStr);
-    
-    // Uptime
-    unsigned long uptime = millis() / 1000;
-    unsigned long hours = uptime / 3600;
-    unsigned long minutes = (uptime % 3600) / 60;
-    char uptimeStr[20];
-    snprintf(uptimeStr, sizeof(uptimeStr), "Up: %luh %lum", hours, minutes);
-    display->drawStr(2, 56, uptimeStr);
-}
-
-void DisplayManager::drawIcon(uint8_t x, uint8_t y, const uint8_t* icon) {
-    display->drawXBMP(x, y, 8, 8, icon);
-}
-
-void DisplayManager::drawGraph(uint8_t x, uint8_t y, uint8_t w, uint8_t h, float* data, uint8_t len, float min, float max) {
-    // Draw frame
-    display->drawFrame(x, y, w, h);
-    
-    // Draw graph line
-    float scale = (h - 2) / (max - min);
-    uint8_t step = w / len;
-    
-    for (uint8_t i = 0; i < len - 1; i++) {
-        float val1 = constrain(data[i], min, max);
-        float val2 = constrain(data[i + 1], min, max);
-        
-        uint8_t y1 = y + h - 1 - (uint8_t)((val1 - min) * scale);
-        uint8_t y2 = y + h - 1 - (uint8_t)((val2 - min) * scale);
-        
-        display->drawLine(x + 1 + i * step, y1, x + 1 + (i + 1) * step, y2);
+    if (wifiConnected) {
+        display->drawStr(2, 30, "Connected");
+        display->drawStr(2, 38, ipAddress.c_str());
+    } else {
+        display->drawStr(2, 30, "Disconnected");
     }
+    
+    // System info
+    display->setFont(u8g2_font_6x10_tf);
+    display->drawStr(2, 50, "System:");
+    display->setFont(u8g2_font_5x7_tf);
+    
+    char buffer[32];
+    snprintf(buffer, sizeof(buffer), "Uptime: %lum", millis() / 60000);
+    display->drawStr(2, 58, buffer);
+    
+    snprintf(buffer, sizeof(buffer), "Heap: %luK", ESP.getFreeHeap() / 1024);
+    display->drawStr(70, 58, buffer);
 }
 
-void DisplayManager::drawProgressBar(uint8_t x, uint8_t y, uint8_t w, uint8_t h, float value, float min, float max) {
+void OLEDDisplayManager::drawProgressBar(uint8_t x, uint8_t y, uint8_t w, uint8_t h, float value, float min, float max) {
+    // Draw outline
     display->drawFrame(x, y, w, h);
     
-    float percentage = (value - min) / (max - min);
-    percentage = constrain(percentage, 0.0, 1.0);
+    // Calculate fill width based on value within min/max range
+    float percent = (value - min) / (max - min);
+    percent = constrain(percent, 0.0, 1.0);
     
-    uint8_t fillWidth = (uint8_t)((w - 2) * percentage);
+    int fillWidth = (int)(percent * (w - 2));
     if (fillWidth > 0) {
         display->drawBox(x + 1, y + 1, fillWidth, h - 2);
     }
 }
 
-void DisplayManager::drawWaveAnimation(uint8_t x, uint8_t y, uint8_t w, uint8_t h) {
+void OLEDDisplayManager::drawGraph(uint8_t x, uint8_t y, uint8_t w, uint8_t h, float* data, uint8_t len, float min, float max) {
+    // Draw frame
+    display->drawFrame(x, y, w, h);
+    
+    // Draw data points
+    for (uint8_t i = 1; i < len && i < w - 2; i++) {
+        float val1 = constrain(data[i - 1], min, max);
+        float val2 = constrain(data[i], min, max);
+        
+        uint8_t y1 = y + h - 1 - ((val1 - min) / (max - min)) * (h - 2);
+        uint8_t y2 = y + h - 1 - ((val2 - min) / (max - min)) * (h - 2);
+        
+        display->drawLine(x + i, y1, x + i + 1, y2);
+    }
+}
+
+void OLEDDisplayManager::drawIcon(uint8_t x, uint8_t y, const uint8_t* icon) {
+    for (uint8_t row = 0; row < 8; row++) {
+        uint8_t line = icon[row];
+        for (uint8_t col = 0; col < 8; col++) {
+            if (line & (0x80 >> col)) {
+                display->drawPixel(x + col, y + row);
+            }
+        }
+    }
+}
+
+void OLEDDisplayManager::drawWaveAnimation(uint8_t x, uint8_t y, uint8_t w, uint8_t h) {
     for (uint8_t i = 0; i < w; i++) {
-        float wave = sin((i + animationFrame * 2) * 0.2) * (h / 2.0);
-        uint8_t waveY = y + h / 2 + (int8_t)wave;
+        float wave = sin((i + animationFrame * 4) * 0.2) * (h / 4) + (h / 2);
+        uint8_t waveY = y + (uint8_t)wave;
         display->drawPixel(x + i, waveY);
     }
-}
-
-void DisplayManager::addToTrend(float* trend, float value) {
-    trend[trendIndex] = value;
-}
-
-void DisplayManager::updateTemperature(float current, float target) {
-    currentTemp = current;
-    targetTemp = target;
-    addToTrend(tempTrend, current);
-}
-
-void DisplayManager::updatePH(float current, float target) {
-    currentPH = current;
-    targetPH = target;
-    addToTrend(phTrend, current);
-}
-
-void DisplayManager::updateTDS(float tds) {
-    currentTDS = tds;
-    addToTrend(tdsTrend, tds);
-    trendIndex = (trendIndex + 1) % TREND_SIZE;
-}
-
-void DisplayManager::updateAmbientTemperature(float temp) {
-    ambientTemp = temp;
-}
-
-void DisplayManager::updateHeaterState(bool active) {
-    heaterActive = active;
-}
-
-void DisplayManager::updateCO2State(bool active) {
-    co2Active = active;
-}
-
-void DisplayManager::updateDosingState(bool active) {
-    dosingActive = active;
-}
-
-void DisplayManager::updateWaterChangeDate(const char* date) {
-    waterChangeDate = String(date);
-}
-
-void DisplayManager::updateNetworkStatus(bool connected, const char* ip) {
-    wifiConnected = connected;
-    ipAddress = String(ip);
-}
-
-void DisplayManager::updateTime(const char* time) {
-    currentTime = String(time);
-}
-
-void DisplayManager::clear() {
-    display->clearBuffer();
-    display->sendBuffer();
-}
-
-void DisplayManager::setBrightness(uint8_t brightness) {
-    display->setContrast(brightness);
-}
-
-void DisplayManager::setContrast(uint8_t contrast) {
-    display->setContrast(contrast);
-}
-
-void DisplayManager::nextScreen() {
-    currentScreen = (currentScreen + 1) % NUM_SCREENS;
-    lastScreenSwitch = millis();
-}
-
-void DisplayManager::setScreen(uint8_t screen) {
-    if (screen < NUM_SCREENS) {
-        currentScreen = screen;
-        lastScreenSwitch = millis();
-    }
-}
-
-void DisplayManager::test() {
-    display->clearBuffer();
-    display->setFont(u8g2_font_ncenB14_tr);
-    display->drawStr(20, 30, "Display");
-    display->drawStr(30, 50, "Test OK");
-    display->sendBuffer();
 }

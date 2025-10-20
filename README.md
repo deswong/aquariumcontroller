@@ -33,7 +33,7 @@ A comprehensive aquarium automation system built for ESP32 that monitors and con
 - **Dosing Pump Control** - DRV8871 motor driver with calibration and scheduling
 - **Water Change Predictor** - Self-learning TDS-based prediction (linear regression)
 - **Pattern Learning** - Learns daily feeding/maintenance patterns
-- **Ender 3 Pro Display** - LCD12864 local interface with encoder navigation
+- **OLED Display** - SSD1309 128x64 monitoring display with trend graphs
 - **Event Logging** - Comprehensive event tracking with 1000-event circular buffer
 - **NTP Time Sync** - Accurate timekeeping with automatic daylight saving
 
@@ -54,8 +54,7 @@ A comprehensive aquarium automation system built for ESP32 that monitors and con
 **Optional:**
 - **DRV8871 Motor Driver** - For dosing pump control
 - **Peristalric Pump** - For liquid fertilizer dosing
-- **Display Option 1: Ender 3 Pro LCD12864** - Full interactive menu with encoder (9 GPIO pins)
-- **Display Option 2: SSD1309 OLED 128x64** - Minimal monitoring display (2 GPIO pins)
+- **SSD1309 OLED Display 128x64** - Real-time monitoring with trend graphs (2 GPIO pins)
 - **RCD Safety Switch** - 30mA, mandatory for Australian installations
 
 ### Pin Configuration
@@ -80,29 +79,14 @@ Dosing Pump IN2 (DRV8871):    GPIO 33 (PWM)
 
 **Display (Optional):**
 
-*Option 1: Ender 3 Pro LCD12864 (Interactive Menu)*
-```
-LCD_CS (Chip Select):         GPIO 15
-LCD_A0 (Data/Command):        GPIO 2
-LCD_RESET:                    GPIO 0
-LCD_SCK (SPI Clock):          GPIO 18
-LCD_MOSI (SPI Data):          GPIO 23
-BTN_ENC (Encoder Button):     GPIO 13
-BTN_EN1 (Encoder A):          GPIO 14
-BTN_EN2 (Encoder B):          GPIO 16
-BEEPER (Buzzer):              GPIO 17
-```
-**Pins Used:** 9 GPIO (full menu system with rotary encoder)
-
-*Option 2: SSD1309 OLED 128x64 (Monitoring Only)*
+*SSD1309 OLED 128x64 (Monitoring Display)*
 ```
 I2C SDA:                      GPIO 21
 I2C SCL:                      GPIO 22
 ```
-**Pins Used:** 2 GPIO (info display only, ~400 KB flash savings)
+**Pins Used:** 2 GPIO (auto-cycling screens with trend graphs)
 
 **Without Display:** 8 GPIO pins  
-**With Ender 3:** 17 GPIO pins (21 remaining)  
 **With OLED:** 10 GPIO pins (28 remaining)
 
 ### Wiring Diagram
@@ -489,12 +473,9 @@ To add new sensors or features:
 - **[TIME_PROPORTIONAL.md](TIME_PROPORTIONAL.md)** - PID control details
 
 ### Display & Interface
-- **[DISPLAY_OPTIONS.md](DISPLAY_OPTIONS.md)** - ⭐ **Quick reference: Choose your display**
-- **[ENDER3_DISPLAY_COMPATIBILITY.md](ENDER3_DISPLAY_COMPATIBILITY.md)** - Display feasibility
-- **[ENDER3_DISPLAY_WIRING.md](ENDER3_DISPLAY_WIRING.md)** - Wiring guide
-- **[DISPLAY_IMPLEMENTATION_COMPLETE.md](DISPLAY_IMPLEMENTATION_COMPLETE.md)** - Implementation details
+- **[OLED_DISPLAY_MANAGER.md](OLED_DISPLAY_MANAGER.md)** - ⭐ **Complete OLED display guide**
+- **[DISPLAY_OPTIONS.md](DISPLAY_OPTIONS.md)** - Display configuration overview
 - **[OLED_DISPLAY_GUIDE.md](OLED_DISPLAY_GUIDE.md)** - SSD1309 OLED setup and integration
-- **[DISPLAY_SIZE_COMPARISON.md](DISPLAY_SIZE_COMPARISON.md)** - Ender 3 vs OLED comparison
 - **[SSD1309_IMPLEMENTATION_SUMMARY.md](SSD1309_IMPLEMENTATION_SUMMARY.md)** - OLED implementation summary
 - **[WEB_UI_PATTERN_GUIDE.md](WEB_UI_PATTERN_GUIDE.md)** - Web UI usage
 
@@ -507,7 +488,7 @@ To add new sensors or features:
 - **[TESTING.md](TESTING.md)** - Complete testing guide
 - **[TEST_SUMMARY.md](TEST_SUMMARY.md)** - Test suite overview
 - **[TEST_QUICKREF.md](TEST_QUICKREF.md)** - Quick testing reference
-- **[DISPLAY_TESTS.md](DISPLAY_TESTS.md)** - Display test documentation
+- **[OLED_DISPLAY_MANAGER.md](OLED_DISPLAY_MANAGER.md)** - OLED display test documentation
 
 ### Implementation Details
 - **[IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md)** - Water change predictor
