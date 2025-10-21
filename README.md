@@ -37,6 +37,13 @@ A comprehensive aquarium automation system built for **ESP32-S3** that monitors 
 - **MQTT Integration** - Publish sensor data for external monitoring (Home Assistant, Node-RED, etc.)
 - **OTA Updates** - Remote firmware updates via web interface or Arduino OTA
 
+### 🤖 Machine Learning Features (NEW!)
+- **ML-Enhanced PID Control** - Learns optimal PID gains from historical performance (Phase 1 ✅)
+- **Performance-Based Learning** - Scores control quality and builds lookup table
+- **Contextual Adaptation** - Adapts to ambient temperature, time of day, and seasonal changes
+- **Training Data Export** - CSV export for neural network training (Phase 2 roadmap)
+- **Pattern Prediction** - LSTM-based forecasting planned (see [ML_SYSTEM_OVERVIEW.md](ML_SYSTEM_OVERVIEW.md))
+
 ### ⚙️ Advanced Features
 - **FreeRTOS Tasks** - Multi-core processing for optimal performance
 - **pH Calibration Interface** - Step-by-step calibration with multiple buffer solutions
@@ -44,9 +51,9 @@ A comprehensive aquarium automation system built for **ESP32-S3** that monitors 
 - **Safety Interlocks** - Automatic shutdown if parameters exceed safe limits
 - **Dosing Pump Control** - DRV8871 motor driver with calibration and scheduling
 - **Water Change Predictor** - Self-learning TDS-based prediction (linear regression)
-- **Pattern Learning** - Learns daily feeding/maintenance patterns
+- **Pattern Learning** - Learns daily feeding/maintenance patterns (ML upgrade planned)
 - **OLED Display** - SSD1309 128x64 monitoring display with trend graphs
-- **Event Logging** - Comprehensive event tracking with 1000-event circular buffer
+- **Event Logging** - Comprehensive event tracking with 5000-event rolling log (SPIFFS)
 - **NTP Time Sync** - Accurate timekeeping with automatic daylight saving
 
 ## Hardware Requirements
@@ -497,6 +504,11 @@ To add new sensors or features:
 - **[AUSTRALIAN_CONFIGURATION.md](AUSTRALIAN_CONFIGURATION.md)** 🇦🇺 - Australian-specific setup
 - **[PH_CALIBRATION_GUIDE.md](PH_CALIBRATION_GUIDE.md)** - pH sensor calibration
 - **[WEB_CALIBRATION_GUIDE.md](WEB_CALIBRATION_GUIDE.md)** - Web-based calibration
+
+### 🤖 Machine Learning Documentation (NEW!)
+- **[ML_SYSTEM_OVERVIEW.md](ML_SYSTEM_OVERVIEW.md)** - ⭐ **Complete ML system guide**
+- **[ML_IMPLEMENTATION_ROADMAP.md](ML_IMPLEMENTATION_ROADMAP.md)** - PID ML Phases 1-3 roadmap
+- **[PATTERN_LEARNER_ML_UPGRADE.md](PATTERN_LEARNER_ML_UPGRADE.md)** - Pattern learning ML upgrade plan
 
 ### Feature Documentation
 - **[DOSING_PUMP_GUIDE.md](DOSING_PUMP_GUIDE.md)** - Dosing pump setup and use
