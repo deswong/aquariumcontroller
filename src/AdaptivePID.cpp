@@ -1,4 +1,5 @@
 #include "AdaptivePID.h"
+#include "MLDataLogger.h"
 
 AdaptivePID::AdaptivePID(String namespaceName, float initialKp, float initialKi, float initialKd)
     : kp(initialKp), ki(initialKi), kd(initialKd), target(0), 
@@ -12,10 +13,13 @@ AdaptivePID::AdaptivePID(String namespaceName, float initialKp, float initialKi,
       autoTuning(false), relayAmplitude(50), tuneStartTime(0),
       oscillationAmplitude(0), oscillationPeriod(0), oscillationCount(0),
       lastPeakValue(0), lastPeakTime(0), peakDetected(false),
-      errorIndex(0), performanceMetric(0),
+      errorIndex(0), performanceMetric(0), useMLAdaptation(false),
+      performanceWindowStart(0), performanceWindowErrorSum(0), performanceWindowErrorSqSum(0), 
+      performanceWindowSamples(0), performanceWindowOutputSum(0),
       settlingStartTime(0), isSettled(false), maxOvershoot(0), 
       steadyStateError(0), settlingTime(0), controlActions(0),
-      namespace_name(namespaceName) {
+      namespace_name(namespaceName),
+      mlLogger(nullptr), mlEnabled(false), mlConfidence(0.0f) {
     
     prefs = new Preferences();
     
@@ -35,6 +39,7 @@ AdaptivePID::~AdaptivePID() {
 void AdaptivePID::begin() {
     loadParameters();
     lastTime = millis();
+    performanceWindowStart = millis(); // Initialize ML performance window
     Serial.printf("AdaptivePID '%s' initialized with Kp=%.3f, Ki=%.3f, Kd=%.3f\n", 
                   namespace_name.c_str(), kp, ki, kd);
 }
@@ -142,6 +147,14 @@ float AdaptivePID::compute(float input, float dt) {
     
     // Update performance metrics
     updatePerformanceMetrics(error, input);
+    
+    // Track performance window for ML logging
+    if (mlLogger) {
+        performanceWindowErrorSum += abs(error);
+        performanceWindowErrorSqSum += error * error;
+        performanceWindowOutputSum += output;
+        performanceWindowSamples++;
+    }
     
     // Store error for learning
     errorHistory[errorIndex] = error;
@@ -422,4 +435,167 @@ void AdaptivePID::updatePerformanceMetrics(float error, float input) {
             maxOvershoot = overshoot;
         }
     }
+}
+
+// ============================================================================
+// ML Integration Methods
+// ============================================================================
+
+void AdaptivePID::setMLLogger(MLDataLogger* logger) {
+    mlLogger = logger;
+    if (mlLogger) {
+        Serial.printf("PID '%s': ML data logger attached\n", namespace_name.c_str());
+    }
+}
+
+float AdaptivePID::computeWithContext(float input, float dt, float ambientTemp, uint8_t hourOfDay, 
+                                     uint8_t season, float tankVolume) {
+    // First compute the normal PID output
+    float output = compute(input, dt);
+    
+    // If ML is enabled and we have a logger, try to adapt parameters
+    if (mlEnabled && mlLogger) {
+        adaptParametersWithML(ambientTemp, hourOfDay, season);
+    }
+    
+    // Log performance data every settling period for ML learning
+    if (mlLogger && isSettled) {
+        logPerformanceToML(ambientTemp, hourOfDay, season, tankVolume);
+    }
+    
+    return output;
+}
+
+void AdaptivePID::enableMLAdaptation(bool enable) {
+    mlEnabled = enable;
+    if (enable && mlLogger) {
+        Serial.printf("PID '%s': ML adaptation enabled\n", namespace_name.c_str());
+    } else if (enable && !mlLogger) {
+        Serial.printf("WARNING: PID '%s' ML adaptation requested but no logger attached\n", 
+                     namespace_name.c_str());
+        mlEnabled = false;
+    } else {
+        Serial.printf("PID '%s': ML adaptation disabled\n", namespace_name.c_str());
+    }
+}
+
+void AdaptivePID::adaptParametersWithML(float ambientTemp, uint8_t hourOfDay, uint8_t season) {
+    if (!mlLogger || !mlEnabled) return;
+    
+    // Query the ML lookup table for optimal gains based on current conditions
+    float kp_ml, ki_ml, kd_ml, confidence;
+    bool found = mlLogger->getOptimalGains(lastInput, ambientTemp, hourOfDay, season, 
+                                          kp_ml, ki_ml, kd_ml, confidence);
+    
+    if (found && confidence > 0.7f) {
+        // High confidence: blend ML recommendations with current gains
+        // Use 70% ML, 30% current to smooth transitions
+        float blend = 0.7f;
+        kp = kp * (1.0f - blend) + kp_ml * blend;
+        ki = ki * (1.0f - blend) + ki_ml * blend;
+        kd = kd * (1.0f - blend) + kd_ml * blend;
+        
+        // Keep within safety bounds
+        kp = constrain(kp, 0.1, 20.0);
+        ki = constrain(ki, 0.01, 5.0);
+        kd = constrain(kd, 0.01, 10.0);
+        
+        mlConfidence = confidence;
+        
+        Serial.printf("PID '%s': ML adaptation applied (confidence: %.2f%%)\n", 
+                     namespace_name.c_str(), confidence * 100.0f);
+        Serial.printf("  New gains: Kp=%.3f Ki=%.3f Kd=%.3f\n", kp, ki, kd);
+    } else if (found && confidence > 0.5f) {
+        // Medium confidence: use as fallback only if current performance is poor
+        if (performanceMetric > 2.0f) { // High average error
+            float blend = 0.3f; // More conservative blending
+            kp = kp * (1.0f - blend) + kp_ml * blend;
+            ki = ki * (1.0f - blend) + ki_ml * blend;
+            kd = kd * (1.0f - blend) + kd_ml * blend;
+            
+            kp = constrain(kp, 0.1, 20.0);
+            ki = constrain(ki, 0.01, 5.0);
+            kd = constrain(kd, 0.01, 10.0);
+            
+            mlConfidence = confidence;
+            
+            Serial.printf("PID '%s': ML adaptation (moderate confidence: %.2f%%, poor performance)\n", 
+                         namespace_name.c_str(), confidence * 100.0f);
+        }
+    } else {
+        // Low or no confidence: don't adapt, but track confidence
+        mlConfidence = confidence;
+    }
+}
+
+void AdaptivePID::logPerformanceToML(float ambientTemp, uint8_t hourOfDay, 
+                                     uint8_t season, float tankVolume) {
+    if (!mlLogger) return;
+    
+    // Check if we've completed a performance window
+    unsigned long now = millis();
+    unsigned long windowDuration = now - performanceWindowStart;
+    
+    // Log every 10 minutes of settled operation
+    const unsigned long LOG_INTERVAL = 600000; // 10 minutes
+    if (windowDuration < LOG_INTERVAL) return;
+    
+    // Calculate windowed performance metrics
+    float avgError = (performanceWindowSamples > 0) ? (performanceWindowErrorSum / performanceWindowSamples) : 0;
+    float errorVariance = 0;
+    if (performanceWindowSamples > 0) {
+        float avgSqError = performanceWindowErrorSqSum / performanceWindowSamples;
+        errorVariance = avgSqError - (avgError * avgError);
+        if (errorVariance < 0) errorVariance = 0; // Numerical stability
+    }
+    float avgOutput = (performanceWindowSamples > 0) ? (performanceWindowOutputSum / performanceWindowSamples) : lastOutput;
+    
+    // Create performance sample
+    PIDPerformanceSample sample;
+    sample.timestamp = now;
+    sample.currentValue = lastInput;
+    sample.targetValue = target;
+    sample.ambientTemp = ambientTemp;
+    sample.hourOfDay = hourOfDay;
+    sample.season = season;
+    sample.tankVolume = tankVolume;
+    
+    sample.kp = kp;
+    sample.ki = ki;
+    sample.kd = kd;
+    
+    sample.errorMean = avgError;
+    sample.errorVariance = errorVariance;
+    sample.settlingTime = settlingTime / 1000.0f; // Convert to seconds
+    sample.overshoot = maxOvershoot;
+    sample.steadyStateError = steadyStateError;
+    sample.averageOutput = avgOutput;
+    sample.cycleCount = performanceWindowSamples;
+    
+    // Let MLDataLogger calculate the performance score
+    sample.score = 0; // Will be calculated in logSample()
+    
+    // Log the sample
+    if (mlLogger->logSample(sample)) {
+        Serial.printf("PID '%s': Performance sample logged (window: %lu sec, samples: %u)\n",
+                     namespace_name.c_str(), windowDuration / 1000, performanceWindowSamples);
+        Serial.printf("  Settling: %.1fs, Overshoot: %.2f%%, SSE: %.3f, Variance: %.4f\n",
+                     sample.settlingTime, sample.overshoot, sample.steadyStateError, 
+                     sample.errorVariance);
+    } else {
+        Serial.printf("WARNING: PID '%s' failed to log ML sample\n", namespace_name.c_str());
+    }
+    
+    // Reset performance window
+    performanceWindowStart = now;
+    performanceWindowErrorSum = 0;
+    performanceWindowErrorSqSum = 0;
+    performanceWindowOutputSum = 0;
+    performanceWindowSamples = 0;
+    
+    // Reset performance metrics for next window
+    maxOvershoot = 0;
+    settlingTime = 0;
+    isSettled = false;
+    settlingStartTime = now;
 }

@@ -4,6 +4,9 @@
 #include <Arduino.h>
 #include <Preferences.h>
 
+// Forward declaration
+class MLDataLogger;
+
 class AdaptivePID {
 private:
     float kp, ki, kd;
@@ -51,6 +54,14 @@ private:
     float errorHistory[100];
     int errorIndex;
     float performanceMetric;
+    bool useMLAdaptation;
+    
+    // Performance monitoring for ML
+    unsigned long performanceWindowStart;
+    float performanceWindowErrorSum;
+    float performanceWindowErrorSqSum;
+    int performanceWindowSamples;
+    float performanceWindowOutputSum;
     
     // Performance monitoring
     unsigned long settlingStartTime;
@@ -60,11 +71,18 @@ private:
     unsigned long settlingTime;
     int controlActions;
     
+    // ML integration
+    MLDataLogger* mlLogger;
+    bool mlEnabled;
+    float mlConfidence;
+    
     // Storage
     Preferences* prefs;
     String namespace_name;
     
     void adaptParameters();
+    void adaptParametersWithML(float ambientTemp, uint8_t hour, uint8_t season);
+    void logPerformanceToML(float ambientTemp, uint8_t hour, uint8_t season, float tankVolume);
     void detectOscillation(float error);
     void calculateAutoTuneParams();
     void updatePerformanceMetrics(float error, float input);
@@ -76,11 +94,15 @@ public:
     ~AdaptivePID();
     
     void begin();
+    void setMLLogger(MLDataLogger* logger);
     void setTarget(float setpoint);
     void setSafetyLimits(float maxValue, float safetyMargin);
     void setOutputLimits(float min, float max);
     
+    // Main compute function with ML support
     float compute(float input, float dt);
+    float computeWithContext(float input, float dt, float ambientTemp, uint8_t hour, uint8_t season, float tankVolume = 0);
+    
     void reset();
     
     // Advanced PID features
@@ -88,6 +110,11 @@ public:
     void enableSetpointRamping(bool enable, float rampRate = 1.0);
     void enableIntegralWindupPrevention(bool enable, float maxIntegral = 100.0);
     void enableFeedForward(bool enable, float gain = 0.5);
+    
+    // ML features
+    void enableMLAdaptation(bool enable);
+    bool isMLEnabled() { return mlEnabled && mlLogger != nullptr; }
+    float getMLConfidence() { return mlConfidence; }
     
     // Auto-tuning
     void startAutoTune(float amplitude = 1.0);
