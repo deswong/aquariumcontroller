@@ -212,6 +212,56 @@ void WebServerManager::setupRoutes() {
         request->send(200, "application/json", response);
     });
     
+    // API: Get event logs
+    server->on("/api/logs", HTTP_GET, [](AsyncWebServerRequest* request) {
+        // Get count parameter (default 100, max 500)
+        int count = 100;
+        if (request->hasParam("count")) {
+            count = request->getParam("count")->value().toInt();
+            if (count > 500) count = 500;
+            if (count < 1) count = 1;
+        }
+        
+        // Get recent logs
+        std::vector<LogEvent> logs = eventLogger->getRecentLogs(count);
+        
+        // Build JSON response
+        DynamicJsonDocument doc(20000); // Allocate for ~100 logs
+        JsonArray logsArray = doc.createNestedArray("logs");
+        
+        for (const auto& log : logs) {
+            JsonObject logObj = logsArray.createNestedObject();
+            logObj["timestamp"] = log.timestamp;
+            
+            // Convert EventLevel enum to string
+            String levelStr;
+            switch(log.level) {
+                case EVENT_INFO: levelStr = "INFO"; break;
+                case EVENT_WARNING: levelStr = "WARNING"; break;
+                case EVENT_ERROR: levelStr = "ERROR"; break;
+                case EVENT_CRITICAL: levelStr = "CRITICAL"; break;
+                default: levelStr = "UNKNOWN"; break;
+            }
+            logObj["level"] = levelStr;
+            logObj["category"] = log.category;
+            logObj["message"] = log.message;
+        }
+        
+        doc["totalCount"] = eventLogger->getLogCount();
+        doc["storageSize"] = eventLogger->getLogFileSize();
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    // API: Clear event logs
+    server->on("/api/logs", HTTP_DELETE, [](AsyncWebServerRequest* request) {
+        eventLogger->clearLogs();
+        eventLogger->info("System", "Event logs cleared via web interface");
+        request->send(200, "application/json", "{\"status\":\"ok\",\"message\":\"Logs cleared\"}");
+    });
+    
     // API: Get settings
     server->on("/api/settings", HTTP_GET, [this](AsyncWebServerRequest* request) {
         SystemConfig& cfg = config->getConfig();

@@ -667,6 +667,54 @@
             color: #ef4444;
             font-weight: bold;
         }
+        
+        /* Event Logs Styles */
+        .log-level-INFO {
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        
+        .log-level-WARNING {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+        
+        .log-level-ERROR {
+            color: #ef4444;
+            font-weight: 700;
+        }
+        
+        .log-level-CRITICAL {
+            color: #dc2626;
+            font-weight: 700;
+            background: #fee2e2;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        
+        .log-row-CRITICAL {
+            background: #fef2f2 !important;
+            border-left: 4px solid #dc2626;
+        }
+        
+        .log-row-ERROR {
+            background: #fef2f2 !important;
+        }
+        
+        #logs-table tbody tr {
+            transition: background 0.2s;
+        }
+        
+        #logs-table tbody td {
+            font-size: 14px;
+            vertical-align: top;
+        }
+        
+        #logs-table tbody td:first-child {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #6b7280;
+        }
     </style>
 </head>
 <body>
@@ -730,6 +778,7 @@
                 <button class="tab" onclick="showTab('pattern')">🧠 Pattern Learning</button>
                 <button class="tab" onclick="showTab('dosing')">💊 Dosing Pump</button>
                 <button class="tab" onclick="showTab('calibration')">🔬 pH Calibration</button>
+                <button class="tab" onclick="showTab('logs')">📋 Event Logs</button>
                 <button class="tab" onclick="showTab('firmware')">🔄 Firmware</button>
                 <button class="tab" onclick="showTab('settings')">🔧 Settings</button>
             </div>
@@ -1457,6 +1506,72 @@
                 </div>
             </div>
             
+            <!-- Event Logs Tab -->
+            <div id="logs-tab" class="tab-content">
+                <h2>📋 Event Logs</h2>
+                
+                <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                    <div style="display: flex; gap: 8px;">
+                        <button class="tab" id="filter-all" onclick="filterLogs('all')" style="font-size: 12px; padding: 8px 16px;">All</button>
+                        <button class="tab" id="filter-info" onclick="filterLogs('INFO')" style="font-size: 12px; padding: 8px 16px;">ℹ️ Info</button>
+                        <button class="tab" id="filter-warning" onclick="filterLogs('WARNING')" style="font-size: 12px; padding: 8px 16px;">⚠️ Warning</button>
+                        <button class="tab" id="filter-error" onclick="filterLogs('ERROR')" style="font-size: 12px; padding: 8px 16px;">❌ Error</button>
+                        <button class="tab" id="filter-critical" onclick="filterLogs('CRITICAL')" style="font-size: 12px; padding: 8px 16px;">🔥 Critical</button>
+                    </div>
+                    
+                    <div style="flex: 1; min-width: 200px;">
+                        <input type="text" id="log-search" placeholder="🔍 Search logs..." 
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                               onkeyup="searchLogs()">
+                    </div>
+                    
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn" onclick="refreshLogs()" style="padding: 8px 16px; font-size: 14px;">🔄 Refresh</button>
+                        <button class="btn btn-danger" onclick="clearLogs()" style="padding: 8px 16px; font-size: 14px;">🗑️ Clear</button>
+                        <button class="btn btn-success" onclick="exportLogs()" style="padding: 8px 16px; font-size: 14px;">📥 Export CSV</button>
+                    </div>
+                </div>
+                
+                <div style="background: #f9f9f9; padding: 12px; border-radius: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>Total Entries:</strong> <span id="log-count">0</span> | 
+                        <strong>Filtered:</strong> <span id="log-filtered-count">0</span> | 
+                        <strong>Storage:</strong> <span id="log-storage-size">0 KB</span>
+                    </div>
+                    <div>
+                        <label style="margin: 0; display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="auto-refresh-logs" style="margin-right: 8px;" onchange="toggleAutoRefresh()">
+                            <span style="font-size: 14px;">Auto-refresh (5s)</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div style="max-height: 600px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px;">
+                    <table class="history-table" id="logs-table">
+                        <thead style="position: sticky; top: 0; background: #667eea; z-index: 10;">
+                            <tr>
+                                <th style="width: 180px;">Timestamp</th>
+                                <th style="width: 100px;">Level</th>
+                                <th style="width: 120px;">Category</th>
+                                <th>Message</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-tbody">
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 40px; color: #999;">
+                                    Loading logs...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 4px;">
+                    <strong>💡 Tip:</strong> Logs are stored in SPIFFS and automatically rotate at 5,000 entries. 
+                    Critical events are highlighted for quick identification. Use filters to focus on specific log levels.
+                </div>
+            </div>
+            
             <!-- Settings Tab -->
             <div id="settings-tab" class="tab-content">
                 <h2>WiFi & MQTT Settings</h2>
@@ -1757,6 +1872,8 @@
             } else if (tabName === 'calibration') {
                 // Reload calibration data if needed
                 updateCalibrationStatus();
+            } else if (tabName === 'logs') {
+                refreshLogs();
             }
         }
         
@@ -3401,6 +3518,202 @@
         // Update clock every second
         setInterval(updateDateTime, 1000);
         updateDateTime(); // Initial call
+        
+        // ===================================================================
+        // EVENT LOGS FUNCTIONS
+        // ===================================================================
+        
+        let allLogs = [];
+        let currentLogFilter = 'all';
+        let autoRefreshInterval = null;
+        
+        async function refreshLogs() {
+            try {
+                const response = await fetch('/api/logs');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch logs');
+                }
+                
+                const data = await response.json();
+                allLogs = data.logs || [];
+                
+                // Update stats
+                document.getElementById('log-count').textContent = data.totalCount || allLogs.length;
+                document.getElementById('log-storage-size').textContent = 
+                    ((data.storageSize || 0) / 1024).toFixed(1) + ' KB';
+                
+                // Apply current filter
+                filterLogs(currentLogFilter);
+                
+            } catch (error) {
+                console.error('Error loading logs:', error);
+                document.getElementById('logs-tbody').innerHTML = `
+                    <tr><td colspan="4" style="text-align: center; padding: 40px; color: #ef4444;">
+                        ❌ Failed to load logs. Please check connection.
+                    </td></tr>
+                `;
+            }
+        }
+        
+        function filterLogs(level) {
+            currentLogFilter = level;
+            
+            // Update filter button states
+            document.querySelectorAll('[id^="filter-"]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById('filter-' + level.toLowerCase()).classList.add('active');
+            
+            // Filter logs
+            let filtered = allLogs;
+            if (level !== 'all') {
+                filtered = allLogs.filter(log => log.level === level);
+            }
+            
+            // Apply search if active
+            const searchTerm = document.getElementById('log-search').value.toLowerCase();
+            if (searchTerm) {
+                filtered = filtered.filter(log => 
+                    log.message.toLowerCase().includes(searchTerm) ||
+                    log.category.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            displayLogs(filtered);
+        }
+        
+        function searchLogs() {
+            filterLogs(currentLogFilter);
+        }
+        
+        function displayLogs(logs) {
+            const tbody = document.getElementById('logs-tbody');
+            document.getElementById('log-filtered-count').textContent = logs.length;
+            
+            if (logs.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="4" style="text-align: center; padding: 40px; color: #999;">
+                        No logs found matching the current filter.
+                    </td></tr>
+                `;
+                return;
+            }
+            
+            // Build table rows
+            let html = '';
+            logs.forEach(log => {
+                const timestamp = new Date(log.timestamp * 1000);
+                const timeStr = timestamp.toLocaleString('en-AU', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+                
+                const rowClass = log.level === 'CRITICAL' || log.level === 'ERROR' ? 
+                    'log-row-' + log.level : '';
+                
+                html += `
+                    <tr class="${rowClass}">
+                        <td>${timeStr}</td>
+                        <td><span class="log-level-${log.level}">${getLevelIcon(log.level)} ${log.level}</span></td>
+                        <td><strong>${escapeHtml(log.category)}</strong></td>
+                        <td>${escapeHtml(log.message)}</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        }
+        
+        function getLevelIcon(level) {
+            const icons = {
+                'INFO': 'ℹ️',
+                'WARNING': '⚠️',
+                'ERROR': '❌',
+                'CRITICAL': '🔥'
+            };
+            return icons[level] || '📝';
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        async function clearLogs() {
+            if (!confirm('Are you sure you want to clear all event logs? This cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/logs', { method: 'DELETE' });
+                if (response.ok) {
+                    showAlert('All logs cleared successfully', 'success');
+                    refreshLogs();
+                } else {
+                    showAlert('Failed to clear logs', 'error');
+                }
+            } catch (error) {
+                console.error('Error clearing logs:', error);
+                showAlert('Error clearing logs', 'error');
+            }
+        }
+        
+        function exportLogs() {
+            if (allLogs.length === 0) {
+                showAlert('No logs to export', 'warning');
+                return;
+            }
+            
+            // Create CSV content
+            let csv = 'Timestamp,Level,Category,Message\n';
+            allLogs.forEach(log => {
+                const timestamp = new Date(log.timestamp * 1000).toISOString();
+                const message = log.message.replace(/"/g, '""'); // Escape quotes
+                csv += `"${timestamp}","${log.level}","${log.category}","${message}"\n`;
+            });
+            
+            // Download file
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `aquarium_logs_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showAlert('Logs exported successfully', 'success');
+        }
+        
+        function toggleAutoRefresh() {
+            const enabled = document.getElementById('auto-refresh-logs').checked;
+            
+            if (enabled) {
+                // Start auto-refresh every 5 seconds
+                autoRefreshInterval = setInterval(refreshLogs, 5000);
+                showAlert('Auto-refresh enabled (5s interval)', 'success');
+            } else {
+                // Stop auto-refresh
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+                showAlert('Auto-refresh disabled', 'info');
+            }
+        }
+        
+        // Initialize filter button on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('filter-all').classList.add('active');
+        });
+        
     </script>
 </body>
 </html>
