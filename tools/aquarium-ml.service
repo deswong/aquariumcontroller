@@ -1,0 +1,19 @@
+[Unit]
+Description=Aquarium Water Change ML Predictor Service
+After=network.target mosquitto.service
+Wants=mosquitto.service
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+WorkingDirectory=/path/to/aquariumcontroller/tools
+Environment="PATH=/usr/bin:/usr/local/bin"
+EnvironmentFile=/path/to/aquariumcontroller/tools/.env
+ExecStart=/usr/bin/python3 /path/to/aquariumcontroller/tools/water_change_ml_service.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

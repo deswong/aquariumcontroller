@@ -323,6 +323,14 @@
         }
         
         /* Water Change Styles */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
         .phase-indicator {
             display: flex;
             align-items: center;
@@ -828,50 +836,107 @@
             <div id="waterchange-tab" class="tab-content">
                 <h2>💧 Water Change Assistant</h2>
                 
+                <!-- ML Prediction Section -->
+                <div id="ml-prediction-section" class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 20px;">
+                    <h3 style="color: white; margin-bottom: 15px;">🤖 AI Water Change Prediction</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 8px;">
+                            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Days Until Next Change</div>
+                            <div style="font-size: 36px; font-weight: bold;"><span id="ml-days-remaining">--</span></div>
+                            <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">
+                                <span id="ml-days-since">--</span> days since last change
+                            </div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 8px;">
+                            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Confidence</div>
+                            <div style="font-size: 36px; font-weight: bold;"><span id="ml-confidence">--</span>%</div>
+                            <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">
+                                Model: <span id="ml-model">--</span>
+                            </div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 8px;">
+                            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">TDS Increase Rate</div>
+                            <div style="font-size: 36px; font-weight: bold;"><span id="ml-tds-rate">--</span></div>
+                            <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">ppm per day</div>
+                        </div>
+                    </div>
+                    <div id="ml-filter-status" style="margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 8px; display: none;">
+                        <span style="font-size: 14px;">🔧 Filter Status:</span>
+                        <span id="ml-filter-days" style="font-weight: bold; margin-left: 10px;">--</span>
+                    </div>
+                    <div id="ml-status-message" style="margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.2); border-radius: 8px; font-size: 14px;">
+                        <span id="ml-status-text">⏳ Waiting for prediction data...</span>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 12px; opacity: 0.7; text-align: center;">
+                        Last updated: <span id="ml-last-update">Never</span>
+                    </div>
+                </div>
+                
                 <!-- Current Status -->
                 <div class="phase-indicator">
                     <div>
                         <h3 style="margin: 0 0 5px 0;">Current Status</h3>
                         <p id="wc-phase-desc" style="margin: 0; color: #666;">Loading...</p>
                     </div>
-                    <div>
-                        <span id="wc-elapsed" style="font-size: 24px; font-weight: bold;">--</span>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div>
+                            <small style="color: #666;">Systems:</small>
+                            <span id="wc-systems-status" class="badge" style="margin-left: 5px;">Active</span>
+                        </div>
+                        <div>
+                            <small style="color: #666;">Elapsed:</small>
+                            <span id="wc-elapsed" style="font-size: 20px; font-weight: bold; margin-left: 5px;">--</span>
+                        </div>
                     </div>
                 </div>
                 
-                <!-- Phase Progress -->
-                <div class="phase-steps">
-                    <div class="phase-step" id="phase-0">
-                        <div class="phase-circle">1</div>
-                        <div>Prepare</div>
-                    </div>
-                    <div class="phase-step" id="phase-1">
-                        <div class="phase-circle">2</div>
-                        <div>Drain</div>
-                    </div>
-                    <div class="phase-step" id="phase-2">
-                        <div class="phase-circle">3</div>
-                        <div>Drained</div>
-                    </div>
-                    <div class="phase-step" id="phase-3">
-                        <div class="phase-circle">4</div>
-                        <div>Fill</div>
-                    </div>
-                    <div class="phase-step" id="phase-4">
-                        <div class="phase-circle">5</div>
-                        <div>Stabilize</div>
-                    </div>
-                    <div class="phase-step" id="phase-5">
-                        <div class="phase-circle">✓</div>
-                        <div>Complete</div>
+                <!-- Initial Readings (shown during water change) -->
+                <div id="wc-before-readings" class="card" style="display: none; background: #f0f9ff; border-left: 4px solid #3b82f6;">
+                    <h3 style="color: #1e40af; margin-bottom: 15px;">📊 Initial Readings (at start)</h3>
+                    <div class="sensor-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
+                        <div style="text-align: center; padding: 10px;">
+                            <div style="font-size: 14px; color: #666; margin-bottom: 5px;">Temperature</div>
+                            <div style="font-size: 24px; font-weight: bold; color: #1e40af;"><span id="wc-temp-before">--</span>°C</div>
+                        </div>
+                        <div style="text-align: center; padding: 10px;">
+                            <div style="font-size: 14px; color: #666; margin-bottom: 5px;">pH</div>
+                            <div style="font-size: 24px; font-weight: bold; color: #1e40af;"><span id="wc-ph-before">--</span></div>
+                        </div>
+                        <div style="text-align: center; padding: 10px;">
+                            <div style="font-size: 14px; color: #666; margin-bottom: 5px;">TDS</div>
+                            <div style="font-size: 24px; font-weight: bold; color: #1e40af;"><span id="wc-tds-before">--</span> ppm</div>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Controls -->
                 <div class="water-change-controls">
-                    <button class="btn btn-success" onclick="startWaterChange()" id="wc-start-btn">🚀 Start Water Change</button>
-                    <button class="btn btn-primary" onclick="advancePhase()" id="wc-advance-btn" disabled>➡️ Next Phase</button>
-                    <button class="btn btn-danger" onclick="cancelWaterChange()" id="wc-cancel-btn" disabled>❌ Cancel</button>
+                    <div id="wc-start-controls">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Volume (litres) - leave empty for scheduled amount</label>
+                        <input type="number" id="wc-volume-input" step="0.5" min="0" placeholder="Auto" 
+                               style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; width: 200px; margin-right: 10px;">
+                        <button class="btn btn-success" onclick="startWaterChange()" id="wc-start-btn">🚀 Start Water Change</button>
+                    </div>
+                    <div id="wc-active-controls" style="display: none;">
+                        <button class="btn btn-primary" onclick="endWaterChange()" id="wc-end-btn" style="font-size: 18px; padding: 12px 30px;">✅ Complete Water Change</button>
+                        <button class="btn btn-danger" onclick="cancelWaterChange()" id="wc-cancel-btn" style="margin-left: 10px;">❌ Cancel</button>
+                    </div>
+                </div>
+                
+                <!-- Filter Maintenance -->
+                <div class="card" style="background: #f0fdf4; border-left: 4px solid #10b981;">
+                    <h3 style="color: #065f46; margin-bottom: 15px;">🔧 Filter Maintenance</h3>
+                    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 15px;">
+                        <div style="flex: 1;">
+                            <div style="font-size: 14px; color: #666; margin-bottom: 5px;">Last Cleaned</div>
+                            <div style="font-size: 32px; font-weight: bold; color: #10b981;"><span id="filter-days-since">--</span> <span style="font-size: 16px;">days ago</span></div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="filter-notes-input" placeholder="Optional notes (e.g., 'Replaced cartridge')" 
+                               style="flex: 1; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+                        <button class="btn" onclick="recordFilterMaintenance()" style="background: #10b981; color: white; white-space: nowrap;">✅ Record Maintenance</button>
+                    </div>
                 </div>
                 
                 <!-- Schedule Info -->
@@ -923,24 +988,42 @@
                 <!-- History -->
                 <div class="card">
                     <h3>📊 Recent Water Changes</h3>
-                    <table class="history-table" id="wc-history-table">
-                        <thead>
-                            <tr>
-                                <th>Date & Time</th>
-                                <th>Volume (L)</th>
-                                <th>Temp Before</th>
-                                <th>Temp After</th>
-                                <th>pH Before</th>
-                                <th>pH After</th>
-                                <th>TDS Before</th>
-                                <th>TDS After</th>
-                                <th>Duration (min)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="wc-history-body">
-                            <tr><td colspan="9" style="text-align: center;">Loading history...</td></tr>
-                        </tbody>
-                    </table>
+                    <div style="overflow-x: auto;">
+                        <table class="history-table" id="wc-history-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Duration</th>
+                                    <th>Volume (L)</th>
+                                    <th>Temp Δ</th>
+                                    <th>pH Δ</th>
+                                    <th>TDS Δ</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wc-history-body">
+                                <tr><td colspan="7" style="text-align: center;">Loading history...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Filter Maintenance History -->
+                <div class="card">
+                    <h3>🔧 Filter Maintenance History</h3>
+                    <div style="overflow-x: auto;">
+                        <table class="history-table" id="filter-history-table">
+                            <thead>
+                                <tr>
+                                    <th>Date & Time</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="filter-history-body">
+                                <tr><td colspan="2" style="text-align: center;">Loading history...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 
                 <!-- Statistics -->
@@ -2327,9 +2410,13 @@
         // Update time status every 30 seconds
         setInterval(updateTimeStatus, 30000);
         
+        // Update ML prediction every 60 seconds
+        updateMLPrediction(); // Initial update
+        setInterval(updateMLPrediction, 60000);
+        
         // Water Change Functions
         let wcUpdateInterval = null;
-        let lastWaterChangePhase = null;
+        let lastWaterChangeInProgress = false;
         
         async function updateWaterChangeStatus() {
             try {
@@ -2337,14 +2424,11 @@
                 if (response.ok) {
                     const status = await response.json();
                     
-                    // Check if water change just completed (phase changed to complete/idle from in-progress)
-                    if (lastWaterChangePhase !== null && 
-                        lastWaterChangePhase > 0 && 
-                        lastWaterChangePhase < 6 && 
-                        (status.phase === 0 || status.phase === 6)) {
-                        // Water change just completed, refresh history and stats
+                    // Check if water change just completed
+                    if (lastWaterChangeInProgress && !status.inProgress) {
                         console.log('Water change completed, refreshing history...');
                         updateWaterChangeHistory();
+                        updateFilterHistory();
                         updateWaterChangeStats();
                         
                         // Stop the update interval timer
@@ -2355,32 +2439,45 @@
                         }
                     }
                     
-                    // Store current phase for next comparison
-                    lastWaterChangePhase = status.phase;
+                    // Store current state for next comparison
+                    lastWaterChangeInProgress = status.inProgress;
                     
                     // Update phase description
                     document.getElementById('wc-phase-desc').textContent = status.phaseDescription;
+                    const phaseDescEl = document.getElementById('wc-phase-desc');
+                    phaseDescEl.textContent = status.phaseDescription;
+                    phaseDescEl.style.color = status.inProgress ? '#f59e0b' : '#10b981';
+                    phaseDescEl.style.fontWeight = status.inProgress ? 'bold' : 'normal';
+                    
+                    // Update systems status
+                    const systemsEl = document.getElementById('wc-systems-status');
+                    systemsEl.textContent = status.systemsPaused ? 'PAUSED' : 'Active';
+                    systemsEl.style.background = status.systemsPaused ? '#ef4444' : '#10b981';
+                    systemsEl.style.color = 'white';
+                    systemsEl.style.padding = '4px 12px';
+                    systemsEl.style.borderRadius = '4px';
+                    systemsEl.style.fontSize = '14px';
+                    systemsEl.style.fontWeight = 'bold';
                     
                     // Update elapsed time
-                    const minutes = Math.floor(status.phaseElapsed / 60);
-                    const seconds = status.phaseElapsed % 60;
+                    const minutes = Math.floor(status.elapsedTime / 60);
+                    const seconds = status.elapsedTime % 60;
                     document.getElementById('wc-elapsed').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
                     
-                    // Update phase steps
-                    for (let i = 0; i <= 5; i++) {
-                        const step = document.getElementById(`phase-${i}`);
-                        step.classList.remove('active', 'completed');
-                        if (i < status.phase) {
-                            step.classList.add('completed');
-                        } else if (i === status.phase) {
-                            step.classList.add('active');
-                        }
-                    }
+                    // Show/hide control sections
+                    document.getElementById('wc-start-controls').style.display = status.inProgress ? 'none' : 'block';
+                    document.getElementById('wc-active-controls').style.display = status.inProgress ? 'block' : 'none';
                     
-                    // Update buttons
-                    document.getElementById('wc-start-btn').disabled = status.inProgress;
-                    document.getElementById('wc-advance-btn').disabled = !status.inProgress;
-                    document.getElementById('wc-cancel-btn').disabled = !status.inProgress;
+                    // Show/hide initial readings
+                    const beforeReadings = document.getElementById('wc-before-readings');
+                    if (status.inProgress && status.tempBefore !== undefined) {
+                        beforeReadings.style.display = 'block';
+                        document.getElementById('wc-temp-before').textContent = status.tempBefore.toFixed(1);
+                        document.getElementById('wc-ph-before').textContent = status.phBefore.toFixed(2);
+                        document.getElementById('wc-tds-before').textContent = status.tdsBefore.toFixed(0);
+                    } else {
+                        beforeReadings.style.display = 'none';
+                    }
                     
                     // Update schedule info
                     document.getElementById('wc-tank-volume').textContent = status.tankVolume.toFixed(1);
@@ -2394,6 +2491,9 @@
                     } else {
                         document.getElementById('wc-days-until').classList.remove('overdue');
                     }
+                    
+                    // Update filter maintenance days
+                    document.getElementById('filter-days-since').textContent = status.daysSinceFilterMaintenance || '--';
                     
                     // Update schedule select and volume percent
                     document.getElementById('wc-schedule').value = status.schedule;
@@ -2413,7 +2513,57 @@
                     tbody.innerHTML = '';
                     
                     if (history.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center;">No water changes recorded yet</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No water changes recorded yet</td></tr>';
+                    } else {
+                        history.forEach(record => {
+                            const row = document.createElement('tr');
+                            const date = new Date(record.endTime * 1000);
+                            const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                            
+                            const tempDelta = (record.tempAfter - record.tempBefore).toFixed(1);
+                            const phDelta = (record.phAfter - record.phBefore).toFixed(2);
+                            const tdsDelta = (record.tdsAfter - record.tdsBefore).toFixed(0);
+                            
+                            row.innerHTML = `
+                                <td>${dateStr}</td>
+                                <td>${record.duration} min</td>
+                                <td>${record.volume.toFixed(1)}</td>
+                                <td style="color: ${tempDelta > 0 ? '#ef4444' : tempDelta < 0 ? '#3b82f6' : '#666'};">
+                                    ${tempDelta > 0 ? '+' : ''}${tempDelta}°C
+                                </td>
+                                <td style="color: ${phDelta > 0 ? '#10b981' : phDelta < 0 ? '#ef4444' : '#666'};">
+                                    ${phDelta > 0 ? '+' : ''}${phDelta}
+                                </td>
+                                <td style="color: ${tdsDelta > 0 ? '#f59e0b' : tdsDelta < 0 ? '#3b82f6' : '#666'};">
+                                    ${tdsDelta > 0 ? '+' : ''}${tdsDelta} ppm
+                                </td>
+                                <td>
+                                    <small style="color: #666;">
+                                        T: ${record.tempBefore.toFixed(1)}→${record.tempAfter.toFixed(1)}°C<br>
+                                        pH: ${record.phBefore.toFixed(2)}→${record.phAfter.toFixed(2)}<br>
+                                        TDS: ${record.tdsBefore.toFixed(0)}→${record.tdsAfter.toFixed(0)} ppm
+                                    </small>
+                                </td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch water change history:', error);
+            }
+        }
+        
+        async function updateFilterHistory() {
+            try {
+                const response = await fetch('/api/maintenance/filter?count=10');
+                if (response.ok) {
+                    const history = await response.json();
+                    const tbody = document.getElementById('filter-history-body');
+                    tbody.innerHTML = '';
+                    
+                    if (history.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="2" style="text-align: center;">No maintenance records yet</td></tr>';
                     } else {
                         history.forEach(record => {
                             const row = document.createElement('tr');
@@ -2422,21 +2572,14 @@
                             
                             row.innerHTML = `
                                 <td>${dateStr}</td>
-                                <td>${record.volume.toFixed(1)}</td>
-                                <td>${record.tempBefore.toFixed(1)}°C</td>
-                                <td>${record.tempAfter.toFixed(1)}°C</td>
-                                <td>${record.phBefore.toFixed(2)}</td>
-                                <td>${record.phAfter.toFixed(2)}</td>
-                                <td>${record.tdsBefore.toFixed(0)} ppm</td>
-                                <td>${record.tdsAfter.toFixed(0)} ppm</td>
-                                <td>${record.duration}</td>
+                                <td>${record.notes || '<em style="color: #999;">(No notes)</em>'}</td>
                             `;
                             tbody.appendChild(row);
                         });
                     }
                 }
             } catch (error) {
-                console.error('Failed to fetch water change history:', error);
+                console.error('Failed to fetch filter history:', error);
             }
         }
         
@@ -2455,123 +2598,110 @@
             }
         }
         
+        async function updateMLPrediction() {
+            try {
+                const response = await fetch('/api/ml/prediction');
+                if (response.ok) {
+                    const ml = await response.json();
+                    
+                    // Update prediction values
+                    document.getElementById('ml-days-remaining').textContent = ml.days_remaining !== undefined ? ml.days_remaining.toFixed(1) : '--';
+                    document.getElementById('ml-days-since').textContent = ml.days_since_last !== undefined ? ml.days_since_last.toFixed(1) : '--';
+                    document.getElementById('ml-confidence').textContent = ml.confidence !== undefined ? Math.round(ml.confidence * 100) : '--';
+                    document.getElementById('ml-model').textContent = ml.model || '--';
+                    document.getElementById('ml-tds-rate').textContent = ml.tds_rate !== undefined ? ml.tds_rate.toFixed(2) : '--';
+                    
+                    // Update filter status if available
+                    if (ml.days_since_filter !== undefined && ml.days_since_filter < 999) {
+                        document.getElementById('ml-filter-status').style.display = 'block';
+                        document.getElementById('ml-filter-days').textContent = ml.days_since_filter.toFixed(0) + ' days since filter maintenance';
+                    } else {
+                        document.getElementById('ml-filter-status').style.display = 'none';
+                    }
+                    
+                    // Update status message
+                    const statusDiv = document.getElementById('ml-status-message');
+                    const statusText = document.getElementById('ml-status-text');
+                    
+                    if (!ml.valid || ml.error) {
+                        statusDiv.style.background = 'rgba(239, 68, 68, 0.3)';
+                        if (ml.error === 'no_trained_model') {
+                            statusText.textContent = '⚠️ No trained model yet. Need more water change history.';
+                        } else if (ml.error === 'insufficient_data') {
+                            statusText.textContent = '⚠️ Insufficient data for prediction. Perform ' + (5 - (ml.samples || 0)) + ' more water changes.';
+                        } else if (ml.stale) {
+                            statusText.textContent = '⏰ Prediction data is stale (>24 hours old)';
+                        } else {
+                            statusText.textContent = '⚠️ ' + (ml.error || 'Unknown error');
+                        }
+                    } else if (ml.needs_change_soon) {
+                        statusDiv.style.background = 'rgba(251, 191, 36, 0.3)';
+                        statusText.textContent = '⚡ Water change recommended soon!';
+                    } else if (ml.days_remaining < 3) {
+                        statusDiv.style.background = 'rgba(251, 191, 36, 0.2)';
+                        statusText.textContent = '✅ Water change approaching in next few days';
+                    } else {
+                        statusDiv.style.background = 'rgba(34, 197, 94, 0.3)';
+                        statusText.textContent = '✅ Water quality stable - ' + Math.round(ml.days_remaining) + ' days until next change';
+                    }
+                    
+                    // Update timestamp
+                    if (ml.timestamp) {
+                        const date = new Date(ml.timestamp * 1000);
+                        document.getElementById('ml-last-update').textContent = date.toLocaleString();
+                    }
+                } else if (response.status === 404) {
+                    // No prediction available yet
+                    document.getElementById('ml-status-text').textContent = '⏳ Waiting for ML service to generate prediction...';
+                }
+            } catch (error) {
+                console.error('Failed to fetch ML prediction:', error);
+                document.getElementById('ml-status-text').textContent = '❌ Failed to fetch prediction data';
+            }
+        }
+        
         async function startWaterChange() {
             if (confirm('Start water change? This will pause heating and CO2 systems for safety.')) {
+                const volumeInput = document.getElementById('wc-volume-input');
+                const volume = parseFloat(volumeInput.value) || 0; // 0 = use scheduled volume
+                
                 const response = await fetch('/api/waterchange/start', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({})
+                    body: JSON.stringify({volume: volume})
                 });
                 
                 if (response.ok) {
+                    volumeInput.value = '';
                     showAlert('✓ Water change started - Systems paused for safety', 'success');
                     updateWaterChangeStatus();
                     // Start auto-updating status
                     if (wcUpdateInterval) clearInterval(wcUpdateInterval);
-                    wcUpdateInterval = setInterval(updateWaterChangeStatus, 2000);
+                    wcUpdateInterval = setInterval(updateWaterChangeStatus, 5000);
                 } else {
                     showAlert('Failed to start water change', 'error');
                 }
             }
         }
         
-        async function advancePhase() {
-            // Check if we're in the stabilizing phase (phase 5)
-            if (lastWaterChangePhase === 5) {
-                // Show dialog to ask for actual volume
-                await showVolumeCompletionDialog();
-            } else {
-                // Normal phase advancement
-                const response = await fetch('/api/waterchange/advance', {method: 'POST'});
+        async function endWaterChange() {
+            if (confirm('Complete water change? Systems will be re-enabled.')) {
+                const response = await fetch('/api/waterchange/end', {
+                    method: 'POST'
+                });
                 
                 if (response.ok) {
-                    showAlert('✓ Advanced to next phase', 'success');
+                    showAlert('✓ Water change completed - Systems resumed', 'success');
                     updateWaterChangeStatus();
+                    updateWaterChangeHistory();
+                    updateFilterHistory();
+                    if (wcUpdateInterval) {
+                        clearInterval(wcUpdateInterval);
+                        wcUpdateInterval = null;
+                    }
                 } else {
-                    const error = await response.json();
-                    showAlert('Failed to advance: ' + (error.error || 'Unknown error'), 'error');
+                    showAlert('Failed to complete water change', 'error');
                 }
-            }
-        }
-        
-        async function showVolumeCompletionDialog() {
-            // Get the scheduled volume from the display
-            const scheduledVolText = document.getElementById('wc-scheduled-volume').textContent;
-            const scheduledVol = parseFloat(scheduledVolText) || 25.0;
-            
-            // Create custom dialog
-            const dialog = document.createElement('div');
-            dialog.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000;';
-            
-            const dialogBox = document.createElement('div');
-            dialogBox.style.cssText = 'background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); padding: 30px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-width: 400px; width: 90%;';
-            
-            dialogBox.innerHTML = `
-                <h3 style="margin: 0 0 20px 0; color: #fff; font-size: 24px;">💧 Complete Water Change</h3>
-                <p style="color: #e0e0e0; margin-bottom: 20px; line-height: 1.6;">
-                    Please enter the approximate volume of water changed:
-                </p>
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; color: #fff; margin-bottom: 8px; font-weight: 500;">Volume (litres)</label>
-                    <input type="number" id="actual-volume-input" step="0.5" min="0" 
-                           value="${scheduledVol.toFixed(1)}" 
-                           style="width: 100%; padding: 12px; border: 2px solid #4a90e2; border-radius: 8px; font-size: 18px; background: #fff; box-sizing: border-box;">
-                </div>
-                <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button onclick="cancelVolumeDialog()" 
-                            style="padding: 12px 24px; background: #666; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 500;">
-                        Cancel
-                    </button>
-                    <button onclick="confirmVolumeAndComplete()" 
-                            style="padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 500; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
-                        ✓ Complete
-                    </button>
-                </div>
-            `;
-            
-            dialog.appendChild(dialogBox);
-            document.body.appendChild(dialog);
-            
-            // Focus the input
-            setTimeout(() => document.getElementById('actual-volume-input').focus(), 100);
-            
-            // Allow Enter key to submit
-            document.getElementById('actual-volume-input').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    confirmVolumeAndComplete();
-                }
-            });
-        }
-        
-        window.cancelVolumeDialog = function() {
-            const dialog = document.querySelector('div[style*="position: fixed"]');
-            if (dialog) dialog.remove();
-        }
-        
-        window.confirmVolumeAndComplete = async function() {
-            const actualVolume = parseFloat(document.getElementById('actual-volume-input').value);
-            
-            if (isNaN(actualVolume) || actualVolume <= 0) {
-                showAlert('Please enter a valid volume', 'error');
-                return;
-            }
-            
-            // Remove dialog
-            cancelVolumeDialog();
-            
-            // Send completion request with actual volume
-            const response = await fetch('/api/waterchange/advance', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({actualVolume: actualVolume})
-            });
-            
-            if (response.ok) {
-                showAlert(`✓ Water change completed with ${actualVolume.toFixed(1)}L changed`, 'success');
-                updateWaterChangeStatus();
-            } else {
-                const error = await response.json();
-                showAlert('Failed to complete: ' + (error.error || 'Unknown error'), 'error');
             }
         }
         
@@ -2613,13 +2743,38 @@
             }
         }
         
+        async function recordFilterMaintenance() {
+            const notesInput = document.getElementById('filter-notes-input');
+            const notes = notesInput.value.trim();
+            
+            const response = await fetch('/api/maintenance/filter', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({notes: notes})
+            });
+            
+            if (response.ok) {
+                notesInput.value = '';
+                showAlert('✓ Filter maintenance recorded', 'success');
+                updateWaterChangeStatus(); // Refresh days count
+                updateFilterHistory();
+            } else {
+                showAlert('Failed to record filter maintenance', 'error');
+            }
+        }
+        
         // Initial load of water change status
         updateWaterChangeStatus();
         updateWaterChangeHistory();
+        updateFilterHistory();
         updateWaterChangeStats();
         
-        // Update water change status every 5 seconds
-        setInterval(updateWaterChangeStatus, 5000);
+        // Update water change status every 30 seconds (faster when in progress via wcUpdateInterval)
+        setInterval(() => {
+            if (!wcUpdateInterval) {
+                updateWaterChangeStatus();
+            }
+        }, 30000);
         
         // ====================
         // Pattern Learning Functions

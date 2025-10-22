@@ -17,29 +17,32 @@ enum WaterChangeSchedule {
     SCHEDULE_MONTHLY = 30
 };
 
-// Water change phases
+// Water change phases (simplified)
 enum WaterChangePhase {
     PHASE_IDLE = 0,
-    PHASE_PREPARE,      // Pause systems
-    PHASE_DRAINING,     // Draining old water
-    PHASE_DRAINED,      // Waiting for user to add new water
-    PHASE_FILLING,      // Filling with new water
-    PHASE_STABILIZING,  // Temperature/pH stabilization
+    PHASE_IN_PROGRESS,  // Water change in progress (systems paused)
     PHASE_COMPLETE      // Resume normal operation
 };
 
-// Water change record
+// Water change record (simplified)
 struct WaterChangeRecord {
-    unsigned long timestamp;    // Unix timestamp (seconds since epoch)
-    float volumeChanged;        // Liters
-    float tempBefore;
-    float tempAfter;
-    float phBefore;
-    float phAfter;
-    float tdsBefore;
-    float tdsAfter;
+    unsigned long startTimestamp;   // Unix timestamp when started (seconds since epoch)
+    unsigned long endTimestamp;     // Unix timestamp when ended
+    float volumeChanged;            // Liters
+    float tempBefore;               // Temperature before change (°C)
+    float tempAfter;                // Temperature after change (°C)
+    float phBefore;                 // pH before change
+    float phAfter;                  // pH after change
+    float tdsBefore;                // TDS before change (ppm)
+    float tdsAfter;                 // TDS after change (ppm)
     int durationMinutes;
     bool completedSuccessfully;
+};
+
+// Filter maintenance record
+struct FilterMaintenanceRecord {
+    unsigned long timestamp;        // Unix timestamp when maintenance performed
+    String notes;                   // Optional notes (e.g., "Replaced filter media", "Cleaned impeller")
 };
 
 class WaterChangeAssistant {
@@ -54,24 +57,18 @@ private:
     
     // Current water change state
     WaterChangePhase currentPhase;
-    unsigned long phaseStartTime;
     unsigned long waterChangeStartTimestamp; // Unix timestamp when water change started
     float currentChangeVolume;
-    float tempBeforeChange;
-    float phBeforeChange;
-    float tdsBeforeChange;
+    float tempBeforeChange;         // Captured at start
+    float phBeforeChange;           // Captured at start
+    float tdsBeforeChange;          // Captured at start
     bool systemsPaused;
     
     // History tracking
     std::vector<WaterChangeRecord> history;
+    std::vector<FilterMaintenanceRecord> filterMaintenanceHistory;
     static const int MAX_HISTORY = 50;
-    
-    // Safety parameters
-    float maxTempDifference;      // Max safe temp difference (°C)
-    float maxPhDifference;        // Max safe pH difference
-    unsigned long maxDrainTime;   // Max time for drain phase (ms)
-    unsigned long maxFillTime;    // Max time for fill phase (ms)
-    unsigned long stabilizationTime; // Time to wait for stabilization (ms)
+    static const int MAX_FILTER_HISTORY = 100;
     
     // Deferred saving (dirty flag pattern)
     bool settingsDirty;
@@ -84,6 +81,9 @@ private:
     void loadHistory();
     void saveHistory();
     void addToHistory(const WaterChangeRecord& record);
+    void loadFilterMaintenanceHistory();
+    void saveFilterMaintenanceHistory();
+    void addFilterMaintenance(const FilterMaintenanceRecord& record);
     
     void markSettingsDirty();
     void markHistoryDirty();
@@ -109,12 +109,16 @@ public:
     float getTankVolume(); // Returns calculated volume from ConfigManager
     float getScheduledChangeVolume(); // Returns litres
     
-    // Water change operations
-    bool startWaterChange(float volumeLitres = 0); // 0 = use scheduled volume
-    bool advancePhase();
-    bool cancelWaterChange();
-    bool completeWaterChange();
-    void setActualVolume(float volumeLitres); // Set actual volume changed (for completion dialog)
+    // Water change operations (simplified)
+    bool startWaterChange(float volumeLitres, float temp, float ph, float tds); // Start water change with current readings
+    bool endWaterChange(float temp, float ph, float tds); // End water change with final readings and resume systems
+    bool cancelWaterChange(); // Cancel without logging
+    
+    // Filter maintenance
+    bool recordFilterMaintenance(const char* notes = "");
+    unsigned long getDaysSinceLastFilterMaintenance();
+    int getFilterMaintenanceCount() { return filterMaintenanceHistory.size(); }
+    std::vector<FilterMaintenanceRecord> getRecentFilterMaintenance(int count);
     
     // Deferred save management
     void forceSave(); // Immediate save for critical operations
@@ -122,12 +126,8 @@ public:
     // Phase control
     WaterChangePhase getCurrentPhase() { return currentPhase; }
     const char* getPhaseDescription();
-    unsigned long getPhaseElapsedTime(); // Returns seconds
-    bool isInProgress() { return currentPhase != PHASE_IDLE && currentPhase != PHASE_COMPLETE; }
-    
-    // Safety checks
-    bool isSafeToFill(float currentTemp, float currentPh);
-    void setSafetyLimits(float maxTempDiff, float maxPhDiff);
+    unsigned long getElapsedTime(); // Returns seconds since start
+    bool isInProgress() { return currentPhase == PHASE_IN_PROGRESS; }
     bool areSystemsPaused() { return systemsPaused; }
     
     // History and statistics
@@ -140,6 +140,7 @@ public:
     
     // Status
     float getCurrentChangeVolume() { return currentChangeVolume; }
+    unsigned long getStartTimestamp() { return waterChangeStartTimestamp; }
     float getTempBeforeChange() { return tempBeforeChange; }
     float getPhBeforeChange() { return phBeforeChange; }
     float getTdsBeforeChange() { return tdsBeforeChange; }

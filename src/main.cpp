@@ -234,7 +234,6 @@ void setup() {
     waterChangeAssistant = new WaterChangeAssistant();
     waterChangeAssistant->begin(configMgr); // Pass ConfigManager to use tank dimensions
     waterChangeAssistant->setSchedule(SCHEDULE_WEEKLY, 25.0); // 25% weekly (if not saved in NVS)
-    waterChangeAssistant->setSafetyLimits(2.0, 0.5); // ±2°C, ±0.5 pH
     
     if (eventLogger) {
         eventLogger->info("waterchange", "Water change assistant ready");

@@ -16,7 +16,7 @@ WebServerManager::~WebServerManager() {
 
 void WebServerManager::begin() {
     Serial.println("Web interface embedded in firmware (PROGMEM) - always available!");
-    Serial.printf("Compressed HTML size: %u bytes\n", index_html_gz_len);
+    Serial.printf("Compressed HTML size: %u bytes\n", data_index_html_gz_len);
     
     // Setup WebSocket
     ws->onEvent([this](AsyncWebSocket* server, AsyncWebSocketClient* client, 
@@ -45,8 +45,8 @@ void WebServerManager::setupRoutes() {
         AsyncWebServerResponse *response = request->beginResponse(
             200, 
             "text/html", 
-            index_html_gz, 
-            index_html_gz_len
+            data_index_html_gz, 
+            data_index_html_gz_len
         );
         response->addHeader("Content-Encoding", "gzip");
         response->addHeader("Cache-Control", "max-age=86400"); // Cache for 24 hours
@@ -496,7 +496,7 @@ void WebServerManager::setupRoutes() {
         doc["inProgress"] = waterChangeAssistant->isInProgress();
         doc["phase"] = waterChangeAssistant->getCurrentPhase();
         doc["phaseDescription"] = waterChangeAssistant->getPhaseDescription();
-        doc["phaseElapsed"] = waterChangeAssistant->getPhaseElapsedTime();
+        doc["elapsedTime"] = waterChangeAssistant->getElapsedTime();
         doc["systemsPaused"] = waterChangeAssistant->areSystemsPaused();
         doc["currentVolume"] = waterChangeAssistant->getCurrentChangeVolume();
         doc["tankVolume"] = waterChangeAssistant->getTankVolume();
@@ -506,6 +506,16 @@ void WebServerManager::setupRoutes() {
         doc["daysSinceLastChange"] = waterChangeAssistant->getDaysSinceLastChange();
         doc["daysUntilNextChange"] = waterChangeAssistant->getDaysUntilNextChange();
         doc["isOverdue"] = waterChangeAssistant->isChangeOverdue();
+        
+        // If water change in progress, include "before" readings
+        if (waterChangeAssistant->isInProgress()) {
+            doc["tempBefore"] = waterChangeAssistant->getTempBeforeChange();
+            doc["phBefore"] = waterChangeAssistant->getPhBeforeChange();
+            doc["tdsBefore"] = waterChangeAssistant->getTdsBeforeChange();
+        }
+        
+        // Filter maintenance info
+        doc["daysSinceFilterMaintenance"] = waterChangeAssistant->getDaysSinceLastFilterMaintenance();
         
         String response;
         serializeJson(doc, response);
@@ -529,52 +539,30 @@ void WebServerManager::setupRoutes() {
             }
         }
         
-        if (waterChangeAssistant->startWaterChange(volume)) {
+        // Get current sensor readings
+        SensorData sensorData = getSensorData();
+        
+        if (waterChangeAssistant->startWaterChange(volume, sensorData.temperature, sensorData.ph, sensorData.tds)) {
             request->send(200, "application/json", "{\"status\":\"ok\"}");
         } else {
             request->send(400, "application/json", "{\"error\":\"Failed to start water change\"}");
         }
     });
     
-    // API: Water Change - Advance Phase
-    server->on("/api/waterchange/advance", HTTP_POST, 
-    [](AsyncWebServerRequest* request) {
-        // Handle requests without body (normal phase advancement)
+    // API: Water Change - End
+    server->on("/api/waterchange/end", HTTP_POST, [](AsyncWebServerRequest* request) {
         if (!waterChangeAssistant) {
             request->send(500, "application/json", "{\"error\":\"Water change assistant not initialized\"}");
             return;
         }
         
-        if (waterChangeAssistant->advancePhase()) {
+        // Get current sensor readings
+        SensorData sensorData = getSensorData();
+        
+        if (waterChangeAssistant->endWaterChange(sensorData.temperature, sensorData.ph, sensorData.tds)) {
             request->send(200, "application/json", "{\"status\":\"ok\"}");
         } else {
-            request->send(400, "application/json", "{\"error\":\"Failed to advance phase\"}");
-        }
-    }, NULL, 
-    [](AsyncWebServerRequest* request, uint8_t *data, size_t len, size_t index, size_t total) {
-        // Handle requests with body (phase advancement with volume)
-        if (!waterChangeAssistant) {
-            request->send(500, "application/json", "{\"error\":\"Water change assistant not initialized\"}");
-            return;
-        }
-        
-        // Check if volume data was provided (for completion with actual volume)
-        if (len > 0) {
-            StaticJsonDocument<128> doc;
-            DeserializationError error = deserializeJson(doc, data, len);
-            
-            if (!error && doc.containsKey("actualVolume")) {
-                float actualVolume = doc["actualVolume"];
-                // Store actual volume in the water change assistant
-                waterChangeAssistant->setActualVolume(actualVolume);
-                Serial.printf("Water change actual volume set to: %.1f litres\n", actualVolume);
-            }
-        }
-        
-        if (waterChangeAssistant->advancePhase()) {
-            request->send(200, "application/json", "{\"status\":\"ok\"}");
-        } else {
-            request->send(400, "application/json", "{\"error\":\"Failed to advance phase\"}");
+            request->send(400, "application/json", "{\"error\":\"Failed to end water change\"}");
         }
     });
     
@@ -610,7 +598,8 @@ void WebServerManager::setupRoutes() {
         for (size_t i = 0; i < records.size(); i++) {
             if (i > 0) json += ",";
             json += "{";
-            json += "\"timestamp\":" + String(records[i].timestamp) + ",";
+            json += "\"startTime\":" + String(records[i].startTimestamp) + ",";
+            json += "\"endTime\":" + String(records[i].endTimestamp) + ",";
             json += "\"volume\":" + String(records[i].volumeChanged) + ",";
             json += "\"tempBefore\":" + String(records[i].tempBefore) + ",";
             json += "\"tempAfter\":" + String(records[i].tempAfter) + ",";
@@ -701,6 +690,99 @@ void WebServerManager::setupRoutes() {
         
         String response;
         serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    // ============================
+    // Filter Maintenance API
+    // ============================
+    
+    // API: Filter Maintenance - Record
+    server->on("/api/maintenance/filter", HTTP_POST, [](AsyncWebServerRequest* request) {}, 
+        NULL, [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+        if (!waterChangeAssistant) {
+            request->send(500, "application/json", "{\"error\":\"Water change assistant not initialized\"}");
+            return;
+        }
+        
+        String notes = "";
+        if (len > 0) {
+            StaticJsonDocument<256> doc;
+            DeserializationError error = deserializeJson(doc, data, len);
+            if (!error && doc.containsKey("notes")) {
+                notes = doc["notes"].as<String>();
+            }
+        }
+        
+        if (waterChangeAssistant->recordFilterMaintenance(notes.c_str())) {
+            request->send(200, "application/json", "{\"status\":\"ok\"}");
+        } else {
+            request->send(500, "application/json", "{\"error\":\"Failed to record filter maintenance\"}");
+        }
+    });
+    
+    // API: Filter Maintenance - History
+    server->on("/api/maintenance/filter", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!waterChangeAssistant) {
+            request->send(500, "application/json", "{\"error\":\"Water change assistant not initialized\"}");
+            return;
+        }
+        
+        int count = 10; // Default
+        if (request->hasParam("count")) {
+            count = request->getParam("count")->value().toInt();
+        }
+        
+        auto records = waterChangeAssistant->getRecentFilterMaintenance(count);
+        
+        String json = "[";
+        for (size_t i = 0; i < records.size(); i++) {
+            if (i > 0) json += ",";
+            json += "{";
+            json += "\"timestamp\":" + String(records[i].timestamp) + ",";
+            json += "\"notes\":\"";
+            // Escape quotes in notes
+            for (size_t j = 0; j < records[i].notes.length(); j++) {
+                if (records[i].notes[j] == '"') {
+                    json += "\\\"";
+                } else {
+                    json += records[i].notes[j];
+                }
+            }
+            json += "\"";
+            json += "}";
+        }
+        json += "]";
+        
+        request->send(200, "application/json", json);
+    });
+    
+    // ====================
+    // ML Prediction API
+    // ====================
+    
+    // API: ML Prediction - Get Current Prediction
+    server->on("/api/ml/prediction", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!mlPredictor) {
+            request->send(404, "application/json", "{\"error\":\"ML predictor not initialized\"}");
+            return;
+        }
+        
+        if (!mlPredictor->isPredictionValid()) {
+            StaticJsonDocument<256> doc;
+            doc["error"] = "no_prediction";
+            doc["valid"] = false;
+            doc["stale"] = mlPredictor->isPredictionStale();
+            doc["message"] = "No valid prediction available. ML service may not be running.";
+            
+            String response;
+            serializeJson(doc, response);
+            request->send(404, "application/json", response);
+            return;
+        }
+        
+        // Build prediction response
+        String response = mlPredictor->getStatusJSON();
         request->send(200, "application/json", response);
     });
     
