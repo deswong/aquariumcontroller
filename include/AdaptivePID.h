@@ -7,6 +7,15 @@
 // Forward declaration
 class MLDataLogger;
 
+// ESP32-S3 Phase 1 Enhancements: PSRAM support
+#ifdef BOARD_HAS_PSRAM
+#define PID_USE_PSRAM 1
+#define PID_HISTORY_SIZE 1000  // Large history buffer in PSRAM
+#else
+#define PID_USE_PSRAM 0
+#define PID_HISTORY_SIZE 100   // Smaller history buffer in SRAM
+#endif
+
 class AdaptivePID {
 private:
     float kp, ki, kd;
@@ -50,8 +59,11 @@ private:
     unsigned long lastPeakTime;
     bool peakDetected;
     
-    // Learning/adaptation
-    float errorHistory[100];
+    // Learning/adaptation - PHASE 1: PSRAM-based history buffers
+    float* errorHistory;      // Dynamic allocation (PSRAM if available)
+    float* outputHistory;     // Track outputs for ML analysis
+    float* inputHistory;      // Track inputs for ML analysis
+    uint16_t historySize;     // Configurable size based on available memory
     int errorIndex;
     float performanceMetric;
     bool useMLAdaptation;
@@ -76,6 +88,117 @@ private:
     bool mlEnabled;
     float mlConfidence;
     
+    // PHASE 1: ML Parameter Cache (NVS-based)
+    struct MLParamCache {
+        float ambientTemp;
+        uint8_t hour;
+        uint8_t season;
+        float kp_ml, ki_ml, kd_ml;
+        float confidence;
+        uint32_t lastUpdateTime;
+        bool valid;
+    };
+    MLParamCache mlCache;
+    uint32_t mlCacheValidityMs;     // Cache lifetime (default: 5 minutes)
+    uint32_t mlCacheHits;           // Statistics
+    uint32_t mlCacheMisses;
+    
+    // PHASE 1: Hardware Timer Support
+    hw_timer_t* controlTimer;
+    bool useHardwareTimer;
+    uint32_t controlPeriodUs;       // Microseconds
+    volatile bool computeReady;
+    static void IRAM_ATTR onControlTimer(void* arg);
+    
+    // PHASE 1: Performance Profiling
+    struct PerformanceProfile {
+        uint32_t computeTimeUs;      // Current compute time (microseconds)
+        uint32_t maxComputeTimeUs;
+        uint32_t minComputeTimeUs;
+        uint32_t avgComputeTimeUs;
+        uint32_t computeCount;
+        uint32_t overrunCount;       // Missed deadlines
+        float cpuUsagePercent;
+    };
+    PerformanceProfile profile;
+    bool enableProfiling;
+    
+    // PHASE 2: Dual-Core ML Processing
+    TaskHandle_t mlTaskHandle;
+    SemaphoreHandle_t paramMutex;          // Protect PID parameters
+    SemaphoreHandle_t mlWakeupSemaphore;   // Signal ML task
+    bool useDualCore;
+    volatile bool mlTaskRunning;
+    struct MLTaskData {
+        float ambientTemp;
+        uint8_t hour;
+        uint8_t season;
+        float tankVolume;
+        float tds;  // Added for TDS influence
+        bool needsUpdate;
+    };
+    MLTaskData mlTaskData;
+    static void mlAdaptationTask(void* pvParameters);
+    
+    // PHASE 2: Kalman Filter for sensor smoothing
+    struct KalmanFilter {
+        float x;          // State estimate
+        float p;          // Error covariance
+        float q;          // Process noise
+        float r;          // Measurement noise
+        bool initialized;
+    };
+    KalmanFilter kalman;
+    bool useKalman;
+    float kalmanFilterInput(float measurement);
+    void initKalmanFilter(float processNoise, float measurementNoise);
+    
+    // PHASE 3: Bumpless Transfer (smooth parameter transitions)
+    struct ParameterTransition {
+        float kp_target, ki_target, kd_target;
+        float kp_start, ki_start, kd_start;
+        uint32_t transitionStartTime;
+        uint32_t transitionDuration;  // ms
+        bool inTransition;
+    };
+    ParameterTransition paramTransition;
+    void updateParameterTransition();
+    
+    // PHASE 3: Health Monitoring
+    struct HealthMetrics {
+        bool outputStuck;              // Output not changing despite error
+        bool persistentHighError;      // Error remains high for extended period
+        bool outputSaturation;         // Output at limits too often
+        uint32_t lastHealthCheck;
+        uint32_t stuckOutputCount;
+        uint32_t saturationCount;
+        float lastOutputValue;
+        bool hasError;
+        String errorMessage;
+    };
+    HealthMetrics health;
+    bool useHealthMonitoring;
+    void updateHealthMetrics();
+    
+    // PHASE 3: Predictive Feed-Forward based on TDS/sensor data
+    struct FeedForwardModel {
+        float tdsInfluence;            // How TDS affects target (cooling effect from water changes)
+        float ambientTempInfluence;    // How ambient temp affects heat loss
+        float phInfluence;             // How pH affects CO2 dissolution (for CO2 control)
+        bool enabled;
+        // Baseline values for computing deltas
+        float baselineTDS;
+        float baselineAmbientTemp;
+        float baselinePH;
+        // Last computed contributions (for API reporting)
+        float lastTdsContribution;
+        float lastAmbientContribution;
+        float lastPhContribution;
+        float lastTotalContribution;
+    };
+    FeedForwardModel feedForward;
+    float computeFeedForward(float tds, float ambientTemp, float ph);
+    
     // Storage
     Preferences* prefs;
     String namespace_name;
@@ -88,6 +211,12 @@ private:
     void updatePerformanceMetrics(float error, float input);
     float computeDerivative(float input, float dt);
     void updateSetpointRamp(float dt);
+    
+    // PHASE 1: Internal helpers
+    void saveCacheToNVS();
+    void loadCacheFromNVS();
+    void allocateHistoryBuffers();
+    void freeHistoryBuffers();
 
 public:
     AdaptivePID(String namespaceName, float initialKp = 2.0, float initialKi = 0.1, float initialKd = 1.0);
@@ -148,6 +277,63 @@ public:
     float getOutput() { return lastOutput; }
     float getIntegral() { return integral; }
     float getPerformanceMetric() { return performanceMetric; }
+    
+    // PHASE 1: Hardware Timer Control
+    void enableHardwareTimer(uint32_t periodMs);
+    void disableHardwareTimer();
+    float computeIfReady(float input);  // Only compute if timer triggered
+    bool isComputeReady() { return computeReady; }
+    
+    // PHASE 1: Performance Profiling
+    void enablePerformanceProfiling(bool enable);
+    String getProfileReport();
+    PerformanceProfile getProfile() { return profile; }
+    float getCPUUsage() { return profile.cpuUsagePercent; }
+    
+    // PHASE 1: ML Cache Statistics
+    float getMLCacheHitRate() { 
+        uint32_t total = mlCacheHits + mlCacheMisses;
+        return (total > 0) ? ((float)mlCacheHits / (float)total * 100.0f) : 0.0f;
+    }
+    void resetMLCacheStats() { mlCacheHits = 0; mlCacheMisses = 0; }
+    
+    // History buffer access (for ML training)
+    uint16_t getHistorySize() { return historySize; }
+    float getErrorHistory(uint16_t index);
+    float getOutputHistory(uint16_t index);
+    float getInputHistory(uint16_t index);
+    
+    // PHASE 2: Dual-Core ML Control
+    void enableDualCoreML(bool enable);
+    bool isDualCoreEnabled() { return useDualCore; }
+    void triggerMLAdaptation(float ambientTemp, uint8_t hour, uint8_t season, float tankVolume = 100.0f, float tds = 0.0f);
+    
+    // PHASE 2: Kalman Filter Control
+    void enableKalmanFilter(bool enable, float processNoise = 0.001f, float measurementNoise = 0.1f);
+    bool isKalmanEnabled() { return useKalman; }
+    float getKalmanState() { return kalman.x; }
+    float getKalmanCovariance() { return kalman.p; }
+    bool isKalmanInitialized() { return kalman.initialized; }
+    
+    // PHASE 3: Bumpless Transfer
+    void setParametersSmooth(float p, float i, float d, uint32_t durationMs = 30000);
+    bool isInTransition() { return paramTransition.inTransition; }
+    
+    // PHASE 3: Health Monitoring
+    void enableHealthMonitoring(bool enable);
+    bool isHealthMonitoringEnabled() { return useHealthMonitoring; }
+    HealthMetrics getHealthMetrics() { return health; }
+    String getHealthReport();
+    
+    // PHASE 3: Predictive Feed-Forward with sensor data
+    void enableFeedForwardModel(bool enable, float tdsInfluence = 0.1f, float ambientInfluence = 0.3f, float phInfluence = 0.2f);
+    bool isFeedForwardEnabled() { return feedForward.enabled; }
+    float getFeedForwardTDS() { return feedForward.lastTdsContribution; }
+    float getFeedForwardAmbient() { return feedForward.lastAmbientContribution; }
+    float getFeedForwardPH() { return feedForward.lastPhContribution; }
+    float getFeedForwardTotal() { return feedForward.lastTotalContribution; }
+    float computeWithSensorContext(float input, float dt, float ambientTemp, uint8_t hour, uint8_t season, 
+                                    float tankVolume, float tds, float ph);
 };
 
 #endif

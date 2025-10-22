@@ -1,19 +1,39 @@
 [Unit]
-Description=Aquarium Water Change ML Predictor Service
-After=network.target mosquitto.service
-Wants=mosquitto.service
+Description=Unified Aquarium ML Service (PID + Water Change)
+After=network.target mariadb.service mosquitto.service
+Wants=mariadb.service mosquitto.service
 
 [Service]
 Type=simple
-User=YOUR_USERNAME
-WorkingDirectory=/path/to/aquariumcontroller/tools
-Environment="PATH=/usr/bin:/usr/local/bin"
-EnvironmentFile=/path/to/aquariumcontroller/tools/.env
-ExecStart=/usr/bin/python3 /path/to/aquariumcontroller/tools/water_change_ml_service.py
-Restart=on-failure
+User=aquarium
+Group=aquarium
+WorkingDirectory=/opt/aquarium
+ExecStart=/usr/bin/python3 /opt/aquarium/aquarium_ml_service.py --service
+Restart=always
 RestartSec=10
-StandardOutput=journal
-StandardError=journal
+
+# Environment variables (update these for your setup)
+Environment="MQTT_BROKER=localhost"
+Environment="MQTT_PORT=1883"
+Environment="MQTT_USER="
+Environment="MQTT_PASSWORD="
+Environment="MQTT_TOPIC_PREFIX=aquarium"
+Environment="DB_HOST=localhost"
+Environment="DB_PORT=3306"
+Environment="DB_NAME=aquarium"
+Environment="DB_USER=aquarium"
+Environment="DB_PASSWORD=aquarium"
+
+# Logging
+StandardOutput=append:/var/log/aquarium-ml.log
+StandardError=append:/var/log/aquarium-ml.log
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log
 
 [Install]
 WantedBy=multi-user.target

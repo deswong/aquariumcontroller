@@ -78,6 +78,20 @@ void WebServerManager::setupRoutes() {
             tempMetrics["settled"] = tempPID->isSystemSettled();
             tempMetrics["effectiveTarget"] = tempPID->getEffectiveTarget();
             tempMetrics["integral"] = tempPID->getIntegral();
+            
+            // Phase 2/3 features
+            JsonObject tempPhase23 = doc.createNestedObject("tempPhase23");
+            tempPhase23["dualCoreMl"] = tempPID->isDualCoreEnabled();
+            tempPhase23["kalmanFilter"] = tempPID->isKalmanEnabled();
+            tempPhase23["kalmanState"] = tempPID->getKalmanState();
+            tempPhase23["healthMonitoring"] = tempPID->isHealthMonitoringEnabled();
+            tempPhase23["feedForward"] = tempPID->isFeedForwardEnabled();
+            tempPhase23["ffTotal"] = tempPID->getFeedForwardTotal();
+            tempPhase23["inTransition"] = tempPID->isInTransition();
+            
+            // Health status summary
+            HealthMetrics tempHealth = tempPID->getHealthMetrics();
+            tempPhase23["healthOk"] = !(tempHealth.outputStuck || tempHealth.persistentHighError || tempHealth.outputSaturation);
         }
         
         if (co2PID) {
@@ -88,6 +102,20 @@ void WebServerManager::setupRoutes() {
             co2Metrics["settled"] = co2PID->isSystemSettled();
             co2Metrics["effectiveTarget"] = co2PID->getEffectiveTarget();
             co2Metrics["integral"] = co2PID->getIntegral();
+            
+            // Phase 2/3 features
+            JsonObject co2Phase23 = doc.createNestedObject("co2Phase23");
+            co2Phase23["dualCoreMl"] = co2PID->isDualCoreEnabled();
+            co2Phase23["kalmanFilter"] = co2PID->isKalmanEnabled();
+            co2Phase23["kalmanState"] = co2PID->getKalmanState();
+            co2Phase23["healthMonitoring"] = co2PID->isHealthMonitoringEnabled();
+            co2Phase23["feedForward"] = co2PID->isFeedForwardEnabled();
+            co2Phase23["ffTotal"] = co2PID->getFeedForwardTotal();
+            co2Phase23["inTransition"] = co2PID->isInTransition();
+            
+            // Health status summary
+            HealthMetrics co2Health = co2PID->getHealthMetrics();
+            co2Phase23["healthOk"] = !(co2Health.outputStuck || co2Health.persistentHighError || co2Health.outputSaturation);
         }
         
         // Add WiFi metrics
@@ -1502,6 +1530,240 @@ void WebServerManager::setupRoutes() {
         String response;
         serializeJson(doc, response);
         request->send(200, "application/json", response);
+    });
+    
+    // ============================
+    // Phase 2/3 ML-Enhanced PID API
+    // ============================
+    
+    // API: Get PID health report
+    server->on("/api/pid/health/temp", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!tempPID) {
+            request->send(500, "application/json", "{\"error\":\"Temperature PID not initialized\"}");
+            return;
+        }
+        
+        String report = tempPID->getHealthReport();
+        StaticJsonDocument<512> doc;
+        doc["controller"] = "temperature";
+        doc["healthReport"] = report;
+        doc["timestamp"] = millis();
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    server->on("/api/pid/health/co2", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!co2PID) {
+            request->send(500, "application/json", "{\"error\":\"CO2 PID not initialized\"}");
+            return;
+        }
+        
+        String report = co2PID->getHealthReport();
+        StaticJsonDocument<512> doc;
+        doc["controller"] = "co2";
+        doc["healthReport"] = report;
+        doc["timestamp"] = millis();
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    // API: Get Kalman filter state
+    server->on("/api/pid/kalman/temp", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!tempPID) {
+            request->send(500, "application/json", "{\"error\":\"Temperature PID not initialized\"}");
+            return;
+        }
+        
+        StaticJsonDocument<256> doc;
+        doc["controller"] = "temperature";
+        doc["enabled"] = tempPID->isKalmanEnabled();
+        doc["state"] = tempPID->getKalmanState();
+        doc["covariance"] = tempPID->getKalmanCovariance();
+        doc["initialized"] = tempPID->isKalmanInitialized();
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    server->on("/api/pid/kalman/co2", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!co2PID) {
+            request->send(500, "application/json", "{\"error\":\"CO2 PID not initialized\"}");
+            return;
+        }
+        
+        StaticJsonDocument<256> doc;
+        doc["controller"] = "co2";
+        doc["enabled"] = co2PID->isKalmanEnabled();
+        doc["state"] = co2PID->getKalmanState();
+        doc["covariance"] = co2PID->getKalmanCovariance();
+        doc["initialized"] = co2PID->isKalmanInitialized();
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    // API: Get feed-forward contributions
+    server->on("/api/pid/feedforward/temp", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!tempPID) {
+            request->send(500, "application/json", "{\"error\":\"Temperature PID not initialized\"}");
+            return;
+        }
+        
+        StaticJsonDocument<256> doc;
+        doc["controller"] = "temperature";
+        doc["enabled"] = tempPID->isFeedForwardEnabled();
+        doc["tdsContribution"] = tempPID->getFeedForwardTDS();
+        doc["ambientContribution"] = tempPID->getFeedForwardAmbient();
+        doc["phContribution"] = tempPID->getFeedForwardPH();
+        doc["totalContribution"] = tempPID->getFeedForwardTotal();
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    server->on("/api/pid/feedforward/co2", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!co2PID) {
+            request->send(500, "application/json", "{\"error\":\"CO2 PID not initialized\"}");
+            return;
+        }
+        
+        StaticJsonDocument<256> doc;
+        doc["controller"] = "co2";
+        doc["enabled"] = co2PID->isFeedForwardEnabled();
+        doc["tdsContribution"] = co2PID->getFeedForwardTDS();
+        doc["ambientContribution"] = co2PID->getFeedForwardAmbient();
+        doc["phContribution"] = co2PID->getFeedForwardPH();
+        doc["totalContribution"] = co2PID->getFeedForwardTotal();
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    // API: Get profiler stats
+    server->on("/api/pid/profiler/temp", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!tempPID || !tempPID->getProfiler()) {
+            request->send(500, "application/json", "{\"error\":\"Temperature PID profiler not initialized\"}");
+            return;
+        }
+        
+        PIDProfiler* profiler = tempPID->getProfiler();
+        StaticJsonDocument<512> doc;
+        doc["controller"] = "temperature";
+        doc["avgComputeTime"] = profiler->getAverageComputeTime();
+        doc["maxComputeTime"] = profiler->getMaxComputeTime();
+        doc["minComputeTime"] = profiler->getMinComputeTime();
+        doc["avgMLTime"] = profiler->getAverageMLTime();
+        doc["maxMLTime"] = profiler->getMaxMLTime();
+        doc["cpuUsage"] = profiler->getCPUUsage();
+        doc["mlCacheHitRate"] = profiler->getMLCacheHitRate();
+        doc["mlCacheHits"] = profiler->getMLCacheHits();
+        doc["mlCacheMisses"] = profiler->getMLCacheMisses();
+        doc["overruns"] = profiler->getOverruns();
+        doc["cycleCount"] = profiler->getCycleCount();
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    server->on("/api/pid/profiler/co2", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!co2PID || !co2PID->getProfiler()) {
+            request->send(500, "application/json", "{\"error\":\"CO2 PID profiler not initialized\"}");
+            return;
+        }
+        
+        PIDProfiler* profiler = co2PID->getProfiler();
+        StaticJsonDocument<512> doc;
+        doc["controller"] = "co2";
+        doc["avgComputeTime"] = profiler->getAverageComputeTime();
+        doc["maxComputeTime"] = profiler->getMaxComputeTime();
+        doc["minComputeTime"] = profiler->getMinComputeTime();
+        doc["avgMLTime"] = profiler->getAverageMLTime();
+        doc["maxMLTime"] = profiler->getMaxMLTime();
+        doc["cpuUsage"] = profiler->getCPUUsage();
+        doc["mlCacheHitRate"] = profiler->getMLCacheHitRate();
+        doc["mlCacheHits"] = profiler->getMLCacheHits();
+        doc["mlCacheMisses"] = profiler->getMLCacheMisses();
+        doc["overruns"] = profiler->getOverruns();
+        doc["cycleCount"] = profiler->getCycleCount();
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    // API: Configure Phase 2/3 features
+    server->on("/api/pid/features", HTTP_POST, [](AsyncWebServerRequest* request) {}, 
+        NULL, [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+        StaticJsonDocument<512> doc;
+        DeserializationError error = deserializeJson(doc, data, len);
+        
+        if (error) {
+            request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+            return;
+        }
+        
+        bool success = true;
+        String message = "";
+        
+        // Which controller?
+        String controller = doc["controller"] | "temp";
+        AdaptivePID* pid = (controller == "co2") ? co2PID : tempPID;
+        
+        if (!pid) {
+            request->send(500, "application/json", "{\"error\":\"PID controller not initialized\"}");
+            return;
+        }
+        
+        // Dual-core ML
+        if (doc.containsKey("dualCoreMl")) {
+            bool enable = doc["dualCoreMl"];
+            pid->enableDualCoreML(enable);
+            message += "Dual-core ML " + String(enable ? "enabled" : "disabled") + ". ";
+        }
+        
+        // Kalman filter
+        if (doc.containsKey("kalmanFilter")) {
+            bool enable = doc["kalmanFilter"];
+            float q = doc["kalmanQ"] | (controller == "co2" ? 0.002f : 0.001f);
+            float r = doc["kalmanR"] | (controller == "co2" ? 0.2f : 0.1f);
+            pid->enableKalmanFilter(enable, q, r);
+            message += "Kalman filter " + String(enable ? "enabled" : "disabled") + ". ";
+        }
+        
+        // Health monitoring
+        if (doc.containsKey("healthMonitoring")) {
+            bool enable = doc["healthMonitoring"];
+            pid->enableHealthMonitoring(enable);
+            message += "Health monitoring " + String(enable ? "enabled" : "disabled") + ". ";
+        }
+        
+        // Feed-forward model
+        if (doc.containsKey("feedForward")) {
+            bool enable = doc["feedForward"];
+            float tdsInfluence = doc["tdsInfluence"] | 0.0f;
+            float ambientInfluence = doc["ambientInfluence"] | 0.0f;
+            float phInfluence = doc["phInfluence"] | 0.0f;
+            pid->enableFeedForwardModel(enable, tdsInfluence, ambientInfluence, phInfluence);
+            message += "Feed-forward " + String(enable ? "enabled" : "disabled") + ". ";
+        }
+        
+        StaticJsonDocument<256> response;
+        response["status"] = "ok";
+        response["message"] = message;
+        response["controller"] = controller;
+        
+        String responseStr;
+        serializeJson(response, responseStr);
+        request->send(200, "application/json", responseStr);
     });
     
     // API: Restart device

@@ -115,16 +115,46 @@ void controlTask(void* parameter) {
         float co2Output = 0;
         
         if (!systemsShouldPause) {
-            // Temperature PID control
-            tempOutput = tempPID->compute(data.temperature, dt);
+            // Get current time for ML context
+            time_t now = time(nullptr);
+            struct tm* timeinfo = localtime(&now);
+            uint8_t hour = timeinfo->tm_hour;
+            uint8_t month = timeinfo->tm_mon + 1;
+            uint8_t season = (month >= 12 || month <= 2) ? 0 : (month >= 3 && month <= 5) ? 1 : (month >= 6 && month <= 8) ? 2 : 3;
+            
+            // Get tank volume from config
+            SystemConfig config = configMgr->getConfig();
+            float tankVolume = config.tankLength * config.tankWidth * config.tankHeight / 1000.0f; // cm³ to liters
+            
+            // PHASE 3: Temperature PID control with full sensor context
+            // Uses: ambient temp, TDS (water change cooling), time, season
+            tempOutput = tempPID->computeWithSensorContext(
+                data.temperature,    // Current temp
+                dt,                  // Time delta
+                data.ambientTemp,    // Ambient temperature (for feed-forward heat loss)
+                hour,                // Hour of day (for ML adaptation)
+                season,              // Season (for ML adaptation)
+                tankVolume,          // Tank volume (for ML adaptation)
+                data.tds,            // TDS (for feed-forward evaporative cooling effect)
+                data.ph              // pH (minimal effect on temperature)
+            );
             heaterRelay->setDutyCycle(tempOutput);
             heaterRelay->update(); // Update for time proportional control
             
-            // CO2 PID control (based on pH)
-            // Lower pH means more CO2, so invert the relationship
-            co2Output = co2PID->compute(data.ph, dt);
+            // PHASE 3: CO2 PID control with full sensor context
+            // Uses: pH, ambient temp (affects CO2 dissolution), TDS, time, season
+            co2Output = co2PID->computeWithSensorContext(
+                data.ph,             // Current pH
+                dt,                  // Time delta
+                data.ambientTemp,    // Ambient temperature (affects CO2 dissolution)
+                hour,                // Hour of day (for ML adaptation)
+                season,              // Season (for ML adaptation)
+                tankVolume,          // Tank volume (for ML adaptation)
+                data.tds,            // TDS (minimal effect on CO2)
+                data.ph              // pH (for feed-forward CO2 dissolution)
+            );
             co2Relay->setDutyCycle(co2Output);
-            co2Relay->update(); // Update for time proportional control;
+            co2Relay->update(); // Update for time proportional control
         } else {
             // Systems paused for water change
             heaterRelay->setDutyCycle(0);

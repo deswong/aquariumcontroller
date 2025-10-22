@@ -182,35 +182,67 @@ void setup() {
         }
     }
     
-    // Initialize PID controllers
-    Serial.println("\nInitializing PID controllers...");
+    // Initialize PID controllers with ML-Enhanced features (Phases 1, 2, 3)
+    Serial.println("\nInitializing ML-Enhanced PID controllers...");
     tempPID = new AdaptivePID("temp-pid", 2.0, 0.5, 1.0);
     co2PID = new AdaptivePID("co2-pid", 2.0, 0.5, 1.0);
     
+    // ===== Temperature PID Configuration =====
     tempPID->begin();
     tempPID->setTarget(config.tempTarget);
     tempPID->setSafetyLimits(config.tempSafetyMax, config.tempSafetyMax - config.tempTarget);
     tempPID->setOutputLimits(0, 100);
     
-    // Enable advanced PID features for temperature control
+    // Phase 1: Hardware timer, profiling, ML cache
+    tempPID->enableHardwareTimer(100000);            // 100ms = 10 Hz control loop
+    tempPID->enablePerformanceProfiling(true);       // Track CPU usage
+    tempPID->enableMLAdaptation(true);               // ML parameter adaptation
+    
+    // Phase 2: Dual-core ML processing and Kalman filtering
+    tempPID->enableDualCoreML(true);                 // ML on Core 0, control on Core 1
+    tempPID->enableKalmanFilter(true, 0.001f, 0.1f); // Smooth sensor noise
+    
+    // Phase 3: Health monitoring, bumpless transfer, predictive feed-forward
+    tempPID->enableHealthMonitoring(true);           // Automated diagnostics
+    // Feed-forward model: TDS (0.1) + Ambient Temp (0.3) influence heater output
+    tempPID->enableFeedForwardModel(true, 0.1f, 0.3f, 0.0f);
+    
+    // Traditional PID features
     tempPID->enableDerivativeFilter(true, 0.7);         // Smooth derivative
     tempPID->enableSetpointRamping(true, 0.5);          // Ramp at 0.5°C per second
     tempPID->enableIntegralWindupPrevention(true, 50.0); // Limit integral
-    tempPID->enableFeedForward(true, 0.3);              // Add feed-forward
     
+    Serial.println("✓ Temperature PID: Phase 1+2+3 enabled (PSRAM, Dual-Core, Kalman, Health, Feed-Forward)");
+    
+    // ===== CO2/pH PID Configuration =====
     co2PID->begin();
     co2PID->setTarget(config.phTarget);
     co2PID->setSafetyLimits(config.phSafetyMin, config.phTarget - config.phSafetyMin);
     co2PID->setOutputLimits(0, 100);
     
-    // Enable advanced PID features for CO2/pH control
+    // Phase 1: Hardware timer, profiling, ML cache
+    co2PID->enableHardwareTimer(100000);             // 100ms = 10 Hz control loop
+    co2PID->enablePerformanceProfiling(true);        // Track CPU usage
+    co2PID->enableMLAdaptation(true);                // ML parameter adaptation
+    
+    // Phase 2: Dual-core ML processing and Kalman filtering
+    co2PID->enableDualCoreML(true);                  // ML on Core 0, control on Core 1
+    co2PID->enableKalmanFilter(true, 0.002f, 0.2f);  // Higher noise tolerance for pH
+    
+    // Phase 3: Health monitoring, bumpless transfer, predictive feed-forward
+    co2PID->enableHealthMonitoring(true);            // Automated diagnostics
+    // Feed-forward model: pH (0.2) influence (TDS has minimal effect on CO2)
+    co2PID->enableFeedForwardModel(true, 0.0f, 0.1f, 0.2f);
+    
+    // Traditional PID features
     co2PID->enableDerivativeFilter(true, 0.8);           // Higher filtering for pH
     co2PID->enableSetpointRamping(true, 0.1);            // Slower ramp for pH (0.1 pH/sec)
     co2PID->enableIntegralWindupPrevention(true, 30.0);  // Smaller integral for pH
-    co2PID->enableFeedForward(false);                    // No feed-forward for pH
+    
+    Serial.println("✓ CO2/pH PID: Phase 1+2+3 enabled (PSRAM, Dual-Core, Kalman, Health, Feed-Forward)");
     
     if (eventLogger) {
-        eventLogger->info("control", "PID controllers initialized with advanced features");
+        eventLogger->info("control", "ML-Enhanced PID controllers initialized (Phase 1+2+3)");
     }
     
     // Initialize relays
