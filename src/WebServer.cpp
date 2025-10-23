@@ -691,39 +691,6 @@ void WebServerManager::setupRoutes() {
         }
     });
     
-    // API: Water Change - Configuration (set tank volume)
-    server->on("/api/waterchange/config", HTTP_POST, [](AsyncWebServerRequest* request) {}, 
-        NULL, [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
-        if (!waterChangeAssistant) {
-            request->send(500, "application/json", "{\"error\":\"Water change assistant not initialized\"}");
-            return;
-        }
-        
-        StaticJsonDocument<128> doc;
-        DeserializationError error = deserializeJson(doc, data, len);
-        
-        if (error) {
-            request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
-            return;
-        }
-        
-        if (doc.containsKey("tankVolume")) {
-            // Tank volume is now managed by ConfigManager via tank dimensions
-            // This API endpoint is deprecated - use /api/settings to set tank dimensions
-            float tankVolume = doc["tankVolume"];
-            request->send(200, "application/json", "{\"status\":\"ok\",\"message\":\"Tank volume is now configured via tank dimensions in settings\"}");
-            
-            Serial.printf("WARNING: Deprecated tankVolume API called. Tank volume is now calculated from dimensions in ConfigManager.\n");
-            Serial.printf("Current tank volume from dimensions: %.1f litres\n", waterChangeAssistant->getTankVolume());
-            
-            if (eventLogger) {
-                eventLogger->warning("api", "Deprecated setTankVolume API called - use tank dimensions instead");
-            }
-        } else {
-            request->send(400, "application/json", "{\"error\":\"Missing tankVolume field\"}");
-        }
-    });
-    
     // API: Water Change - Statistics
     server->on("/api/waterchange/stats", HTTP_GET, [](AsyncWebServerRequest* request) {
         if (!waterChangeAssistant) {

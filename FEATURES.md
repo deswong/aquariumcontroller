@@ -187,7 +187,7 @@
 - `src/PHSensor.cpp` - Dual temp support
 - `include/RelayController.h` - Time proportional mode
 - `src/RelayController.cpp` - Time proportional logic
-- `PINOUT.md` - Updated to 17 pins with display
+- `PINOUT.md` - Complete pin reference (10 pins with OLED display)
 - `README.md` - Australian warnings, display features
 
 ## Quick Start

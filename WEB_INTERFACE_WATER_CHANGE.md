@@ -38,13 +38,10 @@ GET /api/waterchange/status
 ```
 
 #### Start Water Change
+*Volume is recorded at completion, not at start.*
+
 ```http
 POST /api/waterchange/start
-Content-Type: application/json
-
-{
-  "volume": 20.0  // Optional, omit to use scheduled volume
-}
 ```
 **Response:**
 ```json
@@ -52,13 +49,24 @@ Content-Type: application/json
 ```
 
 #### End Water Change
+*Requires actual volume changed in request body.*
+
 ```http
 POST /api/waterchange/end
+Content-Type: application/json
+
+{
+  "volume": 20.0  // Required - actual volume changed
+}
 ```
 **Response:**
 ```json
 {"status": "ok"}
 ```
+
+**Validation:**
+- Volume must be greater than 0
+- Returns HTTP 400 if validation fails
 
 #### Cancel Water Change
 ```http

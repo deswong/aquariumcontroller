@@ -62,8 +62,6 @@ pio run -e esp32s3dev --target upload
 pio run -e esp32s3dev --target uploadfs
 ```
 
-**Note:** The default environment is now `esp32s3dev`. Legacy ESP32 support is available but deprecated.
-
 ### Step 3: Initial WiFi Setup
 1. Power on the ESP32-S3 (via USB-C or 5V power)
 2. Look for WiFi network: `AquariumController` (password: `12345678`)
@@ -164,7 +162,7 @@ Find device IP in:
 
 ### Via Web Interface:
 1. Build new firmware: `pio run`
-2. Find `.pio/build/esp32dev/firmware.bin`
+2. Find `.pio/build/esp32s3dev/firmware.bin`
 3. Go to `http://<device-ip>/update`
 4. Upload firmware file
 

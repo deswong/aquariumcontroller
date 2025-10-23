@@ -1,27 +1,28 @@
-# Water Change Volume Completion Dialog
+# ⚠️ OUTDATED - Water Change Volume Recording
 
-## Feature Overview
-Added an interactive dialog box that appears when completing a water change, allowing the user to enter the actual volume of water changed. The dialog defaults to the scheduled volume but can be adjusted to reflect the actual amount changed.
+> **Notice:** This document describes an older multi-phase water change system. The system has been **significantly simplified** to a 2-button interface where volume is entered at completion.
+> 
+> **See:** [WATER_CHANGE_SIMPLIFICATION.md](WATER_CHANGE_SIMPLIFICATION.md) for current implementation.
 
-## User Experience Flow
+## Current Implementation (Updated October 2025)
 
-### Before
-1. User clicks "Next Phase" repeatedly through all phases
-2. Water change completes with scheduled volume (e.g., 25% = 18.75L from 75L tank)
-3. No way to record actual volume if different from scheduled
+The water change system now uses a simplified flow:
 
-### After
-1. User clicks "Next Phase" through phases: PREPARE → DRAINING → DRAINED → FILLING → STABILIZING
-2. **When in STABILIZING phase**, clicking "Next Phase" shows a dialog:
-   - Title: "💧 Complete Water Change"
-   - Prompt: "Please enter the approximate volume of water changed:"
-   - Input field pre-filled with scheduled volume (e.g., "62.5" litres)
-   - Two buttons: "Cancel" and "✓ Complete"
-3. User can:
-   - **Accept default** by clicking "✓ Complete" or pressing Enter
-   - **Adjust volume** to actual amount changed (e.g., change 62.5L to 50.0L)
-   - **Cancel** to stay in STABILIZING phase
-4. On completion, actual volume is recorded in history
+1. **Start:** User clicks "Start Water Change" (no volume entered)
+2. **In Progress:** Systems pause, user performs water change
+3. **Complete:** User enters **actual volume changed** and clicks "Complete"
+4. **Volume is recorded at END** of water change, not at start
+
+### Why This Changed
+- More accurate: Records what actually happened, not what was planned
+- Realistic data: User knows exact volume after completing the change
+- Simpler UX: No multi-phase advancement, just Start → Complete
+- Flexible: Can change more or less than scheduled amount
+
+## Historical Context (Archived)
+
+### Old Multi-Phase System (Removed)
+The previous implementation had 7 phases (PREPARE → DRAINING → DRAINED → FILLING → STABILIZING → COMPLETE) with manual advancement between each phase. This was overly complex for a simple water change operation.
 
 ## Implementation Details
 

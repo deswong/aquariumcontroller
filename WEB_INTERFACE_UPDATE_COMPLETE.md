@@ -85,8 +85,8 @@ Successfully updated the web interface HTML to support the simplified water chan
 
 ### Water Change
 - `GET /api/waterchange/status` - Enhanced with `tempBefore`, `phBefore`, `tdsBefore` when in progress
-- `POST /api/waterchange/start` - Accepts `{volume: number}` (0 or empty = scheduled)
-- `POST /api/waterchange/end` - No body, auto-captures sensor readings
+- `POST /api/waterchange/start` - **No body** (volume entered at completion)
+- `POST /api/waterchange/end` - **Required:** `{volume: number}` (actual volume changed), auto-captures sensor readings
 - `POST /api/waterchange/cancel` - No body
 - `GET /api/waterchange/history?count=10` - Returns records with `startTime`, `endTime`, deltas
 
@@ -111,14 +111,16 @@ Successfully updated the web interface HTML to support the simplified water chan
 ## Testing Checklist
 
 ### Water Change Flow
-- [ ] Click "Start Water Change" with custom volume
-- [ ] Click "Start Water Change" with empty volume (uses scheduled)
+- [ ] Click "Start Water Change" (no volume needed)
 - [ ] Verify systems show "PAUSED" and heater/CO2 disabled
 - [ ] Initial readings panel appears with temp/pH/TDS
 - [ ] Elapsed timer updates every 5 seconds
+- [ ] Enter actual volume changed in litres
 - [ ] Click "Complete Water Change"
+- [ ] Confirm completion with volume displayed
 - [ ] Verify systems show "Active" and heater/CO2 enabled
-- [ ] History updates with new entry showing deltas
+- [ ] History updates with new entry showing actual volume and deltas
+- [ ] Test validation: Try completing without entering volume
 - [ ] Click "Cancel" during water change
 - [ ] Verify clean cancellation without history entry
 
@@ -141,19 +143,20 @@ Successfully updated the web interface HTML to support the simplified water chan
 
 ### Starting a Water Change
 1. Go to "Water Change" tab
-2. (Optional) Enter volume in litres, or leave empty for scheduled amount
-3. Click "🚀 Start Water Change"
-4. Confirm safety warning
-5. Systems automatically pause (heater + CO2)
-6. Initial sensor readings captured and displayed
+2. Click "🚀 Start Water Change"
+3. Confirm safety warning
+4. Systems automatically pause (heater + CO2)
+5. Initial sensor readings captured and displayed
+6. Volume input field becomes visible
 
 ### Completing a Water Change
 1. Perform your manual water change tasks
-2. Click "✅ Complete Water Change"
-3. Confirm completion
-4. Final sensor readings automatically captured
-5. Systems resume automatically
-6. Complete record saved with before/after data
+2. Enter the actual volume of water changed (in litres) - **REQUIRED**
+3. Click "✅ Complete Water Change"
+4. Confirm completion (shows volume you entered)
+5. Final sensor readings automatically captured
+6. Systems resume automatically
+7. Complete record saved with actual volume and before/after data
 
 ### Recording Filter Maintenance
 1. Perform filter cleaning/maintenance

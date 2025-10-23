@@ -19,14 +19,10 @@ The Water Change Assistant is an intelligent system for managing routine aquariu
 - **Overdue Alerts**: Notifications when maintenance is overdue
 - **MQTT Integration**: Remote monitoring and alerts
 
-### 3. **Multi-Phase Process**
-Guided step-by-step process:
-1. **Prepare** - Pause all systems for safety
-2. **Draining** - Remove old water
-3. **Drained** - Wait for new water preparation
-4. **Filling** - Add conditioned new water
-5. **Stabilizing** - Allow parameters to normalize
-6. **Complete** - Resume normal operation
+### 3. **Simple Process**
+2-button workflow:
+1. **Start** - Pause all systems for safety, begin water change
+2. **Complete** - Enter actual volume changed, record parameters, resume systems
 
 ### 4. **History Tracking**
 - Stores last 50 water changes in SPIFFS

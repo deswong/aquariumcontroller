@@ -358,36 +358,37 @@ Get water change status and predictions.
 ```
 
 #### POST /api/waterchange/start
-Start water change assistant.
+Start water change assistant. Volume is recorded at completion, not at start.
 
-**Request Body:**
+**Request Body:** *(empty - no body required)*
+
+**Response:**
 ```json
 {
-  "volumeLitres": 40,
-  "targetTemp": 25.0
+  "status": "ok"
+}
+```
+
+#### POST /api/waterchange/end
+Complete water change and record actual volume changed.
+
+**Request Body:** *(required)*
+```json
+{
+  "volume": 40.0
 }
 ```
 
 **Response:**
 ```json
 {
-  "success": true,
-  "message": "Water change started",
-  "estimatedDuration": 1200
+  "status": "ok"
 }
 ```
 
-#### POST /api/waterchange/complete
-Mark water change as complete.
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Water change recorded",
-  "actualDuration": 1150
-}
-```
+**Validation:**
+- Volume must be greater than 0
+- Returns HTTP 400 if validation fails
 
 ---
 

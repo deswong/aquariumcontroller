@@ -117,13 +117,11 @@ A comprehensive aquarium automation system built for **ESP32-S3** that monitors 
 - **30+ GPIO pins**
 
 **Why ESP32-S3?**
-- 📈 **Larger sensor history:** 128 trend points (vs 24 on ESP32)
-- ⚡ **AI acceleration:** 10x faster pattern learning
+- 📈 **Larger sensor history:** 128 trend points
+- ⚡ **AI acceleration:** Enhanced pattern learning
 - 🚀 **Better performance:** 20Hz display updates, faster web serving
-- 💾 **More memory:** PSRAM for 500 water change records (vs 30)
+- 💾 **More memory:** PSRAM for 500 water change records
 - 🔧 **Easier programming:** Native USB support, no UART needed
-
-**Note:** Legacy ESP32 support is available but deprecated. See `platformio.ini` for details.
 
 ### Other Components
 
@@ -179,21 +177,29 @@ I2C SCL:                      GPIO 22
 
 ```
 ESP32 Connections:
-┌─────────────────────────────────────────────┐
-│                                             │
-│  GPIO 4  ──── Data ──── DS18B20            │
-│                         (+ 4.7kΩ pullup)   │
-│                                             │
-│  GPIO 34 ──── Analog ─── pH Sensor         │
-│  GPIO 35 ──── Analog ─── TDS Sensor        │
-│                                             │
-│  GPIO 26 ──── IN ──────── Heater Relay     │
-│  GPIO 27 ──── IN ──────── CO2 Relay        │
-│                                             │
-│  GND ─────────────────── Common Ground     │
-│  3.3V ────────────────── Sensors VCC       │
-│  5V ──────────────────── Relay Modules     │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│                                                  │
+│  GPIO 4  ──── Data ──── DS18B20 Water Temp     │
+│                         (+ 4.7kΩ pullup)        │
+│  GPIO 5  ──── Data ──── DS18B20 Ambient Temp   │
+│                         (+ 4.7kΩ pullup)        │
+│                                                  │
+│  GPIO 34 ──── Analog ─── pH Sensor              │
+│  GPIO 35 ──── Analog ─── TDS Sensor             │
+│                                                  │
+│  GPIO 26 ──── IN ──────── Heater Relay          │
+│  GPIO 27 ──── IN ──────── CO2 Relay             │
+│                                                  │
+│  GPIO 25 ──── IN1 ─────── Dosing Pump (L298N)  │
+│  GPIO 33 ──── IN2 ─────── Dosing Pump (L298N)  │
+│                                                  │
+│  GPIO 21 ──── SDA ─────── OLED Display (I2C)   │
+│  GPIO 22 ──── SCL ─────── OLED Display (I2C)   │
+│                                                  │
+│  GND ─────────────────── Common Ground          │
+│  3.3V ────────────────── Sensors VCC            │
+│  5V ──────────────────── Relays & L298N         │
+└──────────────────────────────────────────────────┘
 
 ⚠️ AUSTRALIAN ELECTRICAL SAFETY WARNING:
    - 240V AC mains - USE RCD (30mA) PROTECTION MANDATORY
@@ -530,7 +536,7 @@ aquariumcontroller/
 ├── data/                  # Web interface files
 │   └── index.html
 ├── platformio.ini         # PlatformIO configuration
-├── partitions.csv         # ESP32 partition table
+├── partitions_s3_16mb.csv # ESP32-S3 partition table (16MB flash)
 └── README.md             # This file
 ```
 
