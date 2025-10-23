@@ -582,16 +582,33 @@ void WebServerManager::setupRoutes() {
     });
     
     // API: Water Change - End
-    server->on("/api/waterchange/end", HTTP_POST, [](AsyncWebServerRequest* request) {
+    server->on("/api/waterchange/end", HTTP_POST, [](AsyncWebServerRequest* request) {}, 
+        NULL, [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
         if (!waterChangeAssistant) {
             request->send(500, "application/json", "{\"error\":\"Water change assistant not initialized\"}");
+            return;
+        }
+        
+        // Extract volume from request body (required)
+        float volume = 0;
+        if (len > 0) {
+            StaticJsonDocument<128> doc;
+            DeserializationError error = deserializeJson(doc, data, len);
+            if (!error && doc.containsKey("volume")) {
+                volume = doc["volume"];
+            }
+        }
+        
+        // Volume is required
+        if (volume <= 0) {
+            request->send(400, "application/json", "{\"error\":\"Volume is required to complete water change\"}");
             return;
         }
         
         // Get current sensor readings
         SensorData sensorData = getSensorData();
         
-        if (waterChangeAssistant->endWaterChange(sensorData.temperature, sensorData.ph, sensorData.tds)) {
+        if (waterChangeAssistant->endWaterChange(sensorData.temperature, sensorData.ph, sensorData.tds, volume)) {
             request->send(200, "application/json", "{\"status\":\"ok\"}");
         } else {
             request->send(400, "application/json", "{\"error\":\"Failed to end water change\"}");

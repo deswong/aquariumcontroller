@@ -110,8 +110,8 @@ public:
     float getScheduledChangeVolume(); // Returns litres
     
     // Water change operations (simplified)
-    bool startWaterChange(float volumeLitres, float temp, float ph, float tds); // Start water change with current readings
-    bool endWaterChange(float temp, float ph, float tds); // End water change with final readings and resume systems
+    bool startWaterChange(float volumeLitres, float temp, float ph, float tds); // Start water change with current readings (volumeLitres parameter ignored, kept for compatibility)
+    bool endWaterChange(float temp, float ph, float tds, float volumeLitres = 0); // End water change with final readings, actual volume, and resume systems
     bool cancelWaterChange(); // Cancel without logging
     
     // Filter maintenance

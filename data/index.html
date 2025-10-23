@@ -948,12 +948,12 @@
                 <!-- Controls -->
                 <div class="water-change-controls">
                     <div id="wc-start-controls">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Volume (litres) - leave empty for scheduled amount</label>
-                        <input type="number" id="wc-volume-input" step="0.5" min="0" placeholder="Auto" 
-                               style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; width: 200px; margin-right: 10px;">
                         <button class="btn btn-success" onclick="startWaterChange()" id="wc-start-btn">🚀 Start Water Change</button>
                     </div>
                     <div id="wc-active-controls" style="display: none;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Volume Changed (litres) - required to complete</label>
+                        <input type="number" id="wc-volume-input" step="0.5" min="0.1" placeholder="Enter volume" required
+                               style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; width: 200px; margin-right: 10px;">
                         <button class="btn btn-primary" onclick="endWaterChange()" id="wc-end-btn" style="font-size: 18px; padding: 12px 30px;">✅ Complete Water Change</button>
                         <button class="btn btn-danger" onclick="cancelWaterChange()" id="wc-cancel-btn" style="margin-left: 10px;">❌ Cancel</button>
                     </div>
@@ -3120,19 +3120,17 @@
         
         async function startWaterChange() {
             if (confirm('Start water change? This will pause heating and CO2 systems for safety.')) {
-                const volumeInput = document.getElementById('wc-volume-input');
-                const volume = parseFloat(volumeInput.value) || 0; // 0 = use scheduled volume
-                
                 const response = await fetch('/api/waterchange/start', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({volume: volume})
+                    body: JSON.stringify({})
                 });
                 
                 if (response.ok) {
-                    volumeInput.value = '';
                     showAlert('✓ Water change started - Systems paused for safety', 'success');
                     updateWaterChangeStatus();
+                    // Clear the volume input for the user to fill at the end
+                    document.getElementById('wc-volume-input').value = '';
                     // Start auto-updating status
                     if (wcUpdateInterval) clearInterval(wcUpdateInterval);
                     wcUpdateInterval = setInterval(updateWaterChangeStatus, 5000);
@@ -3143,13 +3141,26 @@
         }
         
         async function endWaterChange() {
-            if (confirm('Complete water change? Systems will be re-enabled.')) {
+            const volumeInput = document.getElementById('wc-volume-input');
+            const volume = parseFloat(volumeInput.value);
+            
+            // Validate volume is entered
+            if (!volume || volume <= 0) {
+                showAlert('❌ Please enter the volume of water changed', 'error');
+                volumeInput.focus();
+                return;
+            }
+            
+            if (confirm(`Complete water change with ${volume} litres changed? Systems will be re-enabled.`)) {
                 const response = await fetch('/api/waterchange/end', {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({volume: volume})
                 });
                 
                 if (response.ok) {
-                    showAlert('✓ Water change completed - Systems resumed', 'success');
+                    volumeInput.value = '';
+                    showAlert(`✓ Water change completed (${volume}L) - Systems resumed`, 'success');
                     updateWaterChangeStatus();
                     updateWaterChangeHistory();
                     updateFilterHistory();
@@ -3158,7 +3169,8 @@
                         wcUpdateInterval = null;
                     }
                 } else {
-                    showAlert('Failed to complete water change', 'error');
+                    const error = await response.json();
+                    showAlert('Failed to complete water change: ' + (error.error || 'Unknown error'), 'error');
                 }
             }
         }

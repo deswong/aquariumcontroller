@@ -284,8 +284,8 @@ bool WaterChangeAssistant::startWaterChange(float volumeLitres, float temp, floa
     time(&now);
     waterChangeStartTimestamp = now;
     
-    // Store current readings
-    currentChangeVolume = volumeLitres;
+    // Store current readings (volume will be set at the end)
+    currentChangeVolume = 0;  // Volume unknown until end of water change
     tempBeforeChange = temp;
     phBeforeChange = ph;
     tdsBeforeChange = tds;
@@ -297,24 +297,28 @@ bool WaterChangeAssistant::startWaterChange(float volumeLitres, float temp, floa
     if (heaterRelay) heaterRelay->safetyDisable();
     if (co2Relay) co2Relay->safetyDisable();
     
-    Serial.printf("Water change started: %.1f litres at %lu\n", volumeLitres, now);
+    Serial.printf("Water change started at %lu\n", now);
     Serial.printf("Initial readings: Temp=%.1f°C, pH=%.2f, TDS=%.0f ppm\n", temp, ph, tds);
+    Serial.println("Volume will be recorded at completion");
     
     if (eventLogger) {
         char msg[128];
-        snprintf(msg, sizeof(msg), "Started: %.1f L, T=%.1f°C pH=%.2f TDS=%.0f (systems paused)", 
-                volumeLitres, temp, ph, tds);
+        snprintf(msg, sizeof(msg), "Started: T=%.1f°C pH=%.2f TDS=%.0f (systems paused, volume TBD)", 
+                temp, ph, tds);
         eventLogger->info("waterchange", msg);
     }
     
     return true;
 }
 
-bool WaterChangeAssistant::endWaterChange(float temp, float ph, float tds) {
+bool WaterChangeAssistant::endWaterChange(float temp, float ph, float tds, float volumeLitres) {
     if (currentPhase != PHASE_IN_PROGRESS) {
         Serial.println("ERROR: No water change in progress");
         return false;
     }
+    
+    // Set the actual volume changed (now known at completion)
+    currentChangeVolume = volumeLitres;
     
     // Get end time
     time_t now;
