@@ -81,7 +81,7 @@ A comprehensive aquarium automation system built for **ESP32-S3** that monitors 
 
 ### ⚙️ Advanced Features
 - **FreeRTOS Tasks** - Multi-core processing for optimal performance
-- **pH Calibration Interface** - Step-by-step calibration with multiple buffer solutions
+- **Flexible pH Calibration** - 1-point, 2-point, or 3-point calibration with multiple buffer solutions
 - **Remote Configuration** - Change WiFi, MQTT, and control settings via web interface
 - **Safety Interlocks** - Automatic shutdown if parameters exceed safe limits
 - **Dosing Pump Control** - DRV8871 motor driver with calibration and scheduling
@@ -90,6 +90,20 @@ A comprehensive aquarium automation system built for **ESP32-S3** that monitors 
 - **OLED Display** - SSD1309 128x64 monitoring display with trend graphs
 - **Event Logging** - Comprehensive event tracking with 5000-event rolling log (SPIFFS)
 - **NTP Time Sync** - Accurate timekeeping with automatic daylight saving
+
+### 🛡️ Production Features (NEW)
+- **Centralized Logging** - Thread-safe logging with compile-time level control (DEBUG/INFO/WARN/ERROR)
+- **Configuration Validation** - Startup validation for all parameters (GPIO pins, ranges, duplicates)
+- **System Monitoring** - Heap/task monitoring with memory leak detection (15-minute window)
+- **Status LED System** - Visual feedback for 6 system states (initializing/normal/warning/error/critical/AP mode)
+- **Notification Manager** - Multi-level alerts (INFO/WARNING/ERROR/CRITICAL) with 100-event history
+- **Sensor Anomaly Detection** - Detects stuck sensors, spikes, and out-of-range conditions
+- **ML Model Versioning** - Model metadata with version, training date, validation scores, MD5 checksums
+- **Debug Build Environment** - Optimized debug configuration with verbose logging and exception decoder
+- **Hardware Protection** - Intelligent relay duty cycle optimization for extended hardware life (20× relay, 5× solenoid)
+- **Comprehensive Documentation** - API reference, troubleshooting guide, duty cycle optimization guide
+
+**📖 Read more:** [SYSTEM_IMPROVEMENTS_SUMMARY.md](SYSTEM_IMPROVEMENTS_SUMMARY.md) | [API_DOCUMENTATION.md](API_DOCUMENTATION.md) | [TROUBLESHOOTING_GUIDE.md](TROUBLESHOOTING_GUIDE.md) | [RELAY_DUTY_CYCLE_OPTIMIZATION.md](RELAY_DUTY_CYCLE_OPTIMIZATION.md)
 
 ## Hardware Requirements
 
@@ -569,6 +583,7 @@ To add new sensors or features:
 - **[NTP_TIME_SYNC.md](NTP_TIME_SYNC.md)** - Time synchronization
 - **[MQTT_IMPROVEMENTS.md](MQTT_IMPROVEMENTS.md)** - MQTT configuration
 - **[TIME_PROPORTIONAL.md](TIME_PROPORTIONAL.md)** - PID control details
+- **[RELAY_DUTY_CYCLE_OPTIMIZATION.md](RELAY_DUTY_CYCLE_OPTIMIZATION.md)** - 🆕 **Hardware longevity & duty cycle optimization**
 
 ### Display & Interface
 - **[OLED_DISPLAY_MANAGER.md](OLED_DISPLAY_MANAGER.md)** - ⭐ **Complete OLED display guide (ESP32-S3 optimized)**
@@ -580,6 +595,7 @@ To add new sensors or features:
 - **[WEB_UI_PATTERN_GUIDE.md](WEB_UI_PATTERN_GUIDE.md)** - Web UI usage
 
 ### API & Integration
+- **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - 🆕 **⭐ Complete REST API reference (50+ endpoints)**
 - **[WEB_API_COMPLETE.md](WEB_API_COMPLETE.md)** - Complete API reference
 - **[PINOUT.md](PINOUT.md)** - Pin configuration details
 - **[PRODUCTION_FEATURES.md](PRODUCTION_FEATURES.md)** - Production-ready features
@@ -588,9 +604,11 @@ To add new sensors or features:
 - **[TESTING.md](TESTING.md)** - Complete testing guide
 - **[TEST_SUMMARY.md](TEST_SUMMARY.md)** - Test suite overview
 - **[TEST_QUICKREF.md](TEST_QUICKREF.md)** - Quick testing reference
+- **[TROUBLESHOOTING_GUIDE.md](TROUBLESHOOTING_GUIDE.md)** - 🆕 **⭐ Comprehensive troubleshooting & diagnostics**
 - **[OLED_DISPLAY_MANAGER.md](OLED_DISPLAY_MANAGER.md)** - OLED display test documentation
 
 ### Implementation Details
+- **[SYSTEM_IMPROVEMENTS_SUMMARY.md](SYSTEM_IMPROVEMENTS_SUMMARY.md)** - 🆕 **⭐ All production improvements (logging, monitoring, notifications, etc.)**
 - **[IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md)** - Water change predictor
 - **[ADVANCED_FEATURES.md](ADVANCED_FEATURES.md)** - Advanced capabilities
 - **[FEATURES.md](FEATURES.md)** - Feature list

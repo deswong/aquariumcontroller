@@ -88,7 +88,7 @@ wcPredictor->setTargetTDSThreshold(400.0);  // 400 ppm - suitable for Australian
 
 ---
 
-### 6. ✅ Electrical Safety Documentation (ENDER3_DISPLAY_WIRING.md)
+### 6. ✅ Electrical Safety Documentation
 
 **Changed:**
 ```markdown
@@ -309,9 +309,8 @@ daylightOffsetSec = 0;      // NO daylight saving
 
 ### Modified
 1. **README.md** - Added Australian reference and safety warnings
-2. **ENDER3_DISPLAY_WIRING.md** - Updated electrical safety section
-3. **ConfigManager.h** - Australian default values and comments
-4. **main.cpp** - Enhanced TDS threshold comment
+2. **ConfigManager.h** - Australian default values and comments
+3. **main.cpp** - Enhanced TDS threshold comment
 
 ---
 

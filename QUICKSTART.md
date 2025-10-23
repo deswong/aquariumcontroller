@@ -198,7 +198,7 @@ pio run --target upload
 
 ## 📚 Next Steps
 
-- **Display**: Install LCD display for at-a-glance monitoring (see [ENDER3_DISPLAY_WIRING.md](ENDER3_DISPLAY_WIRING.md))
+- **Display**: Install OLED display for at-a-glance monitoring (see [OLED_DISPLAY_GUIDE.md](OLED_DISPLAY_GUIDE.md))
 - **Dosing**: Set up automated nutrient dosing (see [DOSING_PUMP_GUIDE.md](DOSING_PUMP_GUIDE.md))
 - **Patterns**: Enable pattern learning for anomaly detection (see [PATTERN_LEARNING.md](PATTERN_LEARNING.md))
 - **Water Changes**: Use water change predictor (see [WATER_CHANGE_ASSISTANT.md](WATER_CHANGE_ASSISTANT.md))

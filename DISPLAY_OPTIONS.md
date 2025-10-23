@@ -125,9 +125,7 @@ GND   →   GND
 ```
 
 **Documentation:**
-- [DISPLAY_IMPLEMENTATION_COMPLETE.md](DISPLAY_IMPLEMENTATION_COMPLETE.md)
-- [ENDER3_DISPLAY_WIRING.md](ENDER3_DISPLAY_WIRING.md)
-- [DISPLAY_TESTS.md](DISPLAY_TESTS.md)
+- See archived documentation (Ender 3 display support removed)
 
 ---
 
@@ -229,7 +227,6 @@ If migrating from older code that used different display managers:
 
 ```cpp
 // Replace any of these:
-// #include "DisplayManager.h"           // Old Ender 3 LCD (removed)
 // #include "DisplayManager_OLED.h"      // Old OLED implementation  
 // #include "UnifiedDisplayManager.h"    // Unified version
 
@@ -269,17 +266,15 @@ displayMgr->updateNetworkStatus(true, "192.168.1.100");
 
 ## Conclusion
 
-Both display options are fully implemented and production-ready:
+The SSD1309 OLED display is the recommended display option for the aquarium controller:
 
-- **Ender 3 LCD**: Full-featured interactive display for standalone operation
 - **SSD1309 OLED**: Minimal monitoring display for web-centric control
-
-Choose based on your usage pattern, available GPIO pins, and flash space requirements. You can always switch later!
+- Simple 2-wire I2C interface
+- Low GPIO pin count (only 2 pins)
+- Small flash footprint (~80 KB)
+- Reliable and inexpensive
 
 ---
 
-**Need Help Deciding?** See the detailed comparison in [DISPLAY_SIZE_COMPARISON.md](DISPLAY_SIZE_COMPARISON.md)
-
-**Implementation Guides:**
-- Ender 3: [DISPLAY_IMPLEMENTATION_COMPLETE.md](DISPLAY_IMPLEMENTATION_COMPLETE.md)
+**Implementation Guide:**
 - OLED: [OLED_DISPLAY_GUIDE.md](OLED_DISPLAY_GUIDE.md)

@@ -407,9 +407,9 @@ Aquarium Controller Ready!
    pio test -e native
    ```
 
-5. **Wire up the display** per `ENDER3_DISPLAY_WIRING.md`
+5. **Wire up the display (optional)** per `OLED_DISPLAY_GUIDE.md`
 
-6. **Enjoy your local aquarium controller display!** 🐠💧📺
+6. **Enjoy your aquarium controller!** 🐠💧📺
 
 ---
 

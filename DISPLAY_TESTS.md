@@ -1,8 +1,10 @@
-# Display Manager Test Suite
+# ⚠️ ARCHIVED: Display Manager Test Suite
+
+> **Notice:** This document is archived. Ender 3 Pro display support and associated tests have been **removed** from the project. See [OLED_DISPLAY_TESTS.md](OLED_DISPLAY_TESTS.md) for current OLED display tests.
 
 ## Overview
 
-Comprehensive unit tests for the DisplayManager class that controls the Ender 3 Pro LCD12864 display.
+Historical unit tests for the DisplayManager class that controlled the Ender 3 Pro LCD12864 display (removed).
 
 ## Test File
 

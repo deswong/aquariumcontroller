@@ -1,6 +1,8 @@
-# Display Code Size Comparison: Ender 3 vs SSD1309 OLED
+# ⚠️ ARCHIVED: Display Code Size Comparison
 
-## Current Implementation (Ender 3 Pro Display)
+> **Notice:** This document is archived. Ender 3 Pro display support has been **removed** from the project. Only the SSD1309 OLED display is currently supported. See [OLED_DISPLAY_GUIDE.md](OLED_DISPLAY_GUIDE.md) for current implementation.
+
+## Historical Implementation (Ender 3 Pro Display - REMOVED)
 
 ### Hardware Complexity
 - **Display Type**: ST7920 128x64 Graphic LCD (RepRapDiscount Full Graphic Smart Controller)
