@@ -863,9 +863,13 @@ void AdaptivePID::logPerformanceToML(float ambientTemp, uint8_t hourOfDay,
 // PHASE 1: Hardware Timer Implementation
 // ============================================================================
 
-void IRAM_ATTR AdaptivePID::onControlTimer(void* arg) {
-    AdaptivePID* pid = (AdaptivePID*)arg;
-    pid->computeReady = true;
+// Static instance pointer for ISR callback
+static AdaptivePID* g_pidInstance = nullptr;
+
+void IRAM_ATTR onControlTimerISR() {
+    if (g_pidInstance) {
+        g_pidInstance->computeReady = true;
+    }
 }
 
 void AdaptivePID::enableHardwareTimer(uint32_t periodMs) {
@@ -875,10 +879,11 @@ void AdaptivePID::enableHardwareTimer(uint32_t periodMs) {
     }
     
     controlPeriodUs = periodMs * 1000;
+    g_pidInstance = this;  // Store instance for ISR
     
     // Create hardware timer (use timer 0, 80 prescaler = 1MHz = 1μs per tick)
     controlTimer = timerBegin(0, 80, true);
-    timerAttachInterrupt(controlTimer, &onControlTimer, true);
+    timerAttachInterrupt(controlTimer, &onControlTimerISR, true);
     timerAlarmWrite(controlTimer, controlPeriodUs, true);  // Auto-reload
     timerAlarmEnable(controlTimer);
     

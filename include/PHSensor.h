@@ -22,6 +22,12 @@ private:
     float baseVoltage;    // pH 10.0 at calibration temp
     bool calibrated;
     
+    // Track which points have been calibrated
+    bool acidCalibrated;
+    bool neutralCalibrated;
+    bool baseCalibrated;
+    int numCalibrationPoints;
+    
     // Temperature compensation data
     float acidCalTemp;      // Temperature when pH 4.0 was calibrated
     float neutralCalTemp;   // Temperature when pH 7.0 was calibrated
@@ -57,7 +63,11 @@ public:
     // Calibration methods with temperature compensation
     void startCalibration();
     void endCalibration();
-    bool calibratePoint(float knownPH, float solutionTemp, float solutionRefPH = 0); 
+    bool calibratePoint(float knownPH, float solutionTemp, float solutionRefPH = 0);
+    int getCalibrationPointCount() { return numCalibrationPoints; }
+    bool hasAcidPoint() { return acidCalibrated; }
+    bool hasNeutralPoint() { return neutralCalibrated; }
+    bool hasBasePoint() { return baseCalibrated; } 
     // knownPH: nominal pH (e.g., 4.0, 7.0, 10.0)
     // solutionTemp: current temperature of calibration solution
     // solutionRefPH: true pH at reference temp (0 = use defaults)

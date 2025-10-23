@@ -1,9 +1,10 @@
 #include "PHSensor.h"
 
 PHSensor::PHSensor(uint8_t analogPin) 
-    : pin(analogPin), currentPH(7.0), readIndex(0), numReadings(20), 
-      total(0), initialized(false), lastReadTime(0),
+    : pin(analogPin), currentPH(7.0), readIndex(0), numReadings(0), total(0), 
+      initialized(false), lastReadTime(0),
       acidVoltage(2.0), neutralVoltage(1.5), baseVoltage(1.0), calibrated(false),
+      acidCalibrated(false), neutralCalibrated(false), baseCalibrated(false), numCalibrationPoints(0),
       acidCalTemp(25.0), neutralCalTemp(25.0), baseCalTemp(25.0),
       acidTrueRef(4.01), neutralTrueRef(7.00), baseTrueRef(10.01), refTemp(25.0),
       isCalibrating(false), lastCalibrationTime(0) {
@@ -48,16 +49,48 @@ float PHSensor::voltageTopH(float voltage, float currentTemp) {
         return applyTempCompensation(rawPH, currentTemp);
     }
     
-    // Three-point calibration curve
+    // Calibration curve based on available points
     float rawPH;
-    if (voltage > neutralVoltage) {
-        // Between acid (4.0) and neutral (7.0)
-        float slope = (7.0 - 4.0) / (neutralVoltage - acidVoltage);
-        rawPH = 4.0 + (voltage - acidVoltage) * slope;
+    
+    if (numCalibrationPoints == 1) {
+        // Single-point calibration (typically pH 7)
+        if (neutralCalibrated) {
+            // Linear offset from neutral point
+            float voltageOffset = voltage - neutralVoltage;
+            // Assume typical slope of ~59.16 mV/pH at 25°C (Nernstian slope)
+            // With 3.3V ADC, that's approximately 0.165V per pH unit
+            rawPH = 7.0 - (voltageOffset / 0.165);
+        } else if (acidCalibrated) {
+            rawPH = 4.0 - ((voltage - acidVoltage) / 0.165);
+        } else {
+            rawPH = 10.0 - ((voltage - baseVoltage) / 0.165);
+        }
+    } else if (numCalibrationPoints == 2) {
+        // Two-point calibration - linear interpolation
+        if (neutralCalibrated && acidCalibrated) {
+            // pH 7 and pH 4
+            float slope = (7.0 - 4.0) / (neutralVoltage - acidVoltage);
+            rawPH = 4.0 + (voltage - acidVoltage) * slope;
+        } else if (neutralCalibrated && baseCalibrated) {
+            // pH 7 and pH 10
+            float slope = (10.0 - 7.0) / (baseVoltage - neutralVoltage);
+            rawPH = 7.0 + (voltage - neutralVoltage) * slope;
+        } else {
+            // pH 4 and pH 10 (wider range, less common)
+            float slope = (10.0 - 4.0) / (baseVoltage - acidVoltage);
+            rawPH = 4.0 + (voltage - acidVoltage) * slope;
+        }
     } else {
-        // Between neutral (7.0) and base (10.0)
-        float slope = (10.0 - 7.0) / (baseVoltage - neutralVoltage);
-        rawPH = 7.0 + (voltage - neutralVoltage) * slope;
+        // Three-point calibration - piecewise linear
+        if (voltage > neutralVoltage) {
+            // Between acid (4.0) and neutral (7.0)
+            float slope = (7.0 - 4.0) / (neutralVoltage - acidVoltage);
+            rawPH = 4.0 + (voltage - acidVoltage) * slope;
+        } else {
+            // Between neutral (7.0) and base (10.0)
+            float slope = (10.0 - 7.0) / (baseVoltage - neutralVoltage);
+            rawPH = 7.0 + (voltage - neutralVoltage) * slope;
+        }
     }
     
     // Apply temperature compensation
@@ -147,12 +180,33 @@ bool PHSensor::isCalibrated() {
 
 void PHSensor::startCalibration() {
     Serial.println("Starting pH calibration (using ambient air temperature)...");
+    Serial.println("You can calibrate with 1, 2, or 3 points:");
+    Serial.println("  1-point: pH 7.0 (neutral) - basic offset calibration");
+    Serial.println("  2-point: pH 4.0 + pH 7.0 OR pH 7.0 + pH 10.0 - slope calibration");
+    Serial.println("  3-point: pH 4.0 + pH 7.0 + pH 10.0 - full curve calibration (recommended)");
     calibrated = false;
+    acidCalibrated = false;
+    neutralCalibrated = false;
+    baseCalibrated = false;
+    numCalibrationPoints = 0;
     isCalibrating = true;
 }
 
 void PHSensor::endCalibration() {
-    Serial.println("Ending pH calibration mode (switching to water temperature)");
+    Serial.printf("Ending pH calibration mode - %d point(s) calibrated\n", numCalibrationPoints);
+    if (numCalibrationPoints >= 1) {
+        calibrated = true;
+        Serial.println("✓ Calibration complete (switching to water temperature)");
+        if (numCalibrationPoints == 1) {
+            Serial.println("  Note: Single-point calibration provides basic accuracy");
+        } else if (numCalibrationPoints == 2) {
+            Serial.println("  Note: Two-point calibration provides good accuracy");
+        } else {
+            Serial.println("  Note: Three-point calibration provides best accuracy");
+        }
+    } else {
+        Serial.println("⚠ Warning: No calibration points set - using defaults");
+    }
     isCalibrating = false;
 }
 
@@ -175,8 +229,13 @@ bool PHSensor::calibratePoint(float knownPH, float solutionTemp, float solutionR
         if (solutionRefPH > 0) {
             acidTrueRef = solutionRefPH;
         }
-        Serial.printf("Calibrated acid point: pH %.2f at %.1f°C = %.3fV (Ref pH: %.2f at %.1f°C)\n", 
+        if (!acidCalibrated) {
+            numCalibrationPoints++;
+            acidCalibrated = true;
+        }
+        Serial.printf("✓ Calibrated acid point: pH %.2f at %.1f°C = %.3fV (Ref pH: %.2f at %.1f°C)\n", 
                       knownPH, solutionTemp, avgVoltage, acidTrueRef, refTemp);
+        Serial.printf("  Total points: %d/3\n", numCalibrationPoints);
         return true;
     } else if (abs(knownPH - 7.0) < 0.5) {
         neutralVoltage = avgVoltage;
@@ -184,8 +243,13 @@ bool PHSensor::calibratePoint(float knownPH, float solutionTemp, float solutionR
         if (solutionRefPH > 0) {
             neutralTrueRef = solutionRefPH;
         }
-        Serial.printf("Calibrated neutral point: pH %.2f at %.1f°C = %.3fV (Ref pH: %.2f at %.1f°C)\n", 
+        if (!neutralCalibrated) {
+            numCalibrationPoints++;
+            neutralCalibrated = true;
+        }
+        Serial.printf("✓ Calibrated neutral point: pH %.2f at %.1f°C = %.3fV (Ref pH: %.2f at %.1f°C)\n", 
                       knownPH, solutionTemp, avgVoltage, neutralTrueRef, refTemp);
+        Serial.printf("  Total points: %d/3\n", numCalibrationPoints);
         return true;
     } else if (abs(knownPH - 10.0) < 0.5) {
         baseVoltage = avgVoltage;
@@ -193,9 +257,13 @@ bool PHSensor::calibratePoint(float knownPH, float solutionTemp, float solutionR
         if (solutionRefPH > 0) {
             baseTrueRef = solutionRefPH;
         }
-        Serial.printf("Calibrated base point: pH %.2f at %.1f°C = %.3fV (Ref pH: %.2f at %.1f°C)\n", 
+        if (!baseCalibrated) {
+            numCalibrationPoints++;
+            baseCalibrated = true;
+        }
+        Serial.printf("✓ Calibrated base point: pH %.2f at %.1f°C = %.3fV (Ref pH: %.2f at %.1f°C)\n", 
                       knownPH, solutionTemp, avgVoltage, baseTrueRef, refTemp);
-        calibrated = true; // Mark as calibrated after all three points
+        Serial.printf("  Total points: %d/3\n", numCalibrationPoints);
         return true;
     }
     
@@ -218,6 +286,10 @@ void PHSensor::saveCalibration() {
     prefs->putFloat("neutralV", neutralVoltage);
     prefs->putFloat("baseV", baseVoltage);
     prefs->putBool("calibrated", calibrated);
+    prefs->putBool("acidCal", acidCalibrated);
+    prefs->putBool("neutralCal", neutralCalibrated);
+    prefs->putBool("baseCal", baseCalibrated);
+    prefs->putInt("numPoints", numCalibrationPoints);
     
     // Save temperature compensation data
     prefs->putFloat("acidTemp", acidCalTemp);
@@ -247,6 +319,10 @@ void PHSensor::loadCalibration() {
     neutralVoltage = prefs->getFloat("neutralV", 1.5);
     baseVoltage = prefs->getFloat("baseV", 1.0);
     calibrated = prefs->getBool("calibrated", false);
+    acidCalibrated = prefs->getBool("acidCal", false);
+    neutralCalibrated = prefs->getBool("neutralCal", false);
+    baseCalibrated = prefs->getBool("baseCal", false);
+    numCalibrationPoints = prefs->getInt("numPoints", 0);
     
     // Load temperature compensation data
     acidCalTemp = prefs->getFloat("acidTemp", 25.0);
@@ -264,13 +340,19 @@ void PHSensor::loadCalibration() {
     
     if (calibrated) {
         int daysSince = getDaysSinceCalibration();
-        Serial.printf("pH calibration loaded with temp compensation:\n");
-        Serial.printf("  Acid: %.3fV at %.1f°C (ref pH %.2f at %.1f°C)\n", 
+        Serial.printf("pH calibration loaded (%d-point) with temp compensation:\n", numCalibrationPoints);
+        if (acidCalibrated) {
+            Serial.printf("  Acid: %.3fV at %.1f°C (ref pH %.2f at %.1f°C)\n", 
                       acidVoltage, acidCalTemp, acidTrueRef, refTemp);
-        Serial.printf("  Neutral: %.3fV at %.1f°C (ref pH %.2f at %.1f°C)\n", 
+        }
+        if (neutralCalibrated) {
+            Serial.printf("  Neutral: %.3fV at %.1f°C (ref pH %.2f at %.1f°C)\n", 
                       neutralVoltage, neutralCalTemp, neutralTrueRef, refTemp);
-        Serial.printf("  Base: %.3fV at %.1f°C (ref pH %.2f at %.1f°C)\n", 
+        }
+        if (baseCalibrated) {
+            Serial.printf("  Base: %.3fV at %.1f°C (ref pH %.2f at %.1f°C)\n", 
                       baseVoltage, baseCalTemp, baseTrueRef, refTemp);
+        }
         Serial.printf("  Age: %d days since last calibration", daysSince);
         
         if (isCalibrationExpired()) {
@@ -288,6 +370,10 @@ void PHSensor::resetCalibration() {
     neutralVoltage = 1.5;
     baseVoltage = 1.0;
     calibrated = false;
+    acidCalibrated = false;
+    neutralCalibrated = false;
+    baseCalibrated = false;
+    numCalibrationPoints = 0;
     
     // Reset temperature compensation to defaults
     acidCalTemp = 25.0;

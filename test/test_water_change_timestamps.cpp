@@ -2,6 +2,7 @@
 #include "test_common.h"
 #include <time.h>
 #include <map>
+#include <string>
 
 // Mock time values
 static time_t mock_current_time = 0;

@@ -90,7 +90,7 @@ void WebServerManager::setupRoutes() {
             tempPhase23["inTransition"] = tempPID->isInTransition();
             
             // Health status summary
-            HealthMetrics tempHealth = tempPID->getHealthMetrics();
+            AdaptivePID::HealthMetrics tempHealth = tempPID->getHealthMetrics();
             tempPhase23["healthOk"] = !(tempHealth.outputStuck || tempHealth.persistentHighError || tempHealth.outputSaturation);
         }
         
@@ -114,7 +114,7 @@ void WebServerManager::setupRoutes() {
             co2Phase23["inTransition"] = co2PID->isInTransition();
             
             // Health status summary
-            HealthMetrics co2Health = co2PID->getHealthMetrics();
+            AdaptivePID::HealthMetrics co2Health = co2PID->getHealthMetrics();
             co2Phase23["healthOk"] = !(co2Health.outputStuck || co2Health.persistentHighError || co2Health.outputSaturation);
         }
         
@@ -234,6 +234,10 @@ void WebServerManager::setupRoutes() {
         doc["waterTemp"] = data.temperature;
         doc["currentPH"] = data.ph;
         doc["calibrating"] = phSensor->inCalibrationMode();
+        doc["calibrationPoints"] = phSensor->getCalibrationPointCount();
+        doc["hasAcid"] = phSensor->hasAcidPoint();
+        doc["hasNeutral"] = phSensor->hasNeutralPoint();
+        doc["hasBase"] = phSensor->hasBasePoint();
         
         String response;
         serializeJson(doc, response);
@@ -790,28 +794,17 @@ void WebServerManager::setupRoutes() {
     // ====================
     
     // API: ML Prediction - Get Current Prediction
+    // TODO: Implement mlPredictor class for water change predictions
     server->on("/api/ml/prediction", HTTP_GET, [](AsyncWebServerRequest* request) {
-        if (!mlPredictor) {
-            request->send(404, "application/json", "{\"error\":\"ML predictor not initialized\"}");
-            return;
-        }
+        // Placeholder response until MLPredictor is implemented
+        StaticJsonDocument<256> doc;
+        doc["error"] = "not_implemented";
+        doc["valid"] = false;
+        doc["message"] = "ML predictor feature not yet implemented";
         
-        if (!mlPredictor->isPredictionValid()) {
-            StaticJsonDocument<256> doc;
-            doc["error"] = "no_prediction";
-            doc["valid"] = false;
-            doc["stale"] = mlPredictor->isPredictionStale();
-            doc["message"] = "No valid prediction available. ML service may not be running.";
-            
-            String response;
-            serializeJson(doc, response);
-            request->send(404, "application/json", response);
-            return;
-        }
-        
-        // Build prediction response
-        String response = mlPredictor->getStatusJSON();
-        request->send(200, "application/json", response);
+        String response;
+        serializeJson(doc, response);
+        request->send(501, "application/json", response);
     });
     
     // ====================
@@ -1649,25 +1642,29 @@ void WebServerManager::setupRoutes() {
     
     // API: Get profiler stats
     server->on("/api/pid/profiler/temp", HTTP_GET, [](AsyncWebServerRequest* request) {
-        if (!tempPID || !tempPID->getProfiler()) {
-            request->send(500, "application/json", "{\"error\":\"Temperature PID profiler not initialized\"}");
+        if (!tempPID) {
+            request->send(500, "application/json", "{\"error\":\"Temperature PID not initialized\"}");
             return;
         }
         
-        PIDProfiler* profiler = tempPID->getProfiler();
+        AdaptivePID::PerformanceProfile profile = tempPID->getProfile();
+        uint32_t cacheHits = tempPID->getMLCacheHits();
+        uint32_t cacheMisses = tempPID->getMLCacheMisses();
+        float cacheHitRate = (cacheHits + cacheMisses > 0) ? 
+            (100.0f * cacheHits / (cacheHits + cacheMisses)) : 0.0f;
+        
         StaticJsonDocument<512> doc;
         doc["controller"] = "temperature";
-        doc["avgComputeTime"] = profiler->getAverageComputeTime();
-        doc["maxComputeTime"] = profiler->getMaxComputeTime();
-        doc["minComputeTime"] = profiler->getMinComputeTime();
-        doc["avgMLTime"] = profiler->getAverageMLTime();
-        doc["maxMLTime"] = profiler->getMaxMLTime();
-        doc["cpuUsage"] = profiler->getCPUUsage();
-        doc["mlCacheHitRate"] = profiler->getMLCacheHitRate();
-        doc["mlCacheHits"] = profiler->getMLCacheHits();
-        doc["mlCacheMisses"] = profiler->getMLCacheMisses();
-        doc["overruns"] = profiler->getOverruns();
-        doc["cycleCount"] = profiler->getCycleCount();
+        doc["avgComputeTime"] = profile.avgComputeTimeUs;
+        doc["maxComputeTime"] = profile.maxComputeTimeUs;
+        doc["minComputeTime"] = profile.minComputeTimeUs;
+        doc["currentComputeTime"] = profile.computeTimeUs;
+        doc["cpuUsage"] = profile.cpuUsagePercent;
+        doc["mlCacheHitRate"] = cacheHitRate;
+        doc["mlCacheHits"] = cacheHits;
+        doc["mlCacheMisses"] = cacheMisses;
+        doc["overruns"] = profile.overrunCount;
+        doc["cycleCount"] = profile.computeCount;
         
         String response;
         serializeJson(doc, response);
@@ -1675,25 +1672,29 @@ void WebServerManager::setupRoutes() {
     });
     
     server->on("/api/pid/profiler/co2", HTTP_GET, [](AsyncWebServerRequest* request) {
-        if (!co2PID || !co2PID->getProfiler()) {
-            request->send(500, "application/json", "{\"error\":\"CO2 PID profiler not initialized\"}");
+        if (!co2PID) {
+            request->send(500, "application/json", "{\"error\":\"CO2 PID not initialized\"}");
             return;
         }
         
-        PIDProfiler* profiler = co2PID->getProfiler();
+        AdaptivePID::PerformanceProfile profile = co2PID->getProfile();
+        uint32_t cacheHits = co2PID->getMLCacheHits();
+        uint32_t cacheMisses = co2PID->getMLCacheMisses();
+        float cacheHitRate = (cacheHits + cacheMisses > 0) ? 
+            (100.0f * cacheHits / (cacheHits + cacheMisses)) : 0.0f;
+        
         StaticJsonDocument<512> doc;
         doc["controller"] = "co2";
-        doc["avgComputeTime"] = profiler->getAverageComputeTime();
-        doc["maxComputeTime"] = profiler->getMaxComputeTime();
-        doc["minComputeTime"] = profiler->getMinComputeTime();
-        doc["avgMLTime"] = profiler->getAverageMLTime();
-        doc["maxMLTime"] = profiler->getMaxMLTime();
-        doc["cpuUsage"] = profiler->getCPUUsage();
-        doc["mlCacheHitRate"] = profiler->getMLCacheHitRate();
-        doc["mlCacheHits"] = profiler->getMLCacheHits();
-        doc["mlCacheMisses"] = profiler->getMLCacheMisses();
-        doc["overruns"] = profiler->getOverruns();
-        doc["cycleCount"] = profiler->getCycleCount();
+        doc["avgComputeTime"] = profile.avgComputeTimeUs;
+        doc["maxComputeTime"] = profile.maxComputeTimeUs;
+        doc["minComputeTime"] = profile.minComputeTimeUs;
+        doc["currentComputeTime"] = profile.computeTimeUs;
+        doc["cpuUsage"] = profile.cpuUsagePercent;
+        doc["mlCacheHitRate"] = cacheHitRate;
+        doc["mlCacheHits"] = cacheHits;
+        doc["mlCacheMisses"] = cacheMisses;
+        doc["overruns"] = profile.overrunCount;
+        doc["cycleCount"] = profile.computeCount;
         
         String response;
         serializeJson(doc, response);

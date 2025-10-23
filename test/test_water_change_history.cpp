@@ -2,6 +2,7 @@
 #include "test_common.h"
 #include <map>
 #include <vector>
+#include <string>
 #include <time.h>
 
 // Mock NVS storage

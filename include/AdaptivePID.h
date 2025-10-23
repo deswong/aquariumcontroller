@@ -7,6 +7,9 @@
 // Forward declaration
 class MLDataLogger;
 
+// Forward declaration for ISR
+void IRAM_ATTR onControlTimerISR();
+
 // ESP32-S3 Phase 1 Enhancements: PSRAM support
 #ifdef BOARD_HAS_PSRAM
 #define PID_USE_PSRAM 1
@@ -17,6 +20,7 @@ class MLDataLogger;
 #endif
 
 class AdaptivePID {
+    friend void onControlTimerISR();  // Allow ISR to access private members
 private:
     float kp, ki, kd;
     float target;
@@ -110,6 +114,9 @@ private:
     volatile bool computeReady;
     static void IRAM_ATTR onControlTimer(void* arg);
     
+    bool enableProfiling;
+
+public:
     // PHASE 1: Performance Profiling
     struct PerformanceProfile {
         uint32_t computeTimeUs;      // Current compute time (microseconds)
@@ -120,8 +127,9 @@ private:
         uint32_t overrunCount;       // Missed deadlines
         float cpuUsagePercent;
     };
+
+private:
     PerformanceProfile profile;
-    bool enableProfiling;
     
     // PHASE 2: Dual-Core ML Processing
     TaskHandle_t mlTaskHandle;
@@ -164,6 +172,10 @@ private:
     ParameterTransition paramTransition;
     void updateParameterTransition();
     
+    bool useHealthMonitoring;
+    void updateHealthMetrics();
+
+public:
     // PHASE 3: Health Monitoring
     struct HealthMetrics {
         bool outputStuck;              // Output not changing despite error
@@ -176,9 +188,9 @@ private:
         bool hasError;
         String errorMessage;
     };
+
+private:
     HealthMetrics health;
-    bool useHealthMonitoring;
-    void updateHealthMetrics();
     
     // PHASE 3: Predictive Feed-Forward based on TDS/sensor data
     struct FeedForwardModel {
@@ -295,6 +307,8 @@ public:
         uint32_t total = mlCacheHits + mlCacheMisses;
         return (total > 0) ? ((float)mlCacheHits / (float)total * 100.0f) : 0.0f;
     }
+    uint32_t getMLCacheHits() { return mlCacheHits; }
+    uint32_t getMLCacheMisses() { return mlCacheMisses; }
     void resetMLCacheStats() { mlCacheHits = 0; mlCacheMisses = 0; }
     
     // History buffer access (for ML training)
