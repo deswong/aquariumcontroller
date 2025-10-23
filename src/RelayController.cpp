@@ -4,7 +4,8 @@ RelayController::RelayController(uint8_t relayPin, String relayName, bool invert
     : pin(relayPin), state(false), inverted(invertLogic), 
       safetyDisabled(false), name(relayName), lastToggleTime(0),
       mode(SIMPLE_THRESHOLD), currentDutyCycle(0), windowStartTime(0),
-      windowSize(DEFAULT_WINDOW_SIZE) {
+      windowSize(DEFAULT_WINDOW_SIZE), minOnTime(DEFAULT_MIN_ON_TIME),
+      minOffTime(DEFAULT_MIN_OFF_TIME) {
 }
 
 void RelayController::begin() {
@@ -78,6 +79,16 @@ void RelayController::setWindowSize(unsigned long sizeMs) {
     Serial.printf("Relay '%s' window size set to %lu ms\n", name.c_str(), windowSize);
 }
 
+void RelayController::setMinOnTime(unsigned long minMs) {
+    minOnTime = minMs;
+    Serial.printf("Relay '%s' minimum on-time set to %lu ms\n", name.c_str(), minOnTime);
+}
+
+void RelayController::setMinOffTime(unsigned long minMs) {
+    minOffTime = minMs;
+    Serial.printf("Relay '%s' minimum off-time set to %lu ms\n", name.c_str(), minOffTime);
+}
+
 void RelayController::setDutyCycle(float percentage) {
     percentage = constrain(percentage, 0, 100);
     currentDutyCycle = percentage;
@@ -110,8 +121,28 @@ void RelayController::updateTimeProportional() {
     
     // Calculate on-time based on duty cycle
     unsigned long onTime = (unsigned long)((currentDutyCycle / 100.0) * windowSize);
+    unsigned long offTime = windowSize - onTime;
     
-    // Determine if relay should be on or off in this window
+    // Enforce minimum on/off times to protect hardware
+    // If calculated on-time is too short, skip this cycle
+    if (onTime > 0 && onTime < minOnTime) {
+        // On-time too short, stay off entire window
+        if (state) {
+            off();
+        }
+        return;
+    }
+    
+    // If calculated off-time is too short, stay on entire window
+    if (offTime > 0 && offTime < minOffTime) {
+        // Off-time too short, stay on entire window
+        if (!state) {
+            on();
+        }
+        return;
+    }
+    
+    // Normal operation: determine if relay should be on or off in this window
     if (elapsed < onTime) {
         // Within the "on" portion of the window
         if (!state) {

@@ -24,7 +24,11 @@ private:
     float currentDutyCycle;
     unsigned long windowStartTime;
     unsigned long windowSize; // Time window in milliseconds
+    unsigned long minOnTime;   // Minimum on-time in milliseconds
+    unsigned long minOffTime;  // Minimum off-time in milliseconds
     static const unsigned long DEFAULT_WINDOW_SIZE = 10000; // 10 seconds default
+    static const unsigned long DEFAULT_MIN_ON_TIME = 10000;  // 10 seconds minimum on
+    static const unsigned long DEFAULT_MIN_OFF_TIME = 10000; // 10 seconds minimum off
     
     void updateTimeProportional();
 
@@ -46,6 +50,8 @@ public:
     void setMode(RelayMode newMode);
     RelayMode getMode() { return mode; }
     void setWindowSize(unsigned long sizeMs);
+    void setMinOnTime(unsigned long minMs);   // Set minimum on-time
+    void setMinOffTime(unsigned long minMs);  // Set minimum off-time
     
     // For PID output (0-100%)
     void setDutyCycle(float percentage);

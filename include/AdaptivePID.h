@@ -107,6 +107,22 @@ private:
     uint32_t mlCacheHits;           // Statistics
     uint32_t mlCacheMisses;
     
+    // ML Model Versioning and Metadata
+    struct MLModelMetadata {
+        uint32_t version;              // Model version number
+        char trainingDate[32];         // ISO8601 format
+        uint32_t trainingSamples;      // Number of samples used for training
+        float validationScore;         // Performance metric (RMSE, accuracy, etc.)
+        float minExpectedError;        // Expected minimum error rate
+        float maxExpectedError;        // Expected maximum error rate
+        char checksum[33];             // MD5 checksum of model file
+        bool isValid;                  // Model loaded and validated successfully
+    };
+    MLModelMetadata mlModelMeta;
+    void loadMLModelMetadata();
+    void saveMLModelMetadata();
+    bool validateMLModel();
+    
     // PHASE 1: Hardware Timer Support
     hw_timer_t* controlTimer;
     bool useHardwareTimer;
@@ -348,6 +364,12 @@ public:
     float getFeedForwardTotal() { return feedForward.lastTotalContribution; }
     float computeWithSensorContext(float input, float dt, float ambientTemp, uint8_t hour, uint8_t season, 
                                     float tankVolume, float tds, float ph);
+    
+    // ML Model Metadata Access
+    const MLModelMetadata& getMLModelMetadata() const { return mlModelMeta; }
+    bool isMLModelValid() const { return mlModelMeta.isValid; }
+    uint32_t getMLModelVersion() const { return mlModelMeta.version; }
+    String getMLModelInfo() const;
 };
 
 #endif

@@ -11,10 +11,15 @@
 #include "AdaptivePID.h"
 #include "RelayController.h"
 #include "ConfigManager.h"
+#include "ConfigValidator.h"
 #include "WiFiManager.h"
 #include "WebServer.h"
 #include "OTAManager.h"
 #include "SystemTasks.h"
+#include "Logger.h"
+#include "SystemMonitor.h"
+#include "StatusLED.h"
+#include "NotificationManager.h"
 
 // Watchdog timeout in seconds
 #define WDT_TIMEOUT 30
@@ -28,6 +33,11 @@ ConfigManager* configMgr;
 extern WiFiManager* wifiMgr;
 WebServerManager* webServer;
 OTAManager* otaManager;
+
+// New system components
+SystemMonitor* sysMonitor = nullptr;
+StatusLED* statusLED = nullptr;
+NotificationManager* notifyMgr = nullptr;
 
 // MQTT reconnection
 unsigned long lastMqttReconnect = 0;
@@ -115,11 +125,16 @@ void setup() {
     Serial.println("Aquarium Controller Starting...");
     Serial.println("=================================\n");
     
+    // Initialize centralized logging system
+    Logger::init(LOG_LEVEL_INFO);
+    LOG_INFO("System", "Aquarium Controller v2.0 Starting");
+    LOG_INFO("System", "ESP32-S3 with PSRAM");
+    
     // Initialize Watchdog Timer
-    Serial.println("Configuring watchdog timer...");
+    LOG_INFO("System", "Configuring watchdog timer");
     esp_task_wdt_init(WDT_TIMEOUT, true); // 30 second timeout, panic on timeout
     esp_task_wdt_add(NULL); // Add current thread to watchdog
-    Serial.printf("Watchdog enabled: %d second timeout\n", WDT_TIMEOUT);
+    LOG_INFO("System", "Watchdog enabled: %d second timeout", WDT_TIMEOUT);
     
     // Initialize configuration manager
     configMgr = new ConfigManager();
@@ -127,6 +142,17 @@ void setup() {
     configMgr->printConfig();
     
     SystemConfig& config = configMgr->getConfig();
+    
+    // Validate configuration
+    LOG_INFO("System", "Validating configuration");
+    ConfigValidator validator;
+    if (!validator.validateAll()) {
+        LOG_WARN("System", "Configuration validation found issues");
+        if (validator.hasCriticalErrors()) {
+            LOG_ERROR("System", "CRITICAL configuration errors detected!");
+            LOG_ERROR("System", "System will continue but may not function correctly");
+        }
+    }
     
     // Initialize event logger
     Serial.println("\nInitializing event logger...");
@@ -146,6 +172,36 @@ void setup() {
     if (eventLogger) {
         eventLogger->info("network", "WiFi initialized");
     }
+    
+    // Initialize system monitoring
+    LOG_INFO("System", "Initializing system monitor");
+    sysMonitor = new SystemMonitor();
+    sysMonitor->begin();
+    sysMonitor->setStackWarningThreshold(80.0);  // Alert if task stack >80% used
+    sysMonitor->setHeapWarningThreshold(85.0);   // Alert if heap >85% used
+    
+    // Initialize status LED (GPIO 2 is commonly available, set to -1 to disable)
+    LOG_INFO("System", "Initializing status LED");
+    statusLED = new StatusLED(2);  // Change pin or set to -1 if not using LED
+    statusLED->begin();
+    statusLED->setState(STATE_INITIALIZING);
+    
+    // Initialize notification manager
+    LOG_INFO("System", "Initializing notification manager");
+    notifyMgr = new NotificationManager();
+    notifyMgr->begin();
+    notifyMgr->setMaxNotifications(100);
+    notifyMgr->setNotificationCooldown(60000);  // 1 minute cooldown per notification
+    
+    // Register notification callback for logging
+    notifyMgr->addCallback([](const Notification& notif) {
+        LOG_INFO("Notify", "[%s] %s: %s", 
+                notif.level == NOTIFY_CRITICAL ? "CRITICAL" :
+                notif.level == NOTIFY_ERROR ? "ERROR" :
+                notif.level == NOTIFY_WARNING ? "WARNING" : "INFO",
+                notif.category.c_str(),
+                notif.message.c_str());
+    });
     
     // Initialize sensors
     Serial.println("\nInitializing sensors...");
@@ -254,12 +310,26 @@ void setup() {
     co2Relay->begin();
     
     // Enable time proportional for heater
+    // 200L tank with 200W heater: longer cycles reduce relay wear
+    // 5 minute window = 300 seconds
+    // Thermal mass of 200L provides natural damping
+    // Typical heating: 0.2°C per minute at 50% duty = ~2.5 hour to heat from 20°C to 25°C
     heaterRelay->setMode(TIME_PROPORTIONAL);
-    heaterRelay->setWindowSize(15000); // 15 second window for heater
+    heaterRelay->setWindowSize(300000); // 5 minute (300 second) window for heater
+    heaterRelay->setMinOnTime(60000);   // Minimum 1 minute on (protects heater element)
+    heaterRelay->setMinOffTime(60000);  // Minimum 1 minute off (reduces relay cycling)
+    LOG_INFO("Relay", "Heater relay: 5 minute window, 1 min min on/off (200L tank, 200W heater)");
 
     // Enable time proportional for CO2
+    // CO2 @ 1 bubble/sec: longer cycles reduce solenoid wear
+    // 2 minute window = 120 seconds
+    // pH changes slowly in 200L tank due to large buffer capacity
+    // This gives minimum 30 second on/off periods to allow meaningful CO2 injection
     co2Relay->setMode(TIME_PROPORTIONAL);
-    co2Relay->setWindowSize(10000); // 10 second window for CO2
+    co2Relay->setWindowSize(120000);   // 2 minute (120 second) window for CO2
+    co2Relay->setMinOnTime(30000);     // Minimum 30 seconds on (30 bubbles @ 1/sec)
+    co2Relay->setMinOffTime(30000);    // Minimum 30 seconds off (reduces solenoid wear)
+    LOG_INFO("Relay", "CO2 relay: 2 minute window, 30 sec min on/off (1 bubble/sec)");
     
     // Initialize Water Change Assistant
     Serial.println("\nInitializing water change assistant...");
@@ -363,6 +433,24 @@ void setup() {
     Serial.println("\nStarting system tasks...");
     initializeTasks();
     
+    // System initialization complete
+    LOG_INFO("System", "=================================");
+    LOG_INFO("System", "Aquarium Controller Ready!");
+    LOG_INFO("System", "=================================");
+    LOG_INFO("System", "Access web interface at: http://%s", wifiMgr->getIPAddress().c_str());
+    LOG_INFO("System", "OTA updates at: http://%s/update", wifiMgr->getIPAddress().c_str());
+    LOG_INFO("System", "=================================");
+    
+    // Update status LED to normal operation
+    if (statusLED) {
+        statusLED->setState(STATE_NORMAL);
+    }
+    
+    // Send startup notification
+    if (notifyMgr) {
+        notifyMgr->info("system", "Aquarium Controller initialized successfully");
+    }
+    
     Serial.println("\n=================================");
     Serial.println("Aquarium Controller Ready!");
     Serial.println("=================================");
@@ -378,6 +466,35 @@ void loop() {
     // Update WiFi manager
     wifiMgr->update();
     
+    // Update system state based on WiFi status
+    if (statusLED) {
+        if (wifiMgr->isAPMode()) {
+            statusLED->setState(STATE_AP_MODE);
+        } else if (!wifiMgr->isConnected()) {
+            statusLED->setState(STATE_ERROR);
+        } else {
+            // Check for other errors/warnings
+            if (notifyMgr && notifyMgr->getUnacknowledgedCount() > 0) {
+                auto unacked = notifyMgr->getUnacknowledged();
+                bool hasCritical = false, hasError = false, hasWarning = false;
+                
+                for (const auto& notif : unacked) {
+                    if (notif.level == NOTIFY_CRITICAL) hasCritical = true;
+                    else if (notif.level == NOTIFY_ERROR) hasError = true;
+                    else if (notif.level == NOTIFY_WARNING) hasWarning = true;
+                }
+                
+                if (hasCritical) statusLED->setState(STATE_CRITICAL);
+                else if (hasError) statusLED->setState(STATE_ERROR);
+                else if (hasWarning) statusLED->setState(STATE_WARNING);
+                else statusLED->setState(STATE_NORMAL);
+            } else {
+                statusLED->setState(STATE_NORMAL);
+            }
+        }
+        statusLED->update();
+    }
+    
     // Handle MQTT connection
     if (!mqttClient->connected()) {
         reconnectMQTT();
@@ -388,6 +505,16 @@ void loop() {
     // Update config manager (deferred NVS saves)
     if (configMgr) {
         configMgr->update();
+    }
+    
+    // Update system monitor
+    if (sysMonitor) {
+        sysMonitor->update();
+    }
+    
+    // Update notification manager
+    if (notifyMgr) {
+        notifyMgr->update();
     }
     
     // Update water change assistant
