@@ -3,18 +3,36 @@
 RelayController::RelayController(uint8_t relayPin, String relayName, bool invertLogic)
     : pin(relayPin), state(false), inverted(invertLogic), 
       safetyDisabled(false), name(relayName), lastToggleTime(0),
-      mode(SIMPLE_THRESHOLD), currentDutyCycle(0), windowStartTime(0),
+      mode(SIMPLE_THRESHOLD), currentDutyCycle(0), timer(nullptr), windowStartTime(0),
       windowSize(DEFAULT_WINDOW_SIZE), minOnTime(DEFAULT_MIN_ON_TIME),
       minOffTime(DEFAULT_MIN_OFF_TIME) {
+    
+    // Create hardware timer for time-proportional control
+    String timerName = "Relay_" + name;
+    timer = new ESP32_Timer(timerName.c_str());
+}
+
+RelayController::~RelayController() {
+    if (timer) {
+        timer->stop();
+        delete timer;
+    }
 }
 
 void RelayController::begin() {
     pinMode(pin, OUTPUT);
     off(); // Start in safe state
-    windowStartTime = millis();
+    windowStartTime = ESP32_Timer::getTimestamp();
+    
+    // Initialize hardware timer for time-proportional mode
+    if (timer) {
+        timer->begin(timerCallback, this, true); // Periodic timer
+        Serial.printf("Relay '%s' hardware timer initialized\n", name.c_str());
+    }
+    
     Serial.printf("Relay '%s' initialized on pin %d (mode: %s)\n", 
                   name.c_str(), pin, 
-                  mode == TIME_PROPORTIONAL ? "Time Proportional" : "Simple Threshold");
+                  mode == TIME_PROPORTIONAL ? "Time Proportional (HW Timer)" : "Simple Threshold");
 }
 
 void RelayController::on() {
@@ -23,7 +41,7 @@ void RelayController::on() {
         return;
     }
     
-    unsigned long now = millis();
+    uint64_t now = ESP32_Timer::getTimestamp();
     if (now - lastToggleTime < MIN_TOGGLE_INTERVAL && state == true) {
         return; // Too soon to toggle again
     }
@@ -35,7 +53,7 @@ void RelayController::on() {
 }
 
 void RelayController::off() {
-    unsigned long now = millis();
+    uint64_t now = ESP32_Timer::getTimestamp();
     if (now - lastToggleTime < MIN_TOGGLE_INTERVAL && state == false) {
         return; // Too soon to toggle again
     }
@@ -67,26 +85,37 @@ void RelayController::safetyEnable() {
 
 void RelayController::setMode(RelayMode newMode) {
     mode = newMode;
-    windowStartTime = millis();
+    windowStartTime = ESP32_Timer::getTimestamp();
+    
+    // Start/stop hardware timer based on mode
+    if (mode == TIME_PROPORTIONAL && timer) {
+        // Start timer with 100ms update interval for smooth control
+        timer->startMs(100);
+        Serial.printf("Relay '%s' hardware timer started\n", name.c_str());
+    } else if (timer && timer->isRunning()) {
+        timer->stop();
+        Serial.printf("Relay '%s' hardware timer stopped\n", name.c_str());
+    }
+    
     Serial.printf("Relay '%s' mode set to %s\n", 
                   name.c_str(), 
-                  mode == TIME_PROPORTIONAL ? "Time Proportional" : "Simple Threshold");
+                  mode == TIME_PROPORTIONAL ? "Time Proportional (HW Timer)" : "Simple Threshold");
 }
 
 void RelayController::setWindowSize(unsigned long sizeMs) {
-    windowSize = sizeMs;
-    windowStartTime = millis();
-    Serial.printf("Relay '%s' window size set to %lu ms\n", name.c_str(), windowSize);
+    windowSize = sizeMs * 1000ULL; // Convert to microseconds
+    windowStartTime = ESP32_Timer::getTimestamp();
+    Serial.printf("Relay '%s' window size set to %lu ms\n", name.c_str(), sizeMs);
 }
 
 void RelayController::setMinOnTime(unsigned long minMs) {
-    minOnTime = minMs;
-    Serial.printf("Relay '%s' minimum on-time set to %lu ms\n", name.c_str(), minOnTime);
+    minOnTime = minMs * 1000ULL; // Convert to microseconds
+    Serial.printf("Relay '%s' minimum on-time set to %lu ms\n", name.c_str(), minMs);
 }
 
 void RelayController::setMinOffTime(unsigned long minMs) {
-    minOffTime = minMs;
-    Serial.printf("Relay '%s' minimum off-time set to %lu ms\n", name.c_str(), minOffTime);
+    minOffTime = minMs * 1000ULL; // Convert to microseconds
+    Serial.printf("Relay '%s' minimum off-time set to %lu ms\n", name.c_str(), minMs);
 }
 
 void RelayController::setDutyCycle(float percentage) {
@@ -104,14 +133,22 @@ void RelayController::setDutyCycle(float percentage) {
     // For TIME_PROPORTIONAL mode, update() handles the switching
 }
 
+// Hardware timer callback (static)
+void RelayController::timerCallback(void* arg) {
+    RelayController* relay = static_cast<RelayController*>(arg);
+    if (relay && relay->mode == TIME_PROPORTIONAL) {
+        relay->updateTimeProportional();
+    }
+}
+
 void RelayController::updateTimeProportional() {
     if (safetyDisabled) {
         off();
         return;
     }
     
-    unsigned long now = millis();
-    unsigned long elapsed = now - windowStartTime;
+    uint64_t now = ESP32_Timer::getTimestamp();
+    uint64_t elapsed = now - windowStartTime;
     
     // Reset window if expired
     if (elapsed >= windowSize) {
@@ -120,8 +157,8 @@ void RelayController::updateTimeProportional() {
     }
     
     // Calculate on-time based on duty cycle
-    unsigned long onTime = (unsigned long)((currentDutyCycle / 100.0) * windowSize);
-    unsigned long offTime = windowSize - onTime;
+    uint64_t onTime = (uint64_t)((currentDutyCycle / 100.0) * windowSize);
+    uint64_t offTime = windowSize - onTime;
     
     // Enforce minimum on/off times to protect hardware
     // If calculated on-time is too short, skip this cycle

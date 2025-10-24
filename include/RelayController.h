@@ -2,10 +2,11 @@
 #define RELAY_CONTROLLER_H
 
 #include <Arduino.h>
+#include "ESP32_Timer.h"
 
 enum RelayMode {
     SIMPLE_THRESHOLD,      // Simple on/off based on threshold
-    TIME_PROPORTIONAL      // Time proportional control
+    TIME_PROPORTIONAL      // Time proportional control with hardware timer
 };
 
 class RelayController {
@@ -16,24 +17,27 @@ private:
     bool safetyDisabled;
     String name;
     
-    unsigned long lastToggleTime;
-    static const unsigned long MIN_TOGGLE_INTERVAL = 5000; // Minimum 5 seconds between toggles
+    uint64_t lastToggleTime;  // Changed to uint64_t for microsecond precision
+    static const uint64_t MIN_TOGGLE_INTERVAL = 5000000; // Minimum 5 seconds in microseconds
     
-    // Time proportional control
+    // Time proportional control with hardware timer
     RelayMode mode;
     float currentDutyCycle;
-    unsigned long windowStartTime;
-    unsigned long windowSize; // Time window in milliseconds
-    unsigned long minOnTime;   // Minimum on-time in milliseconds
-    unsigned long minOffTime;  // Minimum off-time in milliseconds
-    static const unsigned long DEFAULT_WINDOW_SIZE = 10000; // 10 seconds default
-    static const unsigned long DEFAULT_MIN_ON_TIME = 10000;  // 10 seconds minimum on
-    static const unsigned long DEFAULT_MIN_OFF_TIME = 10000; // 10 seconds minimum off
+    ESP32_Timer* timer;        // Hardware timer for precise control
+    uint64_t windowStartTime;  // Changed to uint64_t for microsecond precision
+    uint64_t windowSize;       // Time window in microseconds
+    uint64_t minOnTime;        // Minimum on-time in microseconds
+    uint64_t minOffTime;       // Minimum off-time in microseconds
+    static const uint64_t DEFAULT_WINDOW_SIZE = 10000000; // 10 seconds default in microseconds
+    static const uint64_t DEFAULT_MIN_ON_TIME = 10000000;  // 10 seconds minimum on in microseconds
+    static const uint64_t DEFAULT_MIN_OFF_TIME = 10000000; // 10 seconds minimum off in microseconds
     
     void updateTimeProportional();
+    static void timerCallback(void* arg);
 
 public:
     RelayController(uint8_t relayPin, String relayName, bool invertLogic = false);
+    ~RelayController();
     
     void begin();
     void on();

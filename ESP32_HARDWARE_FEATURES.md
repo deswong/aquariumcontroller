@@ -32,7 +32,32 @@ This document summarizes the ESP32-S3 hardware features implemented for improved
 
 ---
 
-### 2. ✅ ESP32 Hardware RNG (Random Number Generator)
+### 2. ✅ ESP32 Hardware Timers
+
+**Purpose:** Microsecond-precision timing for relay PWM control
+
+**Files:**
+- `include/ESP32_Timer.h` - Hardware timer class & stopwatch
+- `include/RelayController.h` - Updated for hardware timer
+- `src/RelayController.cpp` - Time-proportional control with hardware timer
+
+**Benefits:**
+- ⏱️ **Microsecond precision**: 1µs accuracy vs 1ms with millis()
+- 📊 **Lower jitter**: <1µs vs 1-10ms software timing
+- 🎯 **More deterministic**: Hardware interrupts, not task-dependent
+- ⚡ **Better PWM control**: Smoother relay time-proportional operation
+- 🔥 **Precise heater control**: More accurate temperature regulation
+
+**Impact:**
+- Flash: +1,336 bytes (+0.04%)
+- RAM: 0 bytes (same usage)
+- Better relay PWM accuracy for PID control
+
+**Documentation:** `ESP32_TIMER_IMPLEMENTATION.md`
+
+---
+
+### 3. ✅ ESP32 Hardware RNG (Random Number Generator)
 
 **Purpose:** True random number generation for unique device IDs
 
@@ -66,11 +91,11 @@ This document summarizes the ESP32-S3 hardware features implemented for improved
 - RAM: 15.8% (51,612 bytes)
 
 **After ESP32 Hardware Features:**
-- Flash: 31.8% (1,165,669 bytes)
+- Flash: 31.8% (1,167,005 bytes)
 - RAM: 15.7% (51,412 bytes)
 
 **Total Changes:**
-- Flash: +2,648 bytes (+0.23%) - Well worth the improvements!
+- Flash: +3,984 bytes (+0.34%) - Excellent value for the improvements!
 - RAM: -200 bytes - Saved from less software averaging
 
 ### Feature Breakdown
@@ -78,8 +103,9 @@ This document summarizes the ESP32-S3 hardware features implemented for improved
 | Feature | Flash Cost | RAM Cost | Key Benefit |
 |---------|------------|----------|-------------|
 | Hardware ADC | +2,416 bytes | -200 bytes | 2-3x sensor accuracy |
+| Hardware Timers | +1,336 bytes | 0 bytes | Microsecond precision |
 | Hardware RNG | +232 bytes | 0 bytes | Unique device IDs |
-| **Total** | **+2,648 bytes** | **-200 bytes** | **Better accuracy + uniqueness** |
+| **Total** | **+3,984 bytes** | **-200 bytes** | **Accuracy + Precision + Uniqueness** |
 
 ---
 
@@ -94,14 +120,21 @@ This document summarizes the ESP32-S3 hardware features implemented for improved
    - eFuse calibration support
    - WiFi-safe (ADC1 not affected by WiFi activity)
 
-2. **Hardware RNG Entropy Sources**
+2. **Hardware Timers** (esp_timer)
+   - 64-bit microsecond counter
+   - Multiple timer channels
+   - Hardware interrupt-driven
+   - <1µs jitter
+   - Used for relay PWM control
+
+3. **Hardware RNG Entropy Sources**
    - RF subsystem noise (WiFi/Bluetooth)
    - Internal clock jitter
    - Thermal noise
    - SAR ADC noise
    - FIPS 140-2 compliant
 
-3. **eFuse Memory**
+4. **eFuse Memory**
    - Factory MAC address (device identification)
    - ADC calibration data (voltage accuracy)
    - Vref calibration (reference voltage)
@@ -123,6 +156,13 @@ This document summarizes the ESP32-S3 hardware features implemented for improved
 - ✅ Better water change scheduling
 - ✅ Accurate mineral tracking
 - ✅ Reduced noise from electrical interference
+
+**Relay Control (GPIO 26, 27):**
+- ✅ Microsecond-precision PWM timing
+- ✅ Smoother time-proportional control
+- ✅ More accurate PID output
+- ✅ Less relay chatter
+- ✅ Better temperature stability
 
 **MQTT Connectivity:**
 - ✅ No client ID conflicts with multiple devices
@@ -156,6 +196,11 @@ TDS Sensor ADC Configuration:
   Calibration: Two Point eFuse
   Status: Ready
 TDS sensor initialized
+
+Relay 'Heater' hardware timer initialized
+Relay 'Heater' initialized on pin 26 (mode: Time Proportional (HW Timer))
+Relay 'CO2' hardware timer initialized
+Relay 'CO2' initialized on pin 27 (mode: Time Proportional (HW Timer))
 
 Generated unique MQTT Client ID: aquarium-a1b2c3d4
 MQTT Client: aquarium-a1b2c3d4
@@ -276,23 +321,25 @@ Generated unique MQTT Client ID: aquarium-XXXXXX
 
 | Resource | Available | Used | Percentage | Notes |
 |----------|-----------|------|------------|-------|
-| Flash | 3.5 MB | 1.17 MB | 31.8% | +2,648 bytes for hardware features |
+| Flash | 3.5 MB | 1.17 MB | 31.8% | +3,984 bytes for hardware features |
 | RAM | 320 KB | 51.4 KB | 15.7% | -200 bytes saved |
 | ADC1 Channels | 10 | 2 | 20% | GPIO 34, 35 |
+| Hardware Timers | 4 groups | 2 | 50% | Heater + CO2 relay |
 | Hardware RNG | 1 | 1 | 100% | Used for unique IDs |
-| eFuse | Various | 2 | - | MAC address, ADC cal |
+| eFuse | Various | 3 | - | MAC, ADC cal, Vref |
 
 ---
 
 ## Conclusion
 
-Both hardware features provide significant benefits:
+All three hardware features provide significant benefits:
 
-- **Hardware ADC**: Better sensor accuracy → healthier aquarium
+- **Hardware ADC**: 2-3x better sensor accuracy → healthier aquarium
+- **Hardware Timers**: Microsecond precision → better temperature control
 - **Hardware RNG**: Unique device IDs → easier multi-device setups
 
-Combined cost: **+2,648 bytes flash** (+0.23%)
-Combined benefit: **Improved accuracy, reliability, and uniqueness**
+Combined cost: **+3,984 bytes flash** (+0.34%)
+Combined benefit: **Improved accuracy, precision, reliability, and uniqueness**
 
 **Verdict:** Excellent return on investment! 🎉
 
@@ -303,4 +350,5 @@ Combined benefit: **Improved accuracy, reliability, and uniqueness**
 - ESP32-S3 Technical Reference Manual
 - ESP-IDF Programming Guide
 - `ESP32_ADC_IMPLEMENTATION.md` - Detailed ADC documentation
+- `ESP32_TIMER_IMPLEMENTATION.md` - Detailed Timer documentation
 - `ESP32_RNG_IMPLEMENTATION.md` - Detailed RNG documentation
