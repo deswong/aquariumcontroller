@@ -2,10 +2,12 @@
 #define TDS_SENSOR_H
 
 #include <Arduino.h>
+#include "ESP32_ADC.h"
 
 class TDSSensor {
 private:
     uint8_t pin;
+    ESP32_ADC* adc;  // ESP32 hardware ADC
     float currentTDS;
     float readings[10];
     int readIndex;

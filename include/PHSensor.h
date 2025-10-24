@@ -3,10 +3,12 @@
 
 #include <Arduino.h>
 #include <Preferences.h>
+#include "ESP32_ADC.h"
 
 class PHSensor {
 private:
     uint8_t pin;
+    ESP32_ADC* adc;  // ESP32 hardware ADC
     float currentPH;
     float readings[20];
     int readIndex;

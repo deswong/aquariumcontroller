@@ -1,8 +1,11 @@
 #include "TDSSensor.h"
 
 TDSSensor::TDSSensor(uint8_t analogPin, float kFactor) 
-    : pin(analogPin), currentTDS(0), readIndex(0), numReadings(10), 
+    : pin(analogPin), adc(nullptr), currentTDS(0), readIndex(0), numReadings(10), 
       total(0), initialized(false), lastReadTime(0), temperature(25.0), kValue(kFactor) {
+    
+    // Create ESP32 hardware ADC with 11dB attenuation (0-3.3V range) and 64-sample averaging
+    adc = new ESP32_ADC(analogPin, ADC_ATTEN_DB_11, 64);
     
     // Initialize readings array
     for (int i = 0; i < numReadings; i++) {
@@ -11,20 +14,36 @@ TDSSensor::TDSSensor(uint8_t analogPin, float kFactor)
 }
 
 TDSSensor::~TDSSensor() {
+    if (adc) {
+        delete adc;
+    }
 }
 
 bool TDSSensor::begin() {
-    pinMode(pin, INPUT);
+    // Initialize ESP32 hardware ADC
+    if (!adc->begin()) {
+        Serial.println("ERROR: Failed to initialize TDS sensor ADC");
+        return false;
+    }
+    
+    // Print ADC configuration
+    Serial.println("TDS Sensor ADC Configuration:");
+    adc->printInfo();
+    
     initialized = true;
     Serial.println("TDS sensor initialized");
     return true;
 }
 
 float TDSSensor::readVoltage() {
-    // Read analog value and convert to voltage
-    int rawValue = analogRead(pin);
-    float voltage = (rawValue / 4095.0) * 3.3;
-    return voltage;
+    // Use ESP32 hardware ADC with calibration and multisampling
+    // Returns calibrated voltage with hardware-based noise reduction
+    if (!adc || !adc->isReady()) {
+        Serial.println("ERROR: TDS ADC not ready");
+        return 0.0;
+    }
+    
+    return adc->readVoltage();
 }
 
 float TDSSensor::voltageToTDS(float voltage, float temp) {

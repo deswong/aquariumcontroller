@@ -1,7 +1,7 @@
 #include "PHSensor.h"
 
 PHSensor::PHSensor(uint8_t analogPin) 
-    : pin(analogPin), currentPH(7.0), readIndex(0), numReadings(0), total(0), 
+    : pin(analogPin), adc(nullptr), currentPH(7.0), readIndex(0), numReadings(0), total(0), 
       initialized(false), lastReadTime(0),
       acidVoltage(2.0), neutralVoltage(1.5), baseVoltage(1.0), calibrated(false),
       acidCalibrated(false), neutralCalibrated(false), baseCalibrated(false), numCalibrationPoints(0),
@@ -9,6 +9,8 @@ PHSensor::PHSensor(uint8_t analogPin)
       acidTrueRef(4.01), neutralTrueRef(7.00), baseTrueRef(10.01), refTemp(25.0),
       isCalibrating(false), lastCalibrationTime(0) {
     
+    // Create ESP32 hardware ADC with 11dB attenuation (0-3.3V range) and 64-sample averaging
+    adc = new ESP32_ADC(analogPin, ADC_ATTEN_DB_11, 64);
     prefs = new Preferences();
     
     // Initialize readings array
@@ -19,6 +21,9 @@ PHSensor::PHSensor(uint8_t analogPin)
 }
 
 PHSensor::~PHSensor() {
+    if (adc) {
+        delete adc;
+    }
     if (prefs) {
         prefs->end();
         delete prefs;
@@ -26,7 +31,16 @@ PHSensor::~PHSensor() {
 }
 
 bool PHSensor::begin() {
-    pinMode(pin, INPUT);
+    // Initialize ESP32 hardware ADC
+    if (!adc->begin()) {
+        Serial.println("ERROR: Failed to initialize pH sensor ADC");
+        return false;
+    }
+    
+    // Print ADC configuration
+    Serial.println("pH Sensor ADC Configuration:");
+    adc->printInfo();
+    
     initialized = true;
     loadCalibration();
     Serial.println("pH sensor initialized");
@@ -34,11 +48,14 @@ bool PHSensor::begin() {
 }
 
 float PHSensor::readVoltage() {
-    // Read analog value and convert to voltage
-    // ESP32 ADC is 12-bit (0-4095) with 3.3V reference
-    int rawValue = analogRead(pin);
-    float voltage = (rawValue / 4095.0) * 3.3;
-    return voltage;
+    // Use ESP32 hardware ADC with calibration and multisampling
+    // Returns calibrated voltage with hardware-based noise reduction
+    if (!adc || !adc->isReady()) {
+        Serial.println("ERROR: pH ADC not ready");
+        return 1.65; // Default to neutral voltage
+    }
+    
+    return adc->readVoltage();
 }
 
 float PHSensor::voltageTopH(float voltage, float currentTemp) {
