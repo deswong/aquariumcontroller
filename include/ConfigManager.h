@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <Preferences.h>
+#include "ESP32_Random.h"
 
 struct SystemConfig {
     // WiFi settings
@@ -53,7 +54,9 @@ struct SystemConfig {
         mqttPort = 1883;
         strcpy(mqttUser, "");
         strcpy(mqttPassword, "");
-        strcpy(mqttClientId, "aquarium-controller");
+        // Generate unique MQTT Client ID using ESP32 hardware RNG
+        // Format: aquarium-XXXXXX (based on MAC address + random bytes)
+        ESP32_Random::generateDeviceID(mqttClientId, sizeof(mqttClientId));
         strcpy(mqttTopicPrefix, "aquarium");
         mqttPublishIndividual = true;   // Individual topics enabled by default
         mqttPublishJSON = false;         // JSON disabled by default (opt-in)

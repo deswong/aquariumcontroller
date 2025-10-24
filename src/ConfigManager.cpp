@@ -1,4 +1,5 @@
 #include "ConfigManager.h"
+#include "ESP32_Random.h"
 #include <ArduinoJson.h>
 
 ConfigManager::ConfigManager() {
@@ -33,7 +34,21 @@ void ConfigManager::load() {
     config.mqttPort = prefs->getInt("mqttPort", 1883);
     prefs->getString("mqttUser", config.mqttUser, sizeof(config.mqttUser));
     prefs->getString("mqttPass", config.mqttPassword, sizeof(config.mqttPassword));
+    
+    // Load MQTT Client ID - if empty, generate unique ID using ESP32 hardware RNG
     prefs->getString("mqttClient", config.mqttClientId, sizeof(config.mqttClientId));
+    if (strlen(config.mqttClientId) == 0) {
+        // Generate unique client ID: aquarium-XXXXXX (MAC + random)
+        ESP32_Random::generateDeviceID(config.mqttClientId, sizeof(config.mqttClientId));
+        Serial.printf("Generated unique MQTT Client ID: %s\n", config.mqttClientId);
+        // Save it for persistence
+        prefs->end();
+        prefs->begin("system-config", false);
+        prefs->putString("mqttClient", config.mqttClientId);
+        prefs->end();
+        prefs->begin("system-config", true);
+    }
+    
     prefs->getString("mqttPrefix", config.mqttTopicPrefix, sizeof(config.mqttTopicPrefix));
     config.mqttPublishIndividual = prefs->getBool("mqttPubInd", true);
     config.mqttPublishJSON = prefs->getBool("mqttPubJSON", false);
