@@ -59,8 +59,8 @@ struct SystemConfig {
         mqttPublishJSON = false;         // JSON disabled by default (opt-in)
         
         strcpy(ntpServer, "au.pool.ntp.org");  // Australian NTP servers
-        gmtOffsetSec = 36000;      // AEST (UTC+10) - Sydney/Melbourne/Brisbane
-        daylightOffsetSec = 3600;  // Australian Daylight Saving Time (+1 hour)
+        gmtOffsetSec = 36000;      // AEST (UTC+10) - Brisbane, Queensland
+        daylightOffsetSec = 0;     // Queensland does not observe Daylight Saving Time
         
         tankLength = 0;            // No default tank dimensions
         tankWidth = 0;

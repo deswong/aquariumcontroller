@@ -1,11 +1,12 @@
 #include "WiFiManager.h"
 #include "SystemTasks.h"
 #include <time.h>
+#include <esp_sntp.h>
 
 WiFiManager::WiFiManager(ConfigManager* configMgr) 
     : config(configMgr), dnsServer(nullptr), apMode(false), 
       connected(false), timeSynced(false), lastReconnectAttempt(0), lastConnectionCheck(0),
-      reconnectAttempts(0), reconnectInterval(MIN_RECONNECT_INTERVAL) {
+      lastNTPSync(0), reconnectAttempts(0), reconnectInterval(MIN_RECONNECT_INTERVAL) {
 }
 
 WiFiManager::~WiFiManager() {
@@ -161,6 +162,24 @@ void WiFiManager::update() {
                 }
             }
         }
+        
+        // Check SNTP sync status periodically (SNTP handles auto-sync internally)
+        if (connected && !timeSynced && (now - lastNTPSync > 60000)) {
+            // If not synced after 1 minute, check if SNTP succeeded in background
+            time_t nowTime;
+            struct tm timeinfo;
+            time(&nowTime);
+            localtime_r(&nowTime, &timeinfo);
+            
+            if (timeinfo.tm_year > (2020 - 1900)) {
+                timeSynced = true;
+                lastNTPSync = now;
+                Serial.println("SNTP background sync completed!");
+                if (eventLogger) {
+                    eventLogger->info("system", "SNTP background sync completed");
+                }
+            }
+        }
     }
 }
 
@@ -208,16 +227,48 @@ int WiFiManager::getSignalStrength() {
 void WiFiManager::syncTime() {
     SystemConfig& cfg = config->getConfig();
     
-    Serial.println("\nSynchronizing time with NTP server...");
-    Serial.printf("NTP Server: %s\n", cfg.ntpServer);
+    Serial.println("\nConfiguring SNTP (Simple Network Time Protocol)...");
+    Serial.printf("Primary NTP Server: %s\n", cfg.ntpServer);
     Serial.printf("GMT Offset: %+d hours\n", cfg.gmtOffsetSec / 3600);
     Serial.printf("DST Offset: %+d hours\n", cfg.daylightOffsetSec / 3600);
     
-    // Configure time with NTP
-    configTime(cfg.gmtOffsetSec, cfg.daylightOffsetSec, cfg.ntpServer);
+    // Stop SNTP if already running
+    if (sntp_enabled()) {
+        sntp_stop();
+    }
     
-    // Wait for time to be set (up to 10 seconds)
-    Serial.print("Waiting for NTP sync");
+    // Configure SNTP with optimizations
+    sntp_setoperatingmode(SNTP_OPMODE_POLL);              // Poll mode (not broadcast/multicast)
+    sntp_set_sync_mode(SNTP_SYNC_MODE_SMOOTH);            // Smooth time adjustment (no sudden jumps)
+    sntp_set_sync_interval(3600000);                       // Auto-sync every 1 hour
+    
+    // Set multiple NTP servers for redundancy (Australian servers with global fallback)
+    sntp_setservername(0, cfg.ntpServer);                  // Primary: au.pool.ntp.org
+    sntp_setservername(1, "time.google.com");              // Fallback 1: Google
+    sntp_setservername(2, "pool.ntp.org");                 // Fallback 2: Global pool
+    
+    // Set timezone using configuration values
+    // Brisbane default: AEST-10 (UTC+10, no DST)
+    char tzStr[64];
+    int hours = cfg.gmtOffsetSec / 3600;
+    int dstHours = cfg.daylightOffsetSec / 3600;
+    
+    if (dstHours > 0) {
+        // With DST (e.g., Sydney/Melbourne): AEST-10AEDT,M10.1.0,M4.1.0/3
+        snprintf(tzStr, sizeof(tzStr), "AEST-%d AEDT,M10.1.0,M4.1.0/3", hours);
+    } else {
+        // Without DST (e.g., Brisbane/Queensland): AEST-10
+        snprintf(tzStr, sizeof(tzStr), "AEST-%d", hours);
+    }
+    
+    setenv("TZ", tzStr, 1);
+    tzset();
+    
+    // Start SNTP
+    sntp_init();
+    
+    // Wait for initial sync (non-blocking, up to 10 seconds)
+    Serial.print("Waiting for SNTP sync");
     int attempts = 0;
     time_t now = 0;
     struct tm timeinfo;
@@ -229,18 +280,25 @@ void WiFiManager::syncTime() {
         // Check if time is valid (year > 2020)
         if (timeinfo.tm_year > (2020 - 1900)) {
             timeSynced = true;
+            lastNTPSync = millis();
+            
+            // Get sync status
+            sntp_sync_status_t status = sntp_get_sync_status();
+            const char* statusStr = (status == SNTP_SYNC_STATUS_COMPLETED) ? "completed" : 
+                                   (status == SNTP_SYNC_STATUS_IN_PROGRESS) ? "in progress" : "reset";
+            
             Serial.println(" Success!");
-            Serial.printf("Current time: %04d-%02d-%02d %02d:%02d:%02d\n",
+            Serial.printf("Current time: %04d-%02d-%02d %02d:%02d:%02d (sync: %s)\n",
                          timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday,
-                         timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+                         timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, statusStr);
+            Serial.println("SNTP will auto-sync every 1 hour to compensate for RTC drift");
             
             if (eventLogger) {
-                char timeStr[32];
-                snprintf(timeStr, sizeof(timeStr), "%04d-%02d-%02d %02d:%02d:%02d",
+                char timeStr[64];
+                snprintf(timeStr, sizeof(timeStr), "Time synced via SNTP: %04d-%02d-%02d %02d:%02d:%02d",
                         timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday,
                         timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
-                String msg = "Time synced via NTP: " + String(timeStr);
-                eventLogger->info("system", msg.c_str());
+                eventLogger->info("system", timeStr);
             }
             return;
         }
@@ -253,10 +311,11 @@ void WiFiManager::syncTime() {
     // Failed to sync
     timeSynced = false;
     Serial.println(" Failed!");
-    Serial.println("WARNING: Time synchronization failed - schedules may not work correctly");
+    Serial.println("WARNING: SNTP synchronization failed - schedules may not work correctly");
+    Serial.println("SNTP will continue retrying in background...");
     
     if (eventLogger) {
-        eventLogger->warning("system", "NTP time synchronization failed");
+        eventLogger->warning("system", "SNTP time synchronization failed (will retry)");
     }
 }
 

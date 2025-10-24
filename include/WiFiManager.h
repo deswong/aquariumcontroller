@@ -15,6 +15,7 @@ private:
     bool timeSynced;
     unsigned long lastReconnectAttempt;
     unsigned long lastConnectionCheck;
+    unsigned long lastNTPSync;
     int reconnectAttempts;
     unsigned long reconnectInterval;
     
@@ -23,6 +24,7 @@ private:
     static const unsigned long MAX_RECONNECT_INTERVAL = 300000; // 5 minutes
     static const int MAX_RECONNECT_ATTEMPTS = 10;
     static const unsigned long CONNECTION_CHECK_INTERVAL = 5000; // 5 seconds
+    // Note: SNTP handles automatic hourly sync internally (configured in syncTime())
     
     void startAccessPoint();
     void connectToWiFi();
