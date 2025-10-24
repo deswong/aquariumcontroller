@@ -109,7 +109,7 @@ public:
     
     // Individual setters (now use deferred save)
     void setWiFi(const char* ssid, const char* password);
-    void setMQTT(const char* server, int port, const char* user, const char* password, const char* topicPrefix = nullptr, bool publishIndividual = true, bool publishJSON = false);
+    void setMQTT(const char* server, int port, const char* user, const char* password, const char* clientId = nullptr, const char* topicPrefix = nullptr, bool publishIndividual = true, bool publishJSON = false);
     void setNTP(const char* server, int gmtOffset, int dstOffset);
     void setTemperatureTarget(float target, float safetyMax);
     void setPHTarget(float target, float safetyMin);

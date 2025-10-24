@@ -300,9 +300,12 @@ void WebServerManager::setupRoutes() {
         
         StaticJsonDocument<1536> doc;
         doc["wifiSSID"] = cfg.wifiSSID;
+        // Note: wifiPassword not included for security
         doc["mqttServer"] = cfg.mqttServer;
         doc["mqttPort"] = cfg.mqttPort;
         doc["mqttUser"] = cfg.mqttUser;
+        doc["mqttClientId"] = cfg.mqttClientId;
+        // Note: mqttPassword not included for security
         doc["mqttTopicPrefix"] = cfg.mqttTopicPrefix;
         doc["mqttPublishIndividual"] = cfg.mqttPublishIndividual;
         doc["mqttPublishJSON"] = cfg.mqttPublishJSON;
@@ -342,6 +345,8 @@ void WebServerManager::setupRoutes() {
             
             // Update MQTT settings
             if (doc.containsKey("mqttServer")) {
+                const char* clientId = doc.containsKey("mqttClientId") ? 
+                                      doc["mqttClientId"].as<const char*>() : nullptr;
                 const char* topicPrefix = doc.containsKey("mqttTopicPrefix") ? 
                                          doc["mqttTopicPrefix"].as<const char*>() : nullptr;
                 bool publishIndividual = doc.containsKey("mqttPublishIndividual") ? 
@@ -352,6 +357,7 @@ void WebServerManager::setupRoutes() {
                               doc["mqttPort"] | 1883,
                               doc["mqttUser"] | "",
                               doc["mqttPassword"] | "",
+                              clientId,
                               topicPrefix,
                               publishIndividual,
                               publishJSON);

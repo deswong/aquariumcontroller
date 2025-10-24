@@ -144,11 +144,14 @@ void ConfigManager::setWiFi(const char* ssid, const char* password) {
     markDirty();
 }
 
-void ConfigManager::setMQTT(const char* server, int port, const char* user, const char* password, const char* topicPrefix, bool publishIndividual, bool publishJSON) {
+void ConfigManager::setMQTT(const char* server, int port, const char* user, const char* password, const char* clientId, const char* topicPrefix, bool publishIndividual, bool publishJSON) {
     strncpy(config.mqttServer, server, sizeof(config.mqttServer) - 1);
     config.mqttPort = port;
     strncpy(config.mqttUser, user, sizeof(config.mqttUser) - 1);
     strncpy(config.mqttPassword, password, sizeof(config.mqttPassword) - 1);
+    if (clientId != nullptr && strlen(clientId) > 0) {
+        strncpy(config.mqttClientId, clientId, sizeof(config.mqttClientId) - 1);
+    }
     if (topicPrefix != nullptr && strlen(topicPrefix) > 0) {
         strncpy(config.mqttTopicPrefix, topicPrefix, sizeof(config.mqttTopicPrefix) - 1);
     }

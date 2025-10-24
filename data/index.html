@@ -2066,27 +2066,34 @@
                 <h2>WiFi & MQTT Settings</h2>
                 <div class="control-group">
                     <label>WiFi SSID</label>
-                    <input type="text" id="wifi-ssid">
+                    <input type="text" id="wifi-ssid" placeholder="Your WiFi network name">
                 </div>
                 <div class="control-group">
                     <label>WiFi Password</label>
-                    <input type="password" id="wifi-pass">
+                    <input type="password" id="wifi-pass" placeholder="Leave blank to keep current password">
+                    <small>Leave blank if not changing password</small>
                 </div>
                 <div class="control-group">
                     <label>MQTT Server</label>
-                    <input type="text" id="mqtt-server">
+                    <input type="text" id="mqtt-server" placeholder="mqtt.example.com or IP address">
                 </div>
                 <div class="control-group">
                     <label>MQTT Port</label>
-                    <input type="number" id="mqtt-port" value="1883">
+                    <input type="number" id="mqtt-port" value="1883" placeholder="1883">
                 </div>
                 <div class="control-group">
                     <label>MQTT Username</label>
-                    <input type="text" id="mqtt-user">
+                    <input type="text" id="mqtt-user" placeholder="Optional">
                 </div>
                 <div class="control-group">
                     <label>MQTT Password</label>
-                    <input type="password" id="mqtt-pass">
+                    <input type="password" id="mqtt-pass" placeholder="Leave blank to keep current password">
+                    <small>Leave blank if not changing password</small>
+                </div>
+                <div class="control-group">
+                    <label>MQTT Client ID</label>
+                    <input type="text" id="mqtt-client-id" placeholder="aquarium-controller">
+                    <small>Unique identifier for this device on MQTT broker</small>
                 </div>
                 <div class="control-group">
                     <label>MQTT Topic Prefix</label>
@@ -2696,6 +2703,7 @@
                 mqttPort: parseInt(document.getElementById('mqtt-port').value),
                 mqttUser: document.getElementById('mqtt-user').value,
                 mqttPassword: document.getElementById('mqtt-pass').value,
+                mqttClientId: document.getElementById('mqtt-client-id').value || 'aquarium-controller',
                 mqttTopicPrefix: document.getElementById('mqtt-topic-prefix').value || 'aquarium',
                 mqttPublishIndividual: document.getElementById('mqtt-publish-individual').checked,
                 mqttPublishJSON: document.getElementById('mqtt-publish-json').checked,
@@ -2819,10 +2827,14 @@
                 document.getElementById('temp-safety-max').value = settings.tempSafetyMax || 30.0;
                 document.getElementById('ph-target').value = settings.phTarget || 6.8;
                 document.getElementById('ph-safety-min').value = settings.phSafetyMin || 6.0;
+                // WiFi settings (no password for security)
                 document.getElementById('wifi-ssid').value = settings.wifiSSID || '';
+                
+                // MQTT settings (no password for security)
                 document.getElementById('mqtt-server').value = settings.mqttServer || '';
                 document.getElementById('mqtt-port').value = settings.mqttPort || 1883;
                 document.getElementById('mqtt-user').value = settings.mqttUser || '';
+                document.getElementById('mqtt-client-id').value = settings.mqttClientId || 'aquarium-controller';
                 document.getElementById('mqtt-topic-prefix').value = settings.mqttTopicPrefix || 'aquarium';
                 document.getElementById('mqtt-publish-individual').checked = settings.mqttPublishIndividual !== false; // Default true
                 document.getElementById('mqtt-publish-json').checked = settings.mqttPublishJSON === true; // Default false
