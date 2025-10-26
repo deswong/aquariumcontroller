@@ -1,4 +1,5 @@
 #include "SystemTasks.h"
+#include "SeasonCalculator.h"
 #include <ArduinoJson.h>
 
 // Task handles
@@ -119,11 +120,17 @@ void controlTask(void* parameter) {
             time_t now = time(nullptr);
             struct tm* timeinfo = localtime(&now);
             uint8_t hour = timeinfo->tm_hour;
-            uint8_t month = timeinfo->tm_mon + 1;
-            uint8_t season = (month >= 12 || month <= 2) ? 0 : (month >= 3 && month <= 5) ? 1 : (month >= 6 && month <= 8) ? 2 : 3;
+            
+            // Get season preset from config for meteorological season calculation
+            SystemConfig config = configMgr->getConfig();
+            uint8_t season = SeasonCalculator::getCurrentSeason(config.seasonPreset, now);
+            
+            // Update pattern learner with current season
+            if (patternLearner) {
+                patternLearner->setCurrentSeason(season);
+            }
             
             // Get tank volume from config
-            SystemConfig config = configMgr->getConfig();
             float tankVolume = config.tankLength * config.tankWidth * config.tankHeight / 1000.0f; // cm³ to liters
             
             // PHASE 3: Temperature PID control with full sensor context

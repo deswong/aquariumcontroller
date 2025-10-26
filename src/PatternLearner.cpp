@@ -1,4 +1,6 @@
 #include "PatternLearner.h"
+#include "SeasonCalculator.h"
+#include "ConfigManager.h"
 #include <math.h>
 #include <time.h>
 
@@ -348,12 +350,30 @@ void PatternLearner::updateSeasonalStats() {
     }
 }
 
+void PatternLearner::setCurrentSeason(uint8_t seasonNum) {
+    // Set season from meteorological calculation (called externally with actual season)
+    // 0=Spring, 1=Summer, 2=Autumn, 3=Winter
+    const char* seasonNames[] = {"spring", "summer", "autumn", "winter"};
+    if (seasonNum < 4) {
+        String newSeason = seasonNames[seasonNum];
+        if (newSeason != currentSeason.season && currentSeason.daysCollected >= 7) {
+            Serial.printf("Season update: %s → %s\n",
+                         currentSeason.season.c_str(), newSeason.c_str());
+        }
+        currentSeason.season = newSeason;
+        lastDetectedSeason = newSeason;
+    }
+}
+
 String PatternLearner::detectSeason(float avgAmbient) {
-    // Simple season detection based on ambient temperature
+    // Temperature-based fallback for season detection
+    // NOTE: This is only used if meteorological season calculation fails
+    // Normally, season is set via setCurrentSeason() from SystemTasks
+    // Normally, season is set via setCurrentSeason() from SystemTasks
     if (avgAmbient < 18.0) return "winter";
     else if (avgAmbient < 22.0) return "spring";
     else if (avgAmbient < 27.0) return "summer";
-    else return "hot-summer";
+    else return "summer"; // Hot temperatures still map to summer
 }
 
 bool PatternLearner::checkForAnomalies(float temp, float ph, float tds, float ambient) {
@@ -538,22 +558,26 @@ void PatternLearner::getSeasonalPIDMultipliers(float& kpMult, float& kiMult, flo
     String season = currentSeason.season;
     
     if (season == "winter") {
-        // Winter: More aggressive heating needed
+        // Winter: More aggressive heating needed (cooler ambient temps)
         kpMult = 1.2;
         kiMult = 1.3;
         kdMult = 1.1;
     } else if (season == "summer") {
-        // Summer: Gentler control, less heating
+        // Summer: Gentler control, less heating needed (warmer ambient temps)
         kpMult = 0.8;
         kiMult = 0.7;
         kdMult = 1.2;
-    } else if (season == "hot-summer") {
-        // Hot summer: Minimal heating
-        kpMult = 0.6;
-        kiMult = 0.5;
-        kdMult = 1.3;
+    } else if (season == "autumn") {
+        // Autumn: Moderate cooling, slightly more heating than summer
+        kpMult = 0.95;
+        kiMult = 0.9;
+        kdMult = 1.05;
+    } else if (season == "spring") {
+        // Spring: Moderate warming, slightly less heating than winter
+        kpMult = 1.05;
+        kiMult = 1.1;
+        kdMult = 1.05;
     }
-    // Spring/Fall: default multipliers (1.0)
 }
 
 std::vector<Anomaly> PatternLearner::getRecentAnomalies(int count) {

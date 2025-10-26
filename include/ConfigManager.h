@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <Preferences.h>
 #include "ESP32_Random.h"
+#include "SeasonCalculator.h"
 
 struct SystemConfig {
     // WiFi settings
@@ -24,6 +25,9 @@ struct SystemConfig {
     char ntpServer[64];
     int gmtOffsetSec;
     int daylightOffsetSec;
+    
+    // Season preset (much easier than latitude/longitude!)
+    SeasonPreset seasonPreset;  // NORTHERN_HEMISPHERE, SOUTHERN_HEMISPHERE, TROPICAL, CUSTOM
     
     // Tank dimensions (for volume calculator)
     float tankLength;   // cm
@@ -64,6 +68,8 @@ struct SystemConfig {
         strcpy(ntpServer, "au.pool.ntp.org");  // Australian NTP servers
         gmtOffsetSec = 36000;      // AEST (UTC+10) - Brisbane, Queensland
         daylightOffsetSec = 0;     // Queensland does not observe Daylight Saving Time
+        
+        seasonPreset = SeasonPreset::SOUTHERN_HEMISPHERE;  // Australia is Southern Hemisphere
         
         tankLength = 0;            // No default tank dimensions
         tankWidth = 0;
@@ -114,6 +120,7 @@ public:
     void setWiFi(const char* ssid, const char* password);
     void setMQTT(const char* server, int port, const char* user, const char* password, const char* clientId = nullptr, const char* topicPrefix = nullptr, bool publishIndividual = true, bool publishJSON = false);
     void setNTP(const char* server, int gmtOffset, int dstOffset);
+    void setSeasonPreset(SeasonPreset preset);
     void setTemperatureTarget(float target, float safetyMax);
     void setPHTarget(float target, float safetyMin);
     void setTankDimensions(float length, float width, float height);

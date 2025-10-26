@@ -125,6 +125,7 @@ public:
     // Seasonal adaptation
     SeasonalStats getSeasonalStats();
     String getCurrentSeason();
+    void setCurrentSeason(uint8_t seasonNum); // Set meteorological season (0=Spring, 1=Summer, 2=Autumn, 3=Winter)
     bool shouldAdaptForSeason();
     void getSeasonalPIDMultipliers(float& kpMult, float& kiMult, float& kdMult);
     

@@ -880,7 +880,7 @@ void WebServerManager::setupRoutes() {
         
         SeasonalStats stats = patternLearner->getSeasonalStats();
         
-        StaticJsonDocument<256> doc;
+        StaticJsonDocument<384> doc;
         doc["season"] = stats.season;
         doc["avgAmbient"] = stats.avgAmbientTemp;
         doc["avgWater"] = stats.avgWaterTemp;
@@ -1456,6 +1456,68 @@ void WebServerManager::setupRoutes() {
             // Trigger time re-sync
             if (wifiMgr && wifiMgr->isConnected()) {
                 wifiMgr->syncTime();
+            }
+            
+            request->send(200, "application/json", "{\"status\":\"ok\"}");
+        });
+    
+    // API: Set Season Preset configuration
+    server->on("/api/season/config", HTTP_POST, [](AsyncWebServerRequest* request) {}, NULL,
+        [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+            if (!configMgr) {
+                request->send(500, "application/json", "{\"error\":\"Config manager not initialized\"}");
+                return;
+            }
+            
+            DynamicJsonDocument doc(256);
+            DeserializationError error = deserializeJson(doc, data, len);
+            
+            if (error) {
+                request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+                return;
+            }
+            
+            // Accept either string name or numeric value
+            SeasonPreset preset;
+            if (doc.containsKey("preset")) {
+                if (doc["preset"].is<const char*>()) {
+                    // String: "northern", "southern", "tropical", "custom"
+                    String presetStr = doc["preset"].as<String>();
+                    presetStr.toLowerCase();
+                    
+                    if (presetStr == "northern" || presetStr == "northern_hemisphere") {
+                        preset = SeasonPreset::NORTHERN_HEMISPHERE;
+                    } else if (presetStr == "southern" || presetStr == "southern_hemisphere") {
+                        preset = SeasonPreset::SOUTHERN_HEMISPHERE;
+                    } else if (presetStr == "tropical") {
+                        preset = SeasonPreset::TROPICAL;
+                    } else if (presetStr == "custom") {
+                        preset = SeasonPreset::CUSTOM;
+                    } else {
+                        request->send(400, "application/json", "{\"error\":\"Invalid preset name\"}");
+                        return;
+                    }
+                } else {
+                    // Numeric: 0-3
+                    uint8_t presetNum = doc["preset"].as<uint8_t>();
+                    if (presetNum > 3) {
+                        request->send(400, "application/json", "{\"error\":\"Invalid preset number (must be 0-3)\"}");
+                        return;
+                    }
+                    preset = static_cast<SeasonPreset>(presetNum);
+                }
+            } else {
+                request->send(400, "application/json", "{\"error\":\"Missing 'preset' field\"}");
+                return;
+            }
+            
+            configMgr->setSeasonPreset(preset);
+            
+            if (eventLogger) {
+                char msg[100];
+                snprintf(msg, sizeof(msg), "Season preset updated to %s", 
+                        SeasonCalculator::getPresetName(preset));
+                eventLogger->info("system", msg);
             }
             
             request->send(200, "application/json", "{\"status\":\"ok\"}");

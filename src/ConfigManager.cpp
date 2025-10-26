@@ -57,6 +57,9 @@ void ConfigManager::load() {
     config.gmtOffsetSec = prefs->getInt("gmtOffset", 0);
     config.daylightOffsetSec = prefs->getInt("dstOffset", 0);
     
+    config.seasonPreset = static_cast<SeasonPreset>(prefs->getUChar("seasonPreset", 
+                          static_cast<uint8_t>(SeasonPreset::SOUTHERN_HEMISPHERE)));
+    
     config.tankLength = prefs->getFloat("tankLength", 0.0f);
     config.tankWidth = prefs->getFloat("tankWidth", 0.0f);
     config.tankHeight = prefs->getFloat("tankHeight", 0.0f);
@@ -97,6 +100,8 @@ void ConfigManager::save() {
     prefs->putString("ntpServer", config.ntpServer);
     prefs->putInt("gmtOffset", config.gmtOffsetSec);
     prefs->putInt("dstOffset", config.daylightOffsetSec);
+    
+    prefs->putUChar("seasonPreset", static_cast<uint8_t>(config.seasonPreset));
     
     prefs->putFloat("tankLength", config.tankLength);
     prefs->putFloat("tankWidth", config.tankWidth);
@@ -191,6 +196,11 @@ void ConfigManager::setNTP(const char* server, int gmtOffset, int dstOffset) {
     strncpy(config.ntpServer, server, sizeof(config.ntpServer) - 1);
     config.gmtOffsetSec = gmtOffset;
     config.daylightOffsetSec = dstOffset;
+    markDirty();
+}
+
+void ConfigManager::setSeasonPreset(SeasonPreset preset) {
+    config.seasonPreset = preset;
     markDirty();
 }
 
