@@ -73,13 +73,20 @@ pio run -e esp32s3dev --target uploadfs
 
 ### Step 4: Configure Australian Settings 🇦🇺 (if applicable)
 1. Go to Settings tab
-2. Set timezone to AEST (UTC+10)
-3. Set NTP server to `au.pool.ntp.org`
-4. Enable daylight saving time
-5. Verify electrical standards (240V AC, 50Hz, RCD 30mA)
-6. Save settings
+2. **Set Season Preset** to "Southern Hemisphere" (for Brisbane/Australia)
+3. Set timezone to AEST (UTC+10)
+4. Set NTP server to `au.pool.ntp.org`
+5. Enable daylight saving time
+6. Verify electrical standards (240V AC, 50Hz, RCD 30mA)
+7. Save settings
 
-See [AUSTRALIAN_CONFIGURATION.md](AUSTRALIAN_CONFIGURATION.md) for details.
+**Season Configuration:**
+- For Brisbane/Sydney/Melbourne: Select "Southern Hemisphere"
+- Current season displayed with icon (🌸 Spring, ☀️ Summer, 🍂 Autumn, ❄️ Winter)
+- Used for seasonal PID adaptation and pattern learning
+- See [METEOROLOGICAL_SEASONS.md](METEOROLOGICAL_SEASONS.md) for details
+
+See [AUSTRALIAN_CONFIGURATION.md](AUSTRALIAN_CONFIGURATION.md) for complete details.
 
 ### Step 5: Calibrate pH Sensor
 1. Navigate to pH Calibration tab (or use LCD display if installed)

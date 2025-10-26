@@ -1,6 +1,6 @@
 # Web Interface New Features
 
-## Three New Features Added
+## Four Major Features
 
 ### 1. 🕐 Real-Time Clock Display
 - **Location**: Top-right corner of web page
@@ -8,7 +8,40 @@
 - **Format**: "Day, DD Mon YYYY HH:MM:SS" (Australian format)
 - **Example**: "Sat, 19 Oct 2025 14:37:45"
 
-### 2. 🐠 Tank Volume Calculator  
+### 2. 🌍 Season Configuration (NEW!)
+- **Location**: Settings tab → Season Configuration section
+- **Purpose**: Configure meteorological season for PID adaptation and pattern learning
+- **Features**:
+  - Dropdown to select hemisphere preset:
+    - Northern Hemisphere (USA, Europe, Asia)
+    - Southern Hemisphere (Australia, NZ) - **Default for Brisbane**
+    - Tropical (Near Equator)
+  - **Live preview** showing current season with icon
+  - Season name and month range displayed
+  - Instant visual feedback when changing preset
+  - Saves to NVS (non-volatile storage)
+
+**How to Use**:
+1. Go to Settings tab
+2. Scroll to "🌍 Season Configuration" section
+3. Select your hemisphere from dropdown
+4. Preview shows current season immediately (🌸 Spring, ☀️ Summer, 🍂 Autumn, ❄️ Winter)
+5. Click "💾 Save Season Preset" to persist setting
+
+**Example for Brisbane, Australia**:
+- Preset: "Southern Hemisphere" (selected by default)
+- Current Season (October 2025): Spring 🌸
+- Month Range: September - November
+- Used for: Seasonal PID multipliers and pattern learning adaptation
+
+**Benefits**:
+- Simple configuration - no complex latitude/longitude needed
+- Accurate seasonal PID optimization based on your location
+- Visual feedback with season icons
+- Supports Northern, Southern, and Tropical regions
+- See [METEOROLOGICAL_SEASONS.md](METEOROLOGICAL_SEASONS.md) for full details
+
+### 3. 🐠 Tank Volume Calculator  
 - **Location**: Settings tab
 - **Purpose**: Calculate water volume from tank dimensions
 - **Features**:
@@ -30,7 +63,7 @@
 - Gross Volume: 63.0 litres
 - Actual Volume: ~56.7 litres (accounting for substrate)
 
-### 3. 🔧 Settings Auto-Restore
+### 4. 🔧 Settings Auto-Restore
 - **Location**: Settings tab
 - **Purpose**: Show current MQTT and NTP settings when opening tab
 - **Auto-populated Fields**:
@@ -49,19 +82,75 @@
 
 ## API Endpoints
 
-### New Endpoint: `/api/config`
+### New Endpoint: `/api/season/config`
+- **Method**: GET
+- **Purpose**: Retrieve current season preset configuration
+- **Returns**: `{"preset": 0-2, "presetName": "...", "season": 0-3, "seasonName": "..."}`
+- **Used by**: Settings tab to populate season dropdown
+
+### New Endpoint: `/api/season/config` (POST)
+- **Method**: POST
+- **Purpose**: Update season preset
+- **Body**: `{"preset": 0-2}` or `{"preset": "northern"/"southern"/"tropical"}`
+- **Returns**: `{"status": "ok", "preset": 0-2}`
+- **Used by**: Settings tab season preset save button
+
+### Endpoint: `/api/config`
 - **Method**: GET
 - **Purpose**: Retrieve current configuration
 - **Returns**: JSON with all config parameters
 - **Used by**: Settings tab to populate fields
 
-### Updated Endpoint: `/api/waterchange/config`
+### Endpoint: `/api/waterchange/config`
 - **Method**: POST
 - **Purpose**: Update water change settings
 - **Body**: `{"tankVolume": <litres>}`
 - **Used by**: Tank calculator to apply volume
 
 ## Technical Details
+
+### Season Configuration Implementation
+```javascript
+async function loadSeasonPreset() {
+    const response = await fetch('/api/season/config');
+    if (response.ok) {
+        const data = await response.json();
+        document.getElementById('season-preset').value = data.preset;
+        updateCurrentSeasonDisplay();
+    }
+}
+
+async function saveSeasonPreset() {
+    const preset = parseInt(document.getElementById('season-preset').value);
+    const response = await fetch('/api/season/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preset: preset })
+    });
+    if (response.ok) {
+        alert('✅ Season preset saved successfully!');
+        updateCurrentSeasonDisplay();
+    }
+}
+
+function updateCurrentSeasonDisplay() {
+    const preset = parseInt(document.getElementById('season-preset').value);
+    const month = new Date().getMonth() + 1; // 1-12
+    
+    // Calculate season based on preset and month
+    // Northern: Spring(3-5), Summer(6-8), Autumn(9-11), Winter(12,1-2)
+    // Southern: Spring(9-11), Summer(12,1-2), Autumn(3-5), Winter(6-8)
+    // Tropical: Wet(12-5), Dry(6-11)
+    
+    // Update icon, name, and month range in UI
+}
+
+// Auto-load on page load
+loadSeasonPreset();
+
+// Update display when dropdown changes
+document.getElementById('season-preset').addEventListener('change', updateCurrentSeasonDisplay);
+```
 
 ### Clock Implementation
 ```javascript
@@ -162,9 +251,11 @@ async function loadCurrentSettings() {
 
 1. **Better UX**: No need to remember current MQTT settings
 2. **Accurate Tank Setup**: Calculator ensures correct volume for water changes
-3. **Time Reference**: Always know what time it is
-4. **Easier Configuration**: Visual feedback and calculations
-5. **Prevents Errors**: Can see current values before changing
+3. **Seasonal Optimization**: PID adapts automatically to your hemisphere's seasons
+4. **Location-Aware**: Simple dropdown configuration for worldwide use
+5. **Time Reference**: Always know what time it is
+6. **Easier Configuration**: Visual feedback and calculations
+7. **Prevents Errors**: Can see current values before changing
 
 ## Troubleshooting
 
@@ -172,6 +263,12 @@ async function loadCurrentSettings() {
 - Check browser JavaScript console for errors
 - Refresh page
 - Clock uses browser's local time
+
+### Season not displaying correctly:
+- Verify correct hemisphere preset selected
+- Check browser date/time is correct (used for season calculation)
+- Refresh page after saving preset
+- Check `/api/season/config` endpoint is accessible
 
 ### Tank calculator not working:
 - Ensure all three dimensions are entered
@@ -185,6 +282,6 @@ async function loadCurrentSettings() {
 
 ---
 
-**Version**: v2.1  
-**Date**: October 19, 2025  
-**Features**: Tank calculator, Settings restore, Real-time clock
+**Version**: v2.2  
+**Date**: October 27, 2025  
+**Features**: Season configuration, Tank calculator, Settings restore, Real-time clock

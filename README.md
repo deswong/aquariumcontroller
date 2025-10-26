@@ -84,6 +84,7 @@ A comprehensive aquarium automation system built for **ESP32-S3** that monitors 
 - **Flexible pH Calibration** - 1-point, 2-point, or 3-point calibration with multiple buffer solutions
 - **Remote Configuration** - Change WiFi, MQTT, and control settings via web interface
 - **Safety Interlocks** - Automatic shutdown if parameters exceed safe limits
+- **Seasonal Adaptation** - Meteorological season configuration (Northern/Southern/Tropical hemisphere) for PID optimization
 - **Dosing Pump Control** - DRV8871 motor driver with calibration and scheduling
 - **Water Change Predictor** - Self-learning TDS-based prediction (linear regression)
 - **Pattern Learning** - Learns daily feeding/maintenance patterns (ML upgrade planned)

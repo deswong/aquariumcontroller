@@ -2182,6 +2182,42 @@
                     </select>
                 </div>
                 
+                <h2 style="margin-top: 30px;">🌍 Season Configuration</h2>
+                <div class="card" style="background: #fef3c7; border: 2px solid #f59e0b; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0;">🌡️ Meteorological Season Preset</h3>
+                    <p style="color: #666; margin-bottom: 15px;">
+                        Select your hemisphere for accurate seasonal pattern learning and PID adaptation. 
+                        The system uses meteorological seasons based on calendar months.
+                    </p>
+                    
+                    <div class="control-group">
+                        <label>Season Preset</label>
+                        <select id="season-preset" style="width: 250px;">
+                            <option value="0">Northern Hemisphere</option>
+                            <option value="1" selected>Southern Hemisphere</option>
+                            <option value="2">Tropical (Year-round)</option>
+                        </select>
+                        <small style="color: #888; font-size: 0.9em; display: block; margin-top: 5px;">
+                            🌍 <strong>Northern:</strong> Spring (Mar-May), Summer (Jun-Aug), Autumn (Sep-Nov), Winter (Dec-Feb)<br>
+                            🌏 <strong>Southern:</strong> Spring (Sep-Nov), Summer (Dec-Feb), Autumn (Mar-May), Winter (Jun-Aug)<br>
+                            🌴 <strong>Tropical:</strong> Wet season (Summer), Dry season (Winter)
+                        </small>
+                    </div>
+                    
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <h4 style="margin: 0 0 10px 0; color: #f59e0b;">📊 Current Season</h4>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="font-size: 48px;" id="current-season-icon">🌸</div>
+                            <div>
+                                <div style="font-size: 24px; font-weight: bold; color: #92400e;" id="current-season-name">Loading...</div>
+                                <div style="font-size: 14px; color: #666;" id="current-season-months">--</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="btn" onclick="saveSeasonPreset()" style="margin-top: 15px;">💾 Save Season Preset</button>
+                </div>
+                
                 <h2 style="margin-top: 30px;">🐠 Tank Volume Calculator</h2>
                 <div class="card" style="background: #f0f9ff; border: 2px solid #3b82f6; margin-bottom: 20px;">
                     <h3 style="margin-top: 0;">Calculate Your Tank Volume</h3>
@@ -2876,6 +2912,119 @@
         }
         
         loadSettings();
+        
+        // Season Preset Functions
+        async function loadSeasonPreset() {
+            try {
+                const response = await fetch('/api/season/config');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.preset !== undefined) {
+                        document.getElementById('season-preset').value = data.preset;
+                    }
+                    updateCurrentSeasonDisplay();
+                }
+            } catch (error) {
+                console.error('Error loading season preset:', error);
+            }
+        }
+        
+        async function saveSeasonPreset() {
+            const preset = parseInt(document.getElementById('season-preset').value);
+            const presetNames = ['Northern Hemisphere', 'Southern Hemisphere', 'Tropical'];
+            
+            try {
+                const response = await fetch('/api/season/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ preset: preset })
+                });
+                
+                if (response.ok) {
+                    alert('✅ Season preset saved successfully!\n\nPreset: ' + presetNames[preset]);
+                    updateCurrentSeasonDisplay();
+                } else {
+                    const error = await response.text();
+                    alert('❌ Error saving season preset: ' + error);
+                }
+            } catch (error) {
+                console.error('Error saving season preset:', error);
+                alert('❌ Error saving season preset: ' + error.message);
+            }
+        }
+        
+        function updateCurrentSeasonDisplay() {
+            const preset = parseInt(document.getElementById('season-preset').value);
+            const month = new Date().getMonth() + 1; // 1-12
+            
+            // Season icons
+            const icons = {
+                spring: '🌸',
+                summer: '☀️',
+                autumn: '🍂',
+                winter: '❄️'
+            };
+            
+            // Month ranges for each hemisphere
+            let season, seasonMonths;
+            
+            if (preset === 0) { // Northern Hemisphere
+                if (month >= 3 && month <= 5) {
+                    season = 'Spring';
+                    seasonMonths = 'March - May';
+                    document.getElementById('current-season-icon').textContent = icons.spring;
+                } else if (month >= 6 && month <= 8) {
+                    season = 'Summer';
+                    seasonMonths = 'June - August';
+                    document.getElementById('current-season-icon').textContent = icons.summer;
+                } else if (month >= 9 && month <= 11) {
+                    season = 'Autumn';
+                    seasonMonths = 'September - November';
+                    document.getElementById('current-season-icon').textContent = icons.autumn;
+                } else {
+                    season = 'Winter';
+                    seasonMonths = 'December - February';
+                    document.getElementById('current-season-icon').textContent = icons.winter;
+                }
+            } else if (preset === 1) { // Southern Hemisphere
+                if (month >= 9 && month <= 11) {
+                    season = 'Spring';
+                    seasonMonths = 'September - November';
+                    document.getElementById('current-season-icon').textContent = icons.spring;
+                } else if (month === 12 || month <= 2) {
+                    season = 'Summer';
+                    seasonMonths = 'December - February';
+                    document.getElementById('current-season-icon').textContent = icons.summer;
+                } else if (month >= 3 && month <= 5) {
+                    season = 'Autumn';
+                    seasonMonths = 'March - May';
+                    document.getElementById('current-season-icon').textContent = icons.autumn;
+                } else {
+                    season = 'Winter';
+                    seasonMonths = 'June - August';
+                    document.getElementById('current-season-icon').textContent = icons.winter;
+                }
+            } else { // Tropical
+                if (month === 12 || month <= 5) {
+                    season = 'Wet Season';
+                    seasonMonths = 'December - May';
+                    document.getElementById('current-season-icon').textContent = icons.summer;
+                } else {
+                    season = 'Dry Season';
+                    seasonMonths = 'June - November';
+                    document.getElementById('current-season-icon').textContent = icons.winter;
+                }
+            }
+            
+            document.getElementById('current-season-name').textContent = season;
+            document.getElementById('current-season-months').textContent = seasonMonths;
+        }
+        
+        // Load season preset on page load
+        loadSeasonPreset();
+        
+        // Update season display when dropdown changes
+        document.getElementById('season-preset').addEventListener('change', updateCurrentSeasonDisplay);
         
         // Update time status every 30 seconds
         setInterval(updateTimeStatus, 30000);

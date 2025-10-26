@@ -79,15 +79,53 @@ Just select your hemisphere - that's it!
 
 ---
 
-## Configuration Examples
+## Configuration Methods
 
-### Web API (Easiest!)
+### ⭐ Web Interface (Easiest!)
+
+**Navigate to:** Settings Tab → 🌍 Season Configuration
+
+1. **Select your hemisphere** from the dropdown:
+   - Northern Hemisphere (USA, Europe, Asia)
+   - Southern Hemisphere (Australia, NZ) - Default for Brisbane
+   - Tropical (Near Equator)
+
+2. **Preview** the current season display showing:
+   - Season icon (🌸 🌸 ☀️ 🍂 ❄️)
+   - Season name
+   - Month range
+
+3. **Click** "💾 Save Season Preset" to persist the setting
+
+The current season updates **immediately** when you change the dropdown, and the setting is saved to NVS (non-volatile storage) on the ESP32.
+
+**Location in Web Interface:**
+```
+🔧 Settings Tab
+  └── WiFi & MQTT Settings
+  └── ⏰ Time & NTP Settings
+  └── 🌍 Season Configuration ← HERE!
+      ├── Season Preset Dropdown
+      ├── Current Season Display (live preview)
+      └── Save Button
+  └── 🐠 Tank Volume Calculator
+  └── ⚙️ Hardware Pin Configuration
+```
+
+---
+
+### Web API
 
 ```bash
 # Set to Southern Hemisphere (Australia, NZ, South America, South Africa)
 curl -X POST http://aquarium-ip/api/season/config \
   -H "Content-Type: application/json" \
   -d '{"preset": "southern"}'
+
+# Or use numeric value (1 = Southern)
+curl -X POST http://aquarium-ip/api/season/config \
+  -H "Content-Type: application/json" \
+  -d '{"preset": 1}'
 
 # Set to Northern Hemisphere (USA, Europe, Asia)
 curl -X POST http://aquarium-ip/api/season/config \
@@ -98,6 +136,9 @@ curl -X POST http://aquarium-ip/api/season/config \
 curl -X POST http://aquarium-ip/api/season/config \
   -H "Content-Type: application/json" \
   -d '{"preset": "tropical"}'
+
+# Get current season configuration
+curl http://aquarium-ip/api/season/config
 ```
 
 ### Code
