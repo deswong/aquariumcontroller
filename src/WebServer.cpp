@@ -1,6 +1,7 @@
 #include "WebServer.h"
 #include "SystemTasks.h"
 #include "WebInterface.h"
+#include "NVSHelper.h"
 #include <Update.h>
 
 WebServerManager::WebServerManager(ConfigManager* configMgr) 
@@ -1818,6 +1819,102 @@ void WebServerManager::setupRoutes() {
         serializeJson(response, responseStr);
         request->send(200, "application/json", responseStr);
     });
+    
+    // ============================================================================
+    // NVS Management API Endpoints
+    // ============================================================================
+    
+    // API: Get NVS Statistics
+    server->on("/api/nvs/stats", HTTP_GET, [](AsyncWebServerRequest* request) {
+        String statsJSON = NVSHelper::getStatsJSON();
+        request->send(200, "application/json", statsJSON);
+        
+        // Also print to serial for debugging
+        Serial.println("\n[API] NVS Statistics Requested:");
+        NVSHelper::printStats();
+    });
+    
+    // API: Check NVS Health
+    server->on("/api/nvs/health", HTTP_GET, [](AsyncWebServerRequest* request) {
+        bool healthy = NVSHelper::isHealthy();
+        float usage = NVSHelper::getUsagePercent();
+        String status = NVSHelper::getHealthStatus(usage);
+        
+        StaticJsonDocument<256> doc;
+        doc["healthy"] = healthy;
+        doc["usage_percent"] = usage;
+        doc["status"] = status;
+        doc["recommendation"] = NVSHelper::getRecommendation(usage);
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    // API: Erase NVS (DANGEROUS - requires confirmation)
+    server->on("/api/nvs/erase", HTTP_POST, [this](AsyncWebServerRequest* request) {}, NULL,
+        [this](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+            DynamicJsonDocument doc(256);
+            DeserializationError error = deserializeJson(doc, data, len);
+            
+            if (error) {
+                request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+                return;
+            }
+            
+            // Require exact confirmation string for safety
+            if (!doc.containsKey("confirmation")) {
+                request->send(400, "application/json", 
+                    "{\"error\":\"Missing confirmation field\",\"required\":\"ERASE_ALL_NVS\"}");
+                return;
+            }
+            
+            String confirmation = doc["confirmation"].as<String>();
+            
+            if (confirmation != "ERASE_ALL_NVS") {
+                request->send(403, "application/json", 
+                    "{\"error\":\"Invalid confirmation\",\"required\":\"ERASE_ALL_NVS\"}");
+                return;
+            }
+            
+            // Log the erase operation
+            Serial.println("\n╔════════════════════════════════════════╗");
+            Serial.println("║   NVS ERASE REQUESTED VIA WEB API     ║");
+            Serial.println("╚════════════════════════════════════════╝");
+            
+            if (eventLogger) {
+                eventLogger->warning("system", "NVS erase requested - all configuration will be lost");
+            }
+            
+            // Perform the erase
+            bool success = NVSHelper::eraseAllWithConfirmation("ERASE_ALL_NVS");
+            
+            if (success) {
+                request->send(200, "application/json", 
+                    "{\"status\":\"ok\",\"message\":\"NVS erased successfully. Device will restart.\"}");
+                
+                if (eventLogger) {
+                    eventLogger->warning("system", "NVS erased - restarting device");
+                }
+                
+                // Publish offline status before restart
+                if (mqttClient && mqttClient->connected()) {
+                    SystemConfig& cfg = config->getConfig();
+                    char topic[128];
+                    snprintf(topic, sizeof(topic), "%s/status", cfg.mqttTopicPrefix);
+                    mqttClient->publish(topic, "offline", true);
+                    delay(100);
+                }
+                
+                delay(2000);  // Give time for response to send
+                ESP.restart();
+            } else {
+                request->send(500, "application/json", 
+                    "{\"error\":\"NVS erase failed\"}");
+            }
+        });
+    
+    // ============================================================================
     
     // API: Restart device
     server->on("/api/restart", HTTP_POST, [this](AsyncWebServerRequest* request) {

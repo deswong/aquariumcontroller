@@ -4,8 +4,8 @@ TDSSensor::TDSSensor(uint8_t analogPin, float kFactor)
     : pin(analogPin), adc(nullptr), currentTDS(0), readIndex(0), numReadings(10), 
       total(0), initialized(false), lastReadTime(0), temperature(25.0), kValue(kFactor) {
     
-    // Create ESP32 hardware ADC with 11dB attenuation (0-3.3V range) and 64-sample averaging
-    adc = new ESP32_ADC(analogPin, ADC_ATTEN_DB_11, 64);
+    // Create ESP32 hardware ADC with 12dB attenuation (0-3.3V range) and 64-sample averaging
+    adc = new ESP32_ADC(analogPin, ADC_ATTEN_DB_12, 64);
     
     // Initialize readings array
     for (int i = 0; i < numReadings; i++) {

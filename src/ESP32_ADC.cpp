@@ -163,7 +163,7 @@ void ESP32_ADC::printInfo() const {
         case ADC_ATTEN_DB_0:   Serial.println("0dB (0-1.1V)"); break;
         case ADC_ATTEN_DB_2_5: Serial.println("2.5dB (0-1.5V)"); break;
         case ADC_ATTEN_DB_6:   Serial.println("6dB (0-2.2V)"); break;
-        case ADC_ATTEN_DB_11:  Serial.println("11dB (0-3.3V)"); break;
+        case ADC_ATTEN_DB_12:  Serial.println("12dB (0-3.3V)"); break;
         default:               Serial.println("Unknown"); break;
     }
     Serial.printf("  Resolution: 12-bit (0-4095)\n");

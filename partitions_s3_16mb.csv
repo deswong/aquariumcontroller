@@ -3,24 +3,24 @@
 # Total Flash: 16MB (0x1000000)
 # Aquarium Controller with PSRAM, Event Logging, ML Data Storage
 
-# NVS - Configuration storage (atomic, wear-leveled)
-nvs,      data, nvs,     0x9000,   0x5000,
+# NVS - Configuration storage (atomic, wear-leveled) - 32KB for better safety
+nvs,      data, nvs,     0x9000,   0x8000,
 
 # OTA Data - OTA update management
-otadata,  data, ota,     0xe000,   0x2000,
+otadata,  data, ota,     0x11000,  0x2000,
 
-# App Partitions - Dual OTA (3.5MB each = 7MB total for firmware)
-app0,     app,  ota_0,   0x10000,  0x380000,
-app1,     app,  ota_1,   0x390000, 0x380000,
+# App Partitions - Dual OTA (3.5MB each = 7MB total) - MUST be 64KB aligned (0x10000)
+app0,     app,  ota_0,   0x20000,  0x370000,
+app1,     app,  ota_1,   0x390000, 0x370000,
 
 # SPIFFS - Web interface, event logs, config backups (4MB)
-spiffs,   data, spiffs,  0x710000, 0x400000,
+spiffs,   data, spiffs,  0x700000, 0x400000,
 
 # ML Data - Pattern learning, sensor history, predictions (4MB)
-mldata,   data, fat,     0xB10000, 0x400000,
+mldata,   data, fat,     0xB00000, 0x400000,
 
 # Core Dump - Debug crash information (64KB)
-coredump, data, coredump,0xF10000, 0x10000,
+coredump, data, coredump,0xF00000, 0x10000,
 
 # Factory - Factory reset partition (optional, 960KB remaining)
-factory,  app,  factory, 0xF20000, 0xE0000,
+factory,  app,  factory, 0xF10000, 0xF0000,

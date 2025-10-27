@@ -50,6 +50,11 @@ public:
     // Alert thresholds
     void setStackWarningThreshold(float percent) { stackWarningPercent = percent; }
     void setHeapWarningThreshold(float percent) { heapWarningPercent = percent; }
+    void setNVSWarningThreshold(float percent) { nvsWarningPercent = percent; }
+    
+    // NVS monitoring
+    void checkNVSHealth();
+    void printNVSHealth();
     
 private:
     unsigned long lastUpdate;
@@ -58,6 +63,7 @@ private:
     // Thresholds
     float stackWarningPercent;  // Alert if stack usage > this
     float heapWarningPercent;   // Alert if heap usage > this
+    float nvsWarningPercent;    // Alert if NVS usage > this
     
     // Memory leak detection
     size_t lastFreeHeap;

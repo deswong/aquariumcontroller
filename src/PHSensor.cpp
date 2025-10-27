@@ -9,8 +9,8 @@ PHSensor::PHSensor(uint8_t analogPin)
       acidTrueRef(4.01), neutralTrueRef(7.00), baseTrueRef(10.01), refTemp(25.0),
       isCalibrating(false), lastCalibrationTime(0) {
     
-    // Create ESP32 hardware ADC with 11dB attenuation (0-3.3V range) and 64-sample averaging
-    adc = new ESP32_ADC(analogPin, ADC_ATTEN_DB_11, 64);
+    // Create ESP32 hardware ADC with 12dB attenuation (0-3.3V range) and 64-sample averaging
+    adc = new ESP32_ADC(analogPin, ADC_ATTEN_DB_12, 64);
     prefs = new Preferences();
     
     // Initialize readings array

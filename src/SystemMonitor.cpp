@@ -1,4 +1,5 @@
 #include "SystemMonitor.h"
+#include "NVSHelper.h"
 #include "Logger.h"
 #include <esp_system.h>
 #include <esp_heap_caps.h>
@@ -8,6 +9,7 @@ SystemMonitor::SystemMonitor()
       updateInterval(60000),  // Update every minute
       stackWarningPercent(80.0),
       heapWarningPercent(80.0),
+      nvsWarningPercent(70.0),
       lastFreeHeap(0),
       lastHeapCheck(0),
       heapDecreaseCount(0) {
@@ -43,6 +45,9 @@ void SystemMonitor::update() {
         // Check heap usage
         HeapInfo heap = getHeapInfo();
         checkHeapUsage(heap);
+        
+        // Check NVS health
+        checkNVSHealth();
         
         // Check watchdogs
         checkWatchdogs();
@@ -211,4 +216,41 @@ void SystemMonitor::checkHeapUsage(const HeapInfo& info) {
         LOG_WARN("SysMon", "Heap fragmentation detected (largest block: %zu of %zu free)",
                 info.largestFreeBlock, info.freeHeap);
     }
+}
+
+void SystemMonitor::checkNVSHealth() {
+    NVSHelper::NVSStats stats = NVSHelper::getStats();
+    
+    if (stats.status == "error") {
+        LOG_ERROR("SysMon", "Failed to read NVS statistics");
+        return;
+    }
+    
+    if (stats.usagePercent >= 90.0f) {
+        LOG_ERROR("SysMon", "CRITICAL: NVS nearly full! %.1f%% used (%u/%u entries)",
+                 stats.usagePercent, stats.usedEntries, stats.totalEntries);
+        LOG_ERROR("SysMon", "Action required: Clear old data or erase NVS");
+    } else if (stats.usagePercent >= 80.0f) {
+        LOG_WARN("SysMon", "WARNING: NVS usage high: %.1f%% (%u/%u entries)",
+                stats.usagePercent, stats.usedEntries, stats.totalEntries);
+    } else if (stats.usagePercent >= nvsWarningPercent) {
+        LOG_WARN("SysMon", "NVS usage elevated: %.1f%% (%u/%u entries)",
+                stats.usagePercent, stats.usedEntries, stats.totalEntries);
+    } else {
+        LOG_INFO("SysMon", "NVS health: %.1f%% used (%u/%u entries, %u namespaces)",
+                stats.usagePercent, stats.usedEntries, stats.totalEntries, 
+                stats.namespaceCount);
+    }
+}
+
+void SystemMonitor::printNVSHealth() {
+    Serial.println("\n=== NVS Health Check ===");
+    NVSHelper::printStats();
+    
+    NVSHelper::NVSStats stats = NVSHelper::getStats();
+    if (stats.status != "error") {
+        Serial.printf("Recommendation: %s\n", 
+                     NVSHelper::getRecommendation(stats.usagePercent).c_str());
+    }
+    Serial.println("========================\n");
 }

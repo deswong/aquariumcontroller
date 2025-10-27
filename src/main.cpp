@@ -4,6 +4,8 @@
 #include <esp_task_wdt.h>
 #include <esp_bt.h>
 #include <esp_bt_main.h>
+#include <nvs_flash.h>
+#include "NVSHelper.h"
 #include "TemperatureSensor.h"
 #include "AmbientTempSensor.h"
 #include "PHSensor.h"
@@ -111,6 +113,31 @@ void reconnectMQTT() {
 void setup() {
     Serial.begin(115200);
     delay(1000);
+    
+    // ============================================================================
+    // CRITICAL: Initialize NVS Flash Storage
+    // ============================================================================
+    // NVS (Non-Volatile Storage) must be initialized before using Preferences API
+    // This handles first boot and corrupted NVS recovery automatically
+    Serial.println("\n=== Initializing NVS Flash ===");
+    esp_err_t nvsResult = nvs_flash_init();
+    
+    if (nvsResult == ESP_ERR_NVS_NO_FREE_PAGES || nvsResult == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        // NVS partition was truncated or version changed - needs erasing
+        Serial.println("NVS partition requires erasing (truncated or new version)");
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        Serial.println("NVS partition erased successfully");
+        nvsResult = nvs_flash_init();
+    }
+    
+    if (nvsResult == ESP_OK) {
+        Serial.println("✓ NVS flash initialized successfully");
+    } else {
+        Serial.printf("✗ ERROR: NVS flash init failed: %s\n", esp_err_to_name(nvsResult));
+        Serial.println("  System will continue but configuration may not persist!");
+        // Don't halt - let Preferences handle individual namespace errors
+    }
+    Serial.println("==============================\n");
     
     // Disable Bluetooth to free up memory (not used in this application)
     #if CONFIG_BT_ENABLED
@@ -456,12 +483,129 @@ void setup() {
     Serial.println("=================================");
     Serial.printf("Access web interface at: http://%s\n", wifiMgr->getIPAddress().c_str());
     Serial.printf("OTA updates at: http://%s/update\n", wifiMgr->getIPAddress().c_str());
+    Serial.println("=================================");
+    Serial.println("\nSerial Commands Available:");
+    Serial.println("  help        - Show this help");
+    Serial.println("  nvs-stats   - Display NVS statistics");
+    Serial.println("  nvs-erase   - Erase all NVS data (requires confirmation)");
+    Serial.println("  sys-info    - Display system information");
+    Serial.println("  restart     - Restart the device");
     Serial.println("=================================\n");
+}
+
+void handleSerialCommands() {
+    if (Serial.available() > 0) {
+        String cmd = Serial.readStringUntil('\n');
+        cmd.trim();
+        cmd.toLowerCase();
+        
+        if (cmd.length() == 0) return;
+        
+        Serial.printf("\n> Command: %s\n\n", cmd.c_str());
+        
+        if (cmd == "help") {
+            Serial.println("=== Available Serial Commands ===");
+            Serial.println("  help        - Show this help message");
+            Serial.println("  nvs-stats   - Display NVS flash statistics");
+            Serial.println("  nvs-erase   - Erase all NVS data (DANGEROUS!)");
+            Serial.println("  sys-info    - Display system information");
+            Serial.println("  heap-info   - Display heap memory information");
+            Serial.println("  task-info   - Display FreeRTOS task information");
+            Serial.println("  restart     - Restart the ESP32");
+            Serial.println("=================================\n");
+            
+        } else if (cmd == "nvs-stats") {
+            NVSHelper::printStats();
+            
+        } else if (cmd == "nvs-erase") {
+            Serial.println("\n╔════════════════════════════════════════════════╗");
+            Serial.println("║  ⚠️  WARNING: NVS ERASE REQUESTED  ⚠️          ║");
+            Serial.println("╠════════════════════════════════════════════════╣");
+            Serial.println("║  This will ERASE ALL configuration data!      ║");
+            Serial.println("║  - WiFi settings                               ║");
+            Serial.println("║  - Calibration data                            ║");
+            Serial.println("║  - All saved settings                          ║");
+            Serial.println("║  - Water change history                        ║");
+            Serial.println("║  - Pattern learning data                       ║");
+            Serial.println("╠════════════════════════════════════════════════╣");
+            Serial.println("║  Type 'YES' to confirm, or anything else       ║");
+            Serial.println("║  to cancel (you have 10 seconds)               ║");
+            Serial.println("╚════════════════════════════════════════════════╝\n");
+            
+            unsigned long startTime = millis();
+            String confirmation = "";
+            
+            while (millis() - startTime < 10000) {
+                if (Serial.available() > 0) {
+                    confirmation = Serial.readStringUntil('\n');
+                    confirmation.trim();
+                    break;
+                }
+                delay(100);
+            }
+            
+            if (confirmation == "YES") {
+                Serial.println("\n✓ Confirmation received. Erasing NVS...\n");
+                if (NVSHelper::eraseAllWithConfirmation("ERASE_ALL_NVS")) {
+                    Serial.println("\n✓ NVS erased successfully!");
+                    Serial.println("Device will restart in 3 seconds...\n");
+                    delay(3000);
+                    ESP.restart();
+                } else {
+                    Serial.println("\n✗ NVS erase failed!\n");
+                }
+            } else {
+                Serial.println("\n✗ Erase cancelled (invalid or no confirmation)\n");
+            }
+            
+        } else if (cmd == "sys-info") {
+            Serial.println("\n=== System Information ===");
+            Serial.printf("Chip Model:      %s\n", ESP.getChipModel());
+            Serial.printf("Chip Revision:   %d\n", ESP.getChipRevision());
+            Serial.printf("CPU Cores:       %d\n", ESP.getChipCores());
+            Serial.printf("CPU Frequency:   %d MHz\n", ESP.getCpuFreqMHz());
+            Serial.printf("Flash Size:      %d MB\n", ESP.getFlashChipSize() / (1024 * 1024));
+            Serial.printf("Flash Speed:     %d MHz\n", ESP.getFlashChipSpeed() / 1000000);
+            Serial.printf("PSRAM Size:      %d MB\n", ESP.getPsramSize() / (1024 * 1024));
+            Serial.printf("PSRAM Free:      %d KB\n", ESP.getFreePsram() / 1024);
+            Serial.printf("Sketch Size:     %d KB\n", ESP.getSketchSize() / 1024);
+            Serial.printf("Free Sketch:     %d KB\n", ESP.getFreeSketchSpace() / 1024);
+            Serial.printf("SDK Version:     %s\n", ESP.getSdkVersion());
+            Serial.printf("Uptime:          %lu seconds\n", millis() / 1000);
+            Serial.println("==========================\n");
+            
+        } else if (cmd == "heap-info") {
+            if (sysMonitor) {
+                sysMonitor->printHeapInfo();
+            } else {
+                Serial.println("System monitor not available\n");
+            }
+            
+        } else if (cmd == "task-info") {
+            if (sysMonitor) {
+                sysMonitor->printTaskInfo();
+            } else {
+                Serial.println("System monitor not available\n");
+            }
+            
+        } else if (cmd == "restart") {
+            Serial.println("Restarting device...\n");
+            delay(1000);
+            ESP.restart();
+            
+        } else {
+            Serial.printf("Unknown command: '%s'\n", cmd.c_str());
+            Serial.println("Type 'help' for available commands\n");
+        }
+    }
 }
 
 void loop() {
     // Feed the watchdog timer
     esp_task_wdt_reset();
+    
+    // Handle serial commands (non-blocking)
+    handleSerialCommands();
     
     // Update WiFi manager
     wifiMgr->update();

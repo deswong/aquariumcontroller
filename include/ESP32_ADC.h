@@ -41,12 +41,12 @@ private:
 public:
     /**
      * Constructor
-     * @param analogPin GPIO pin number (must be ADC1 pin)
-     * @param atten Attenuation level (default: 11dB for 0-3.3V range)
+     * @param analogPin ADC pin number
+     * @param atten Attenuation level (default: 12dB for 0-3.3V range)
      * @param numSamples Hardware multisampling count (default: 64 samples)
      */
     ESP32_ADC(uint8_t analogPin, 
-              adc_atten_t atten = ADC_ATTEN_DB_11,
+              adc_atten_t atten = ADC_ATTEN_DB_12,
               uint32_t numSamples = 64);
     
     ~ESP32_ADC();
