@@ -1,5 +1,6 @@
 #include "SystemTasks.h"
 #include "SeasonCalculator.h"
+#include "WiFiManager.h"
 #include <ArduinoJson.h>
 
 // Task handles
@@ -387,6 +388,12 @@ void displayTask(void* parameter) {
             displayMgr->updateAmbientTemperature(data.ambientTemp);
             displayMgr->updateHeaterState(data.heaterState);
             displayMgr->updateCO2State(data.co2State);
+            
+            // Update time from NTP (via WiFiManager)
+            if (wifiMgr != nullptr) {
+                String currentTime = wifiMgr->getTimeOnly();
+                displayMgr->updateTime(currentTime.c_str());
+            }
             
             // Update water change date if available
             if (wcPredictor != nullptr) {

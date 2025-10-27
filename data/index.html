@@ -4284,24 +4284,42 @@
             }
         }
         
-        // Update current date/time display
-        function updateDateTime() {
-            const now = new Date();
-            const options = {
-                weekday: 'short',
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
-            };
-            document.getElementById('current-datetime').textContent = 
-                now.toLocaleString('en-AU', options);
+        // Update current date/time display from ESP32
+        async function updateDateTime() {
+            try {
+                const response = await fetch('/api/time/status');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch time');
+                }
+                const data = await response.json();
+                
+                // Display the ESP32's local time
+                const timeDisplay = data.localTime || 'Time not synced';
+                const syncIndicator = data.synced ? '🕐' : '⏱️';
+                
+                document.getElementById('current-datetime').textContent = 
+                    `${syncIndicator} ${timeDisplay}`;
+                    
+            } catch (error) {
+                console.error('Error fetching ESP32 time:', error);
+                // Fallback to client time if ESP32 time unavailable
+                const now = new Date();
+                const options = {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                };
+                document.getElementById('current-datetime').textContent = 
+                    '💻 ' + now.toLocaleString('en-AU', options);
+            }
         }
         
-        // Update clock every second
+        // Update clock every second from ESP32
         setInterval(updateDateTime, 1000);
         updateDateTime(); // Initial call
         

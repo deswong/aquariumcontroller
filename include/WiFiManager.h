@@ -45,6 +45,7 @@ public:
     int getReconnectAttempts();
     int getSignalStrength(); // RSSI in dBm
     String getLocalTime();
+    String getTimeOnly(); // Get just HH:MM:SS for OLED display
 };
 
 #endif

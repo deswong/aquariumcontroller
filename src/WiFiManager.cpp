@@ -340,3 +340,20 @@ String WiFiManager::getLocalTime() {
     
     return String(timeStr);
 }
+
+String WiFiManager::getTimeOnly() {
+    if (!timeSynced) {
+        return "--:--:--";
+    }
+    
+    time_t now;
+    struct tm timeinfo;
+    time(&now);
+    localtime_r(&now, &timeinfo);
+    
+    char timeStr[16];
+    snprintf(timeStr, sizeof(timeStr), "%02d:%02d:%02d",
+             timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+    
+    return String(timeStr);
+}
