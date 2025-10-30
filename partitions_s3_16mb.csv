@@ -1,26 +1,27 @@
 # Name,   Type, SubType, Offset,   Size,     Flags
-# ESP32-S3 16MB Partition Table - Optimized for ML and Logging
-# Total Flash: 16MB (0x1000000)
-# Aquarium Controller with PSRAM, Event Logging, ML Data Storage
+# ESP32-S3 16MB Partition Table - Standard Layout
+# Based on ESP32-S3 requirements and ESP-IDF defaults
 
-# NVS - Configuration storage (atomic, wear-leveled) - 32KB for better safety
-nvs,      data, nvs,     0x9000,   0x8000,
+# NVS - 64KB (ESP32-S3 minimum)
+nvs,      data, nvs,     0x10000,  0x10000,
 
-# OTA Data - OTA update management
-otadata,  data, ota,     0x11000,  0x2000,
+# OTA Data - 8KB
+otadata,  data, ota,     0x20000,  0x2000,
 
-# App Partitions - Dual OTA (3.5MB each = 7MB total) - MUST be 64KB aligned (0x10000)
-app0,     app,  ota_0,   0x20000,  0x370000,
-app1,     app,  ota_1,   0x390000, 0x370000,
+# App 0 - 3.5MB (64KB aligned)
+app0,     app,  ota_0,   0x30000,  0x370000,
 
-# SPIFFS - Web interface, event logs, config backups (4MB)
-spiffs,   data, spiffs,  0x700000, 0x400000,
+# App 1 - 3.5MB (64KB aligned) 
+app1,     app,  ota_1,   0x3A0000, 0x370000,
 
-# ML Data - Pattern learning, sensor history, predictions (4MB)
-mldata,   data, fat,     0xB00000, 0x400000,
+# SPIFFS - 4MB
+spiffs,   data, spiffs,  0x710000, 0x400000,
 
-# Core Dump - Debug crash information (64KB)
-coredump, data, coredump,0xF00000, 0x10000,
+# ML Data - 4MB
+mldata,   data, fat,     0xB10000, 0x400000,
 
-# Factory - Factory reset partition (optional, 960KB remaining)
-factory,  app,  factory, 0xF10000, 0xF0000,
+# Core Dump - 64KB
+coredump, data, coredump,0xF10000, 0x10000,
+
+# Factory - 960KB (remaining space)
+factory,  app,  factory, 0xF20000, 0xE0000,
